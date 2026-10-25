@@ -248,7 +248,6 @@ export default function Admin() {
     "Services",
     "Analytics",
     "Media",
-    "Themes",
     "spideyy",
     "SEO",
     "Security",
@@ -2116,22 +2115,14 @@ export default function Admin() {
           )}
 
           {/* THEMES TAB */}
-          {tab === "Themes" && (
-            <div className="admin-card">
-              <h3>Site settings</h3>
-              <label>
-                Default theme
-                <select
-                  value={site.defaultTheme}
-                  onChange={(e) =>
-                    setSite({ ...site, defaultTheme: e.target.value })
-                  }
-                >
-                  <option value="silver">Paper / Crimson</option>
-                  <option value="gold">White / Gold</option>
-                  <option value="dark">Red / Black</option>
-                </select>
-              </label>
+          {/* Site theme is permanently unified to single refined premium theme */}
+          {tab === "Page content" && (
+            <div className="admin-card" style={{ marginBottom: 20 }}>
+              <h3>Primary Brand Theme & Display</h3>
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 14px 0" }}>
+                Active Theme: <strong>SANJU X DEV Primary (Silver, White &amp; Metallic Crimson)</strong>.
+                Theme-switching has been consolidated into this single refined identity.
+              </p>
               <label className="check">
                 <input
                   type="checkbox"
@@ -2140,7 +2131,7 @@ export default function Admin() {
                     setSite({ ...site, introEnabled: e.target.checked })
                   }
                 />
-                Play cinematic introduction once per session
+                Play introduction animation once per session
               </label>
             </div>
           )}

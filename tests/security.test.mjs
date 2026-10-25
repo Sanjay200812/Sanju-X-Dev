@@ -6,6 +6,7 @@ import {
   verifyPin,
   validateSite,
   safeUrl,
+  isAllowedOrigin,
 } from "../server/security.mjs";
 import seed from "../server/seed.json" with { type: "json" };
 import handler from "../server/handler.mjs";
@@ -107,3 +108,18 @@ test("assistant rejects oversized questions", async () =>
     (await request("/api/chat", "POST", { question: "x".repeat(1001) })).code,
     400,
   ));
+
+test("isAllowedOrigin permits production, local dev and project preview deployments strictly", () => {
+  assert.equal(isAllowedOrigin("https://sanju-x-dev.vercel.app"), true);
+  assert.equal(isAllowedOrigin("https://sanju-x-dev.vercel.app/"), true);
+  assert.equal(isAllowedOrigin("http://127.0.0.1:3100"), true);
+  assert.equal(isAllowedOrigin("http://localhost:3100"), true);
+  assert.equal(isAllowedOrigin("http://localhost:5173"), true);
+  assert.equal(isAllowedOrigin("https://sanju-x-dev-git-feature-spideyy-client-management-sanjay200812s-projects.vercel.app"), true);
+  assert.equal(isAllowedOrigin("https://sanju-x-dev-bkwyq0s9b-sanjay200812s-projects.vercel.app"), true);
+  assert.equal(isAllowedOrigin("https://evil.test"), false);
+  assert.equal(isAllowedOrigin("https://attacker.vercel.app"), false);
+  assert.equal(isAllowedOrigin(""), false);
+  assert.equal(isAllowedOrigin(null), false);
+});
+

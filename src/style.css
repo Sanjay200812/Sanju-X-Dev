@@ -14,28 +14,7 @@ html {
   --shadow: #21212622;
   color-scheme: light;
 }
-html[data-theme="gold"] {
-  --bg: #f7f3e9;
-  --panel: #eee7d7;
-  --paper: #fffdf8;
-  --text: #302c23;
-  --muted: #716753;
-  --line: #ddd1b9;
-  --accent: #826021;
-  --soft: #eae0c9;
-}
-html[data-theme="dark"] {
-  --bg: #141517;
-  --panel: #202125;
-  --paper: #292a2e;
-  --text: #f2f0ed;
-  --muted: #b1adb0;
-  --line: #3a383c;
-  --accent: #e65770;
-  --soft: #42232b;
-  --shadow: #0008;
-  color-scheme: dark;
-}
+/* Single primary SANJU X DEV visual identity */
 body {
   margin: 0;
   background: var(--bg);
@@ -1545,14 +1524,7 @@ dialog {
     transform: none !important;
   }
 }
-html[data-theme="dark"] .button {
-  background: #a51d35;
-  border-color: #a51d35;
-}
-html[data-theme="dark"] .button.secondary {
-  background: transparent;
-  border-color: var(--line);
-}
+
 
 .chat-body a.action-primary,
 .home-ai-link.action-primary {
@@ -1561,3 +1533,260 @@ html[data-theme="dark"] .button.secondary {
   font-weight: 600 !important;
   border-color: var(--accent) !important;
 }
+
+/* =============================================================================
+ * SANJU X DEV — SINGLE PREMIUM THEME & SUBTLE GLASSMORPHISM
+ * ============================================================================= */
+
+.brand-text-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.brand-name {
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+.brand-quote {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.hero-quote-line {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  margin: 0 0 16px 0;
+}
+.hero-ask-spideyy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+.hero-ask-spideyy:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* Affiliation Card (CodeXa Agency) */
+.affiliation-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(213, 212, 209, 0.85);
+  border-radius: 12px;
+  padding: 32px 30px;
+  margin: 40px 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+.affiliation-badge {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.affiliation-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--text);
+  line-height: 1.3;
+}
+.affiliation-text {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 680px;
+  margin: 0 0 20px 0;
+}
+.affiliation-action {
+  display: flex;
+}
+
+/* Enhanced Project Card Clarity (Phase 4) */
+.project-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(213, 212, 209, 0.8);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+.project-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(165, 29, 53, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.07);
+}
+.project-meta-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.project-kind-pill {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+.project-title {
+  margin: 0 0 8px 0;
+}
+.project-purpose {
+  font-size: 13px;
+  color: var(--text);
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+.project-purpose strong {
+  color: var(--accent);
+}
+.project-summary {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+}
+.project-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.project-btn-view {
+  font-size: 13px;
+  padding: 8px 16px;
+  text-decoration: none;
+}
+.project-btn-live {
+  font-size: 13px;
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+/* Services Presentation Cards (Phase 5) */
+.services-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  margin: 36px 0;
+}
+.service-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(213, 212, 209, 0.8);
+  border-radius: 12px;
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.service-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(165, 29, 53, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+.service-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.service-card-number {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+.service-card-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.service-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: var(--text);
+  line-height: 1.3;
+}
+.service-card-desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0 0 14px 0;
+}
+.service-card-example {
+  font-size: 12px;
+  color: var(--text);
+  background: var(--soft);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.service-card-example strong {
+  color: var(--accent);
+}
+.service-card-action {
+  margin-top: auto;
+}
+.service-card-enquire {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 10px 16px;
+  text-decoration: none;
+}
+
+/* Glassmorphic Chat Widget */
+.chat {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(213, 212, 209, 0.85);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(165, 29, 53, 0.1);
+}
+

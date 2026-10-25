@@ -53,7 +53,7 @@ export default function Assistant() {
         onClick={() => setFloatingOpen(!floatingOpen)}
       >
         <img className="spider" src="/media/spideyy.svg" alt="" />
-        <span>Ask spideyy</span>
+        <span>Ask Spideyy</span>
       </button>
       {floatingOpen && (
         <div
@@ -66,7 +66,7 @@ export default function Assistant() {
           <div className="chat-head">
             <img className="spider" src="/media/spideyy.svg" alt="" />
             <div>
-              <b>spideyy</b>
+              <b>Spideyy</b>
               <small>{mode} · SANJU X DEV</small>
             </div>
             <button
@@ -121,10 +121,14 @@ export default function Assistant() {
               ))}
               {busy && <p>Thinking…</p>}
             </div>
-            <div className="chat-suggestions">
-              {s.faqs.map((f) => (
-                <button disabled={busy} key={f.q} onClick={() => handleAsk(f.q)}>
-                  {f.q}
+                        <div className="chat-suggestions">
+              {[
+                "What kind of website do I need?",
+                "Can you build an online store?",
+                "How do I start a project?",
+              ].map((q) => (
+                <button disabled={busy} key={q} onClick={() => handleAsk(q)}>
+                  {q}
                 </button>
               ))}
             </div>

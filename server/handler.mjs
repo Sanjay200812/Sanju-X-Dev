@@ -11,6 +11,7 @@ import {
   getLockoutStatus,
   recordFailedAttempt,
   clearLockout,
+  isAllowedOrigin,
 } from "./security.mjs";
 import {
   sendEnquiryNotification,
@@ -275,19 +276,25 @@ export default async function handler(req, res) {
     const client = db();
     let body = {};
 
-    if (req.method === "POST") {
-      const origin = req.headers.origin;
-      const permitted = [
-        env().SITE_URL,
-        env().VERCEL_URL ? "https://" + env().VERCEL_URL : null,
-        "http://127.0.0.1:3100",
-        "http://127.0.0.1:3101",
-        "http://localhost:3100",
-        "http://localhost:3101",
-      ].filter(Boolean);
+    if (req.method === "OPTIONS") {
+      const origin = req.headers?.origin;
+      if (origin && isAllowedOrigin(origin, env())) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.setHeader(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization, x-owner-authorization"
+        );
+      }
+      res.statusCode = 204;
+      return res.end();
+    }
 
-      if (!origin || !permitted.includes(origin))
+    if (req.method === "POST") {
+      const origin = req.headers?.origin;
+      if (!origin || !isAllowedOrigin(origin, env())) {
         throw fail(403, "Request origin is not allowed.");
+      }
 
       if (req.body)
         body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;

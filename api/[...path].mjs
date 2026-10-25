@@ -1,21 +1,25 @@
 import localHandler from "../server/handler.mjs";
+import { isAllowedOrigin } from "../server/security.mjs";
 
 export default async function handler(req, res) {
   const urlPath = new URL(req.url, "http://local").pathname;
 
-  // Requirement 4: Ensure email sending and transactional operations run in a compatible
-  // Node.js server environment with outbound TCP/TLS socket support on port 465 (Gmail SMTP).
-  // Deno Deploy / Edge sandboxes restrict raw outbound SMTP sockets; Vercel Serverless (Node.js)
-  // has full native support for Nodemailer SSL/TLS connections to smtp.gmail.com:465.
+  // Sensitive serverless endpoints that MUST run in compatible Node.js serverless environment
+  // (Gmail SMTP port 465 SSL/TLS, OpenAI conversational intelligence, database operations)
   const isServerlessSensitiveEndpoint =
+    urlPath.startsWith("/api/enquiry") ||
     urlPath.startsWith("/api/enquiries") ||
     urlPath.startsWith("/api/spideyy") ||
-    urlPath.startsWith("/api/chat");
+    urlPath.startsWith("/api/chat") ||
+    urlPath.startsWith("/api/track") ||
+    urlPath.startsWith("/api/admin");
 
   const hasSmtpConfigured = Boolean(
     process.env.SMTP_USER || process.env.SMTP_PASS || process.env.SMTP_HOST
   );
 
+  // If STUDIO_EDGE_URL is not set, or this is a serverless sensitive endpoint, or SMTP is configured,
+  // or USE_LOCAL_HANDLER is set, use the robust localHandler.
   if (
     !process.env.STUDIO_EDGE_URL ||
     isServerlessSensitiveEndpoint ||
@@ -25,16 +29,32 @@ export default async function handler(req, res) {
     return localHandler(req, res);
   }
 
+  // Set standard CORS & security headers
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
-  const allowed = [
-    process.env.SITE_URL,
-    process.env.VERCEL_URL && "https://" + process.env.VERCEL_URL,
-  ].filter(Boolean);
-  if (req.method === "POST" && !allowed.includes(req.headers.origin)) {
+
+  const origin = req.headers.origin;
+  const originAllowed = isAllowedOrigin(origin, process.env);
+
+  if (origin && originAllowed) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, x-owner-authorization"
+    );
+  }
+
+  if (req.method === "OPTIONS") {
+    res.statusCode = 204;
+    return res.end();
+  }
+
+  if (req.method === "POST" && !originAllowed) {
     res.statusCode = 403;
     return res.end(JSON.stringify({ error: "Request origin is not allowed." }));
   }
+
   try {
     const response = await fetch(process.env.STUDIO_EDGE_URL + urlPath, {
       method: req.method,
@@ -43,7 +63,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
         "x-owner-authorization": req.headers.authorization || "",
         cookie: req.headers.cookie || "",
-        origin: process.env.SITE_URL || allowed[0],
+        origin: origin || process.env.SITE_URL || "https://sanju-x-dev.vercel.app",
         "x-forwarded-for": req.headers["x-forwarded-for"] || "unknown",
       },
       body:

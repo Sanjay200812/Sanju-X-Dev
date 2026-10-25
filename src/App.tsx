@@ -221,7 +221,7 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
         <div className="home-ai-badge">
           <img className="spider" src="/media/spideyy.svg" alt="" />
           <div>
-            <b>spideyy AI</b>
+            <b>Spideyy</b>
             <span>Instant website guidance & project estimates</span>
           </div>
         </div>
@@ -244,7 +244,7 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
           className="home-ai-input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ask spideyy about websites, services or your project idea..."
+          placeholder="Ask Spideyy about websites, services or your project idea..."
           aria-label="Ask spideyy a question"
           disabled={busy}
         />
@@ -799,7 +799,8 @@ export default function App() {
       .then((d) => {
         if (d.site) {
           setSite(d.site);
-          if (!localStorage.getItem("sxd-theme")) setTheme(d.site.defaultTheme);
+          // Enforce single theme
+          document.documentElement.dataset.theme = "silver";
           if (!d.site.introEnabled) setIntro(false);
         }
       })

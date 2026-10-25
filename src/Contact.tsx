@@ -12,6 +12,12 @@ import {
   Layers,
   ShoppingBag,
   Sparkles,
+  Utensils,
+  Store,
+  GraduationCap,
+  Calendar,
+  Code,
+  HelpCircle,
 } from "lucide-react";
 import { useSite, Arrow } from "./App";
 import {
@@ -74,7 +80,7 @@ export default function Contact() {
       );
       if (match) return match.label;
     }
-    return categories[2]?.label || "Business Website";
+    return ""; // Phase 6: No default selection
   }, [params, categories]);
 
   // Form State
@@ -272,6 +278,18 @@ export default function Contact() {
         return <Layers size={18} />;
       case "ecommerce":
         return <ShoppingBag size={18} />;
+      case "restaurant":
+        return <Utensils size={18} />;
+      case "shop":
+        return <Store size={18} />;
+      case "educational":
+        return <GraduationCap size={18} />;
+      case "booking":
+        return <Calendar size={18} />;
+      case "custom":
+        return <Code size={18} />;
+      case "not_sure":
+        return <HelpCircle size={18} />;
       default:
         return <Sparkles size={18} />;
     }
@@ -479,7 +497,7 @@ export default function Contact() {
 
                   {/* Exactly 5 Main Website Category Cards */}
                   <div className="builder-categories-grid">
-                    {categories.slice(0, 5).map((cat) => {
+                    {categories.map((cat) => {
                       const isSelected = form.selectedCategory === cat.label;
                       return (
                         <div
@@ -524,6 +542,21 @@ export default function Contact() {
                     })}
                   </div>
 
+                  {form.selectedCategory === "Other / Custom Website" && (
+                    <div style={{ marginTop: 18, background: "var(--soft)", padding: 16, borderRadius: 8, border: "1px solid var(--line)" }}>
+                      <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                        Tell us what kind of custom website you have in mind:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Real Estate Portal, Event Booking, Community Hub..."
+                        value={form.otherFeatureText}
+                        onChange={(e) => update("otherFeatureText", e.target.value)}
+                        style={{ width: "100%", padding: "10px 12px" }}
+                      />
+                    </div>
+                  )}
+
                   {status && (
                     <p role="alert" className="status" style={{ color: "var(--accent)", marginBottom: 16 }}>
                       {status}
@@ -531,8 +564,8 @@ export default function Contact() {
                   )}
 
                   <div className="form-actions" style={{ justifyContent: "flex-end" }}>
-                    <button type="submit" className="button">
-                      Continue to Step 2: Choose Features <ArrowRight size={18} />
+                    <button type="submit" className="button" disabled={!form.selectedCategory}>
+                      {form.selectedCategory ? "Continue to Step 2: Tell Us About Your Idea" : "Select a Website Type to Continue"} <ArrowRight size={18} />
                     </button>
                   </div>
                 </form>
