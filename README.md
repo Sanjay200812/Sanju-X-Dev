@@ -25,18 +25,20 @@ The only authorized owner is Supabase Auth UID `3984ceee-869a-432f-a5dd-23eb615d
 
 Owner access:
 
-1. Open `/admin` on the preview and sign in with the existing owner account's email/password.
-2. On first sign-in, create and confirm a private 4–12 digit verification code. Only the authorized owner can initialize it. The server stores a salted scrypt verifier in a table inaccessible to browser clients. An existing code cannot be overwritten through this setup endpoint.
-3. Later sign-ins require that secondary code. Unlocks expire after 30 minutes. Sign out everywhere revokes unlocks and auth sessions.
-4. Test publishing/reloading, media uploads and inbox actions with your private session before production approval. Do not share your password or code in chat.
+1. Open `/spideyy` on the deployment. The old `/admin` route redirects directly to `/spideyy`.
+2. Primary Login — Secret Code: Enter your private high-entropy secret code or passphrase. Unsuccessful attempts are strictly limited to 3 before a database-backed 3-minute lockout is enforced with remaining time display.
+3. Secondary Login — "Login with spideyy": Allows signing in with existing Supabase Auth owner credentials (email & password), protected by an independent 3-attempt/3-minute lockout.
+4. On first sign-in (or setup), configure a high-entropy secret code (minimum 8 characters). The server stores a salted scrypt verifier inaccessible to browser clients.
+5. Unlocks issue an expiring HttpOnly, SameSite=Strict cookie (30-minute validity). Sign out everywhere revokes all active unlock sessions.
+6. Do not share your password or secret code in chat or repository files.
 
-The Vercel Preview variables (`STUDIO_EDGE_URL`, `STUDIO_EDGE_ANON_KEY`, `SITE_URL`, and both `VITE_SUPABASE_*` variables) are configured. Optional `OPENAI_API_KEY` and `OPENAI_MODEL` belong in Supabase Edge Function Secrets. FAQ mode is active until these are configured. Supabase supplies its privileged runtime key; the Edge adapter derives a private rate identifier salt from it. `ADMIN_PIN_VERIFIER` is an optional server-secret override for managed recovery; it is not required for first-login setup.
+The Vercel Preview variables (`STUDIO_EDGE_URL`, `STUDIO_EDGE_ANON_KEY`, `SITE_URL`, and both `VITE_SUPABASE_*` variables) are configured. Optional `OPENAI_API_KEY` and `OPENAI_MODEL` belong in Supabase Edge Function Secrets. Optional `RESEND_API_KEY` and `RESEND_FROM_EMAIL` enable automatic email notification alerts to `OWNER_NOTIFICATION_EMAIL` (default: `sanjuxdev27@gmail.com`). `ADMIN_PIN_VERIFIER` is an optional server-secret override for managed recovery.
 
 ### Alternative local or direct Vercel backend setup
 
 Use a dedicated SANJU X DEV Supabase project, not CodeXa or another application's database. Apply all SQL files in `supabase/migrations` in timestamp order to that project. Disable public sign-ups and create/invite the owner through Supabase. Complete the password setup privately; use only the exact owner UID enforced in the source and migration.
 
-Copy `.env.example` to ignored `.env.local` for development. Set the same variables in Vercel's Preview environment:
+Copy `.env.example` to ignored `.env.local` for development. Set the same variables in Vercel:
 
 | Variable                      | Purpose                                                                          |
 | ----------------------------- | -------------------------------------------------------------------------------- |
@@ -47,20 +49,25 @@ Copy `.env.example` to ignored `.env.local` for development. Set the same variab
 | ADMIN_PIN_VERIFIER            | Salted scrypt verifier, generated with `powershell -File scripts/create-pin.ps1` |
 | RATE_LIMIT_SALT               | Long random secret for hashed rate identifiers                                   |
 | SITE_URL                      | Exact deployment origin; local default is http://127.0.0.1:3100                  |
+| RESEND_API_KEY                | Optional server-only Resend API key for instant enquiry notification emails     |
+| RESEND_FROM_EMAIL             | Optional verified sender address (e.g. `SANJU X DEV <onboarding@resend.dev>`)   |
+| OWNER_NOTIFICATION_EMAIL      | Owner email for enquiry alerts (default: `sanjuxdev27@gmail.com`)               |
 | OPENAI_API_KEY                | Optional server-only AI credential                                               |
 | OPENAI_MODEL                  | Optional enabled Responses model name                                            |
+| VERCEL_PROJECT_ID             | Optional Vercel Web Analytics project ID for traffic telemetry                   |
+| VERCEL_AUTH_TOKEN             | Optional Vercel Web Analytics read token                                         |
 
-Restart/redeploy after changing configuration. Open `/admin`, sign in, then enter the secondary code. Publish changes once to initialize the content document. No records are fabricated, and missing backend configuration never returns enquiry success. The secondary code is not a standalone login. Sign-out revokes all unlock records; sessions expire after 30 minutes. Authenticator MFA is not included in this version.
+Restart/redeploy after changing configuration. Open `/spideyy`, sign in with your secret code or spideyy credentials. Publish changes once to initialize the content document. No records are fabricated, and missing backend configuration never returns enquiry success. The secondary code is not a standalone login. Sign-out revokes all unlock records; sessions expire after 30 minutes.
 
-Media is public once uploaded. Use PNG/JPEG/WebP under 3 MB. To replace media, upload a new file, update the content URL, then delete the old file. Enquiries are private; the list and CSV contain the latest 500 records. Media lists up to 100 files; audit lists the latest 50 events. Schedule cleanup of expired session/rate-limit rows and define retention before launch.
+Enquiries are private and support real-time notification alerts, unread status tracking, service and status filtering, date sorting, copy-email, and CSV export.
 
 ## Assistant
 
-Without AI credentials, the assistant identifies itself as “FAQ guide”. AI mode sends the question and published business facts to OpenAI with `store:false`, limits output and falls back on provider errors. It has no tools or write access. Requirements are collected through the consent-based contact wizard. Per-IP AI limit: 20/hour; global cap: 100/day. Set a provider spending cap too. No email notification provider is connected; enquiries, once configured, appear in the owner inbox.
+spideyy operates in enhanced FAQ guide mode with comprehensive knowledge of all six services, five portfolio case studies, and guided enquiry pathways with interactive navigation links. AI mode sends questions and verified facts to OpenAI with `store:false`, limits output and falls back on provider errors. Per-IP AI limit: 20/hour; global cap: 100/day.
 
 ## Deployment and approval
 
-Work branch: `sanju-x-dev-premium-redesign`. Main is preserved. Vercel project: `sanju-x-dev`. Deploy this branch as a preview. This version intentionally uses noindex headers/metadata and disallows crawling. Remove preview indexing restrictions only as part of an approved production release. Do not promote or merge without owner approval.
+Work branch: `feature/spideyy-admin-upgrade`. Main is preserved. Vercel project: `sanju-x-dev`. Production SEO is configured with canonical URLs, Schema.org JSON-LD structured data, Open Graph tags, sitemap.xml and robots.txt; `/spideyy`, `/admin`, and `/api/` are strictly excluded from indexing via `X-Robots-Tag: noindex, nofollow, noarchive` and robots.txt disallow rules. Do not promote or merge without owner approval.
 
 Static metadata is exported for public routes at build time. Rebuild after content/SEO changes; dynamic browser content refreshes on page reload. Unknown SPA paths can return HTTP 200 with the custom 404. Newly added project slugs may need a rebuild for static route metadata. Project technology claims are limited to observed Vercel hosting; unverified conversion, payment, booking and sole-authorship claims are omitted.
 

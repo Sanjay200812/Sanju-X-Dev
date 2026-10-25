@@ -10,6 +10,7 @@ import {
 import {
   Link,
   NavLink,
+  Navigate,
   Route,
   Routes,
   useLocation,
@@ -100,7 +101,6 @@ function Footer() {
             Instagram ↗
           </a>
           <Link to="/privacy">Privacy</Link>
-          <Link to="/admin">Owner access</Link>
         </div>
         <small>© {new Date().getFullYear()} SANJU X DEV</small>
       </div>
@@ -688,7 +688,8 @@ export default function App() {
                   "/services": "Services",
                   "/contact": "Start a Project",
                   "/privacy": "Privacy",
-                  "/admin": "Owner workspace",
+                  "/spideyy": "spideyy — Private Access",
+                  "/admin": "spideyy — Private Access",
                 } as Record<string, string>
               )[loc.pathname] ?? "Page not found")) + " — ") + site.seoTitle;
   }, [loc.pathname, site]);
@@ -767,7 +768,7 @@ export default function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route
-              path="/admin"
+              path="/spideyy"
               element={
                 <Suspense
                   fallback={
@@ -778,13 +779,14 @@ export default function App() {
                 </Suspense>
               }
             />
+            <Route path="/admin" element={<Navigate to="/spideyy" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />
-        {site.assistantEnabled && !loc.pathname.startsWith("/admin") && (
-          <Assistant />
-        )}
+        {site.assistantEnabled &&
+          !loc.pathname.startsWith("/spideyy") &&
+          !loc.pathname.startsWith("/admin") && <Assistant />}
       </div>
     </Context.Provider>
   );

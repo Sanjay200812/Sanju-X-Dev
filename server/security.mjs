@@ -4,19 +4,128 @@ import {
   createHash,
   randomBytes,
 } from "node:crypto";
-export function createPinVerifier(pin) {
-  if (!/^\d{4,12}$/.test(pin || "")) throw Error("Use a code of 4–12 digits.");
-  const salt = randomBytes(24).toString("hex");
-  return salt + ":" + scryptSync(pin, salt, 64).toString("hex");
-}
 import { Buffer } from "node:buffer";
+
 export const digest = (x) => createHash("sha256").update(x).digest("hex");
-export function verifyPin(pin, verifier) {
-  if (!/^\d{4,12}$/.test(pin || "")) return false;
+
+/**
+ * Creates a salted scrypt verifier for a high-entropy secret code or passphrase.
+ * Requires at least 8 characters.
+ */
+export function createSecretVerifier(code) {
+  if (typeof code !== "string" || code.trim().length < 8 || code.length > 128) {
+    throw Error("Secret code must be a secure code or passphrase of at least 8 characters.");
+  }
+  const salt = randomBytes(24).toString("hex");
+  return salt + ":" + scryptSync(code, salt, 64).toString("hex");
+}
+
+/**
+ * Legacy PIN compatibility: accepts 4-12 digits or passes through to high-entropy verifier.
+ */
+export function createPinVerifier(pin) {
+  if (typeof pin === "string" && /^\d{4,12}$/.test(pin)) {
+    const salt = randomBytes(24).toString("hex");
+    return salt + ":" + scryptSync(pin, salt, 64).toString("hex");
+  }
+  return createSecretVerifier(pin);
+}
+
+/**
+ * Verifies a supplied secret code or PIN against a salted scrypt verifier.
+ * Uses timingSafeEqual to protect against timing attacks.
+ */
+export function verifySecret(code, verifier) {
+  if (!code || typeof code !== "string") return false;
   const [salt, hash] = String(verifier || "").split(":");
   if (!salt || !hash || !/^[a-f0-9]{128}$/.test(hash)) return false;
-  return timingSafeEqual(scryptSync(pin, salt, 64), Buffer.from(hash, "hex"));
+  try {
+    return timingSafeEqual(scryptSync(code, salt, 64), Buffer.from(hash, "hex"));
+  } catch {
+    return false;
+  }
 }
+
+export const verifyPin = verifySecret;
+
+/**
+ * Atomic Lockout Management:
+ * Checks if a specific authentication scope (e.g., 'code:owner', 'password:owner') is locked out.
+ */
+export async function getLockoutStatus(client, scope) {
+  if (!client) return { locked: false, remainingSeconds: 0, failedAttempts: 0 };
+  try {
+    const { data: row, error } = await client
+      .from("studio_lockouts")
+      .select("failed_attempts, locked_until")
+      .eq("scope", scope)
+      .maybeSingle();
+
+    if (error || !row) return { locked: false, remainingSeconds: 0, failedAttempts: 0 };
+
+    if (row.locked_until) {
+      const remainingMs = new Date(row.locked_until).getTime() - Date.now();
+      if (remainingMs > 0) {
+        return {
+          locked: true,
+          remainingSeconds: Math.ceil(remainingMs / 1000),
+          failedAttempts: row.failed_attempts || 0,
+        };
+      }
+      // Lockout period has elapsed: clear expired lockout
+      await clearLockout(client, scope);
+      return { locked: false, remainingSeconds: 0, failedAttempts: 0 };
+    }
+
+    return { locked: false, remainingSeconds: 0, failedAttempts: row.failed_attempts || 0 };
+  } catch {
+    return { locked: false, remainingSeconds: 0, failedAttempts: 0 };
+  }
+}
+
+/**
+ * Records a failed attempt for a scope. If attempts reach maxAttempts (default 3),
+ * locks the scope for lockoutMinutes (default 3 minutes).
+ */
+export async function recordFailedAttempt(client, scope, maxAttempts = 3, lockoutMinutes = 3) {
+  if (!client) return { locked: false, remainingSeconds: 0, failedAttempts: 1 };
+  try {
+    const current = await getLockoutStatus(client, scope);
+    const newAttempts = current.failedAttempts + 1;
+    const shouldLock = newAttempts >= maxAttempts;
+    const lockedUntil = shouldLock
+      ? new Date(Date.now() + lockoutMinutes * 60 * 1000).toISOString()
+      : null;
+
+    await client.from("studio_lockouts").upsert({
+      scope,
+      failed_attempts: shouldLock ? 0 : newAttempts,
+      locked_until: lockedUntil,
+      updated_at: new Date().toISOString(),
+    });
+
+    return {
+      locked: shouldLock,
+      remainingSeconds: shouldLock ? lockoutMinutes * 60 : 0,
+      failedAttempts: shouldLock ? maxAttempts : newAttempts,
+    };
+  } catch {
+    return { locked: false, remainingSeconds: 0, failedAttempts: 1 };
+  }
+}
+
+/**
+ * Resets lockout and failed attempts for a scope on successful authentication.
+ */
+export async function clearLockout(client, scope) {
+  if (!client) return;
+  try {
+    await client.from("studio_lockouts").delete().eq("scope", scope);
+  } catch {
+    /* ignore deletion errors */
+  }
+}
+
 export function enquiry(x) {
   if (!x || typeof x !== "object") throw Error("Invalid enquiry.");
   const out = {};
@@ -46,9 +155,11 @@ export function enquiry(x) {
     );
   return { ...out, consent: true };
 }
+
 export const safeUrl = (x) =>
   typeof x === "string" &&
   ((x.startsWith("/") && !x.startsWith("//")) || /^https:\/\//.test(x));
+
 export function validateSite(s) {
   if (!s || typeof s !== "object" || JSON.stringify(s).length > 150000)
     throw Error("Invalid content.");

@@ -57,7 +57,10 @@ export default function Assistant() {
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
       setMode(d.mode);
-      setMessages((m) => [...m, { role: "assistant", text: d.answer }]);
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", text: d.answer, links: d.links || [] },
+      ]);
     } catch {
       setMode("FAQ guide");
       setMessages((m) => [
@@ -65,6 +68,10 @@ export default function Assistant() {
         {
           role: "assistant",
           text: "I couldn’t reach the assistant service. You can explore all five case studies in Our Work or send a project brief through Contact.",
+          links: [
+            { label: "Our Work", url: "/work" },
+            { label: "Contact", url: "/contact" },
+          ],
         },
       ]);
     } finally {
@@ -108,10 +115,34 @@ export default function Assistant() {
           </div>
           <div className="chat-body">
             <div aria-live="polite">
-              {messages.map((m, i) => (
-                <p key={i} className={m.role === "user" ? "user" : ""}>
-                  {m.text}
-                </p>
+              {messages.map((m: any, i: number) => (
+                <div key={i}>
+                  <p className={m.role === "user" ? "user" : ""}>{m.text}</p>
+                  {m.links && m.links.length > 0 && (
+                    <div className="chat-suggestions" style={{ marginBottom: 12 }}>
+                      {m.links.map((lnk: any, li: number) =>
+                        lnk.url.startsWith("http") ? (
+                          <a
+                            key={li}
+                            href={lnk.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {lnk.label}
+                          </a>
+                        ) : (
+                          <Link
+                            key={li}
+                            to={lnk.url}
+                            onClick={() => setOpen(false)}
+                          >
+                            {lnk.label}
+                          </Link>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
               ))}
               {busy && <p>Thinking…</p>}
             </div>
