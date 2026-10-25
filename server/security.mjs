@@ -1,4 +1,5 @@
 import { scryptSync, timingSafeEqual, createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 export const digest = (x) => createHash("sha256").update(x).digest("hex");
 export function verifyPin(pin, verifier) {
   if (!/^\d{4,12}$/.test(pin || "")) return false;

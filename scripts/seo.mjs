@@ -1,5 +1,15 @@
 import fs from "node:fs/promises";
-import seed from "../server/seed.json" with { type: "json" };
+import defaults from "../server/seed.json" with { type: "json" };
+let seed = defaults;
+if (process.env.STUDIO_EDGE_URL && process.env.STUDIO_EDGE_ANON_KEY) {
+  const response = await fetch(process.env.STUDIO_EDGE_URL + "/api/site", {
+    headers: { Authorization: "Bearer " + process.env.STUDIO_EDGE_ANON_KEY },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok)
+    throw new Error("Published content could not be loaded for SEO export");
+  seed = (await response.json()).site;
+}
 const html = await fs.readFile("dist/index.html", "utf8");
 const escape = (s) =>
   s.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");

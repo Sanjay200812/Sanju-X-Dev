@@ -3,7 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/work/:slug", "destination": "/work/:slug/index.html" },
+    { "source": "/work/:slug", "destination": "/index.html" },
     { "source": "/work", "destination": "/work/index.html" },
     { "source": "/about", "destination": "/about/index.html" },
     { "source": "/services", "destination": "/services/index.html" },

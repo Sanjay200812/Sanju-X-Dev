@@ -1,8 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
+import process from "node:process";
+import { Buffer } from "node:buffer";
 import { digest, verifyPin, enquiry, validateSite } from "./security.mjs";
 import seed from "./seed.json" with { type: "json" };
-const env = () => process.env;
+let runtimeEnvironment;
+export const configureEnvironment = (values) => {
+  runtimeEnvironment = values;
+};
+const env = () => runtimeEnvironment || process.env;
 const db = () => {
   const e = env();
   return e.SUPABASE_URL && e.SUPABASE_SERVICE_ROLE_KEY
@@ -37,7 +43,11 @@ async function rate(client, req, scope, max) {
   const ip = String(
     req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown",
   ).split(",")[0];
-  const key = digest(env().RATE_LIMIT_SALT + scope + ip);
+  const key = digest(
+    env().RATE_LIMIT_SALT +
+      scope +
+      (scope.startsWith("pin:") || scope === "enquiry-global" ? "" : ip),
+  );
   const allowed = await checked(
     client.rpc("studio_limit", { key_value: key, maximum: max, seconds: 3600 }),
   );
@@ -128,6 +138,7 @@ export default async function handler(req, res) {
           "Enquiries are not connected yet. Please email sanjuxdev27@gmail.com.",
         );
       await rate(client, req, "enquiry", 5);
+      await rate(client, req, "enquiry-global", 100);
       await checked(
         client.from("studio_enquiries").insert({ data, status: "new" }),
       );
@@ -215,14 +226,12 @@ export default async function handler(req, res) {
           throw fail(403, "Verification code was not accepted.");
         const token = randomBytes(32).toString("hex");
         await checked(
-          client
-            .from("studio_sessions")
-            .insert({
-              hash: digest(token),
-              owner_id: user.id,
-              auth_session: user.session,
-              expires_at: new Date(Date.now() + 1800000).toISOString(),
-            }),
+          client.from("studio_sessions").insert({
+            hash: digest(token),
+            owner_id: user.id,
+            auth_session: user.session,
+            expires_at: new Date(Date.now() + 1800000).toISOString(),
+          }),
         );
         res.setHeader(
           "Set-Cookie",
@@ -278,13 +287,11 @@ export default async function handler(req, res) {
         case "save": {
           const content = validateSite(body.site);
           await checked(
-            client
-              .from("studio_content")
-              .upsert({
-                id: "site",
-                data: content,
-                updated_at: new Date().toISOString(),
-              }),
+            client.from("studio_content").upsert({
+              id: "site",
+              data: content,
+              updated_at: new Date().toISOString(),
+            }),
           );
           await audit(client, "Website content published");
           break;
