@@ -461,7 +461,8 @@ export const defaults = {
   about:
     "SANJU X DEV is a web development and digital solutions business. We bring design and engineering together to create clear, engaging experiences for businesses and their customers.",
   email: "sanjuxdev27@gmail.com",
-  instagram: "https://instagram.com/sanju_x_dev/",
+  instagram: "https://www.instagram.com/sanju_x_dev/",
+  facebook: "https://www.facebook.com/sanju.x.dev",
   defaultTheme: "silver",
   introEnabled: true,
   assistantEnabled: true,

@@ -20,6 +20,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useSite, Arrow } from "./App";
+import { InstagramIcon, FacebookIcon, MailIcon } from "./Decorations";
 import {
   DEFAULT_WEBSITE_CATEGORIES,
   DESIGN_STYLES,
@@ -318,6 +319,7 @@ export default function Contact() {
       <div className="contact-grid">
         {/* Left Column: Context & Helpful Links */}
         <aside className="contact-aside">
+          <div className="paper-tape-pin" aria-hidden="true" />
           <h2>
             Simple, honest<br />
             consultation.
@@ -328,16 +330,52 @@ export default function Contact() {
             can focus on your business or brand.
           </p>
 
-          <a href={"mailto:" + s.email}>{s.email}</a>
+          <div className="contact-social-links">
+            <a href={"mailto:" + s.email} className="contact-social-card" aria-label="Direct email">
+              <span className="contact-social-icon"><MailIcon size={18} /></span>
+              <div className="contact-social-info">
+                <span className="contact-social-label">Email</span>
+                <span className="contact-social-val">{s.email}</span>
+              </div>
+            </a>
 
-          <div style={{ marginTop: 28 }}>
+            <a
+              href={s.instagram || "https://www.instagram.com/sanju_x_dev/"}
+              target="_blank"
+              rel="noreferrer"
+              className="contact-social-card"
+              aria-label="Instagram profile"
+            >
+              <span className="contact-social-icon"><InstagramIcon size={18} /></span>
+              <div className="contact-social-info">
+                <span className="contact-social-label">Instagram</span>
+                <span className="contact-social-val">@sanju_x_dev</span>
+              </div>
+            </a>
+
+            <a
+              href={(s as any).facebook || "https://www.facebook.com/sanju.x.dev"}
+              target="_blank"
+              rel="noreferrer"
+              className="contact-social-card"
+              aria-label="Facebook page"
+            >
+              <span className="contact-social-icon"><FacebookIcon size={18} /></span>
+              <div className="contact-social-info">
+                <span className="contact-social-label">Facebook</span>
+                <span className="contact-social-val">sanju_x_dev</span>
+              </div>
+            </a>
+          </div>
+
+          <div style={{ marginTop: 24 }}>
             <p style={{ margin: "6px 0 10px 0" }}>Already have an SXD enquiry?</p>
             <Link className="text-link" to="/track">
               Track project status <Arrow />
             </Link>
           </div>
 
-          <p style={{ marginTop: 20 }}>Prefer to explore our work first?</p>
+          <p style={{ marginTop: 18 }}>Prefer to explore our work first?</p>
           <Link className="text-link" to="/work">
             See our portfolio <Arrow />
           </Link>

@@ -2081,6 +2081,7 @@ export default function Admin() {
               {field("about", "About page summary text", true)}
               {field("email", "Business contact email address")}
               {field("instagram", "Official Instagram URL")}
+              {field("facebook", "Official Facebook URL")}
             </div>
           )}
 

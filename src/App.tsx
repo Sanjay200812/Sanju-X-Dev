@@ -32,12 +32,27 @@ import { defaults, projects as seed } from "./content";
 import Contact from "./Contact";
 import Assistant from "./Assistant";
 import { ChatProvider, useChat } from "./chat-context";
+import {
+  CompassStar,
+  PostmarkStamp,
+  BotanicalSprig,
+  WashiTape,
+  TornMemoScrap,
+  StudioEngraving,
+  InstagramIcon,
+  FacebookIcon,
+  MailIcon,
+} from "./Decorations";
+
 const Admin = lazy(() => import("./Admin"));
 const Track = lazy(() => import("./Track"));
+
 export type Site = typeof defaults;
 export const Context = createContext(defaults);
 export const useSite = () => useContext(Context);
-export const Arrow = () => <ArrowUpRight size={19} aria-hidden="true" />;
+
+export const Arrow = () => <ArrowUpRight size={18} aria-hidden="true" />;
+
 export function CTA({
   text = "Start a conversation",
   to = "/contact",
@@ -54,21 +69,25 @@ export function CTA({
     </Link>
   );
 }
+
 function Brand() {
   return (
     <Link to="/" className="brand" aria-label="SANJU X DEV home">
-      <img src="/media/official-logo.webp" alt="" />
-      <span>
-        SANJU <b>X</b> DEV<small>DESIGN & DIGITAL DEVELOPMENT</small>
+      <CompassStar size={26} className="brand-compass-star" />
+      <span className="brand-copy">
+        <span className="brand-title">SANJU X DEV</span>
+        <span className="brand-sub">IDEAS · CODE · DESIGN · PEOPLE</span>
       </span>
     </Link>
   );
 }
+
 function Affiliation() {
   return (
-    <section className="affiliation">
+    <section className="affiliation-scrapbook">
+      <div className="washi-tape-strip top-center" aria-hidden="true" />
       <span className="eyebrow">A separate professional affiliation</span>
-      <div>
+      <div className="affiliation-content">
         <h2>
           Co-Founder <span>— CodeXa Agency</span>
         </h2>
@@ -77,16 +96,27 @@ function Affiliation() {
           association, alongside SANJU X DEV.
         </p>
       </div>
-      <a href="https://codxa-agency.online/" target="_blank" rel="noreferrer">
+      <a
+        href="https://codxa-agency.online/"
+        target="_blank"
+        rel="noreferrer"
+        className="affiliation-link"
+      >
         Explore CodeXa <Arrow />
       </a>
     </section>
   );
 }
+
 function Footer() {
   const s = useSite();
+  const facebookUrl =
+    (s as any).facebook || "https://www.facebook.com/sanju.x.dev";
+  const instagramUrl =
+    s.instagram || "https://www.instagram.com/sanju_x_dev/";
+
   return (
-    <footer>
+    <footer className="scrapbook-footer">
       <div className="footer-top">
         <span className="eyebrow">Good things start with a conversation</span>
         <Link to="/contact" className="footer-title">
@@ -94,23 +124,57 @@ function Footer() {
           <br />
           for your business? <ArrowUpRight />
         </Link>
-        <a href={"mailto:" + s.email}>{s.email}</a>
+        <div className="footer-contact-actions">
+          <a
+            href={"mailto:" + s.email}
+            className="footer-contact-badge"
+            aria-label="Direct email"
+          >
+            <MailIcon size={16} />
+            <span>{s.email}</span>
+          </a>
+          <a
+            href={instagramUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="footer-contact-badge"
+            aria-label="Instagram profile"
+          >
+            <InstagramIcon size={16} />
+            <span>@sanju_x_dev</span>
+          </a>
+          <a
+            href={facebookUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="footer-contact-badge"
+            aria-label="Facebook page"
+          >
+            <FacebookIcon size={16} />
+            <span>sanju_x_dev</span>
+          </a>
+        </div>
       </div>
       <div className="footer-bottom">
         <Brand />
-        <span>Digital Experiences. Designed to Stand Out.</span>
-        <div>
-          <a href={s.instagram} target="_blank" rel="noreferrer">
-            Instagram ↗
-          </a>
+        <span className="footer-tagline">
+          Thoughtful Design. Powerful Digital Experiences.
+        </span>
+        <div className="footer-nav-links">
+          <Link to="/">Home</Link>
+          <Link to="/work">Our Work</Link>
+          <Link to="/services">Services</Link>
+          <Link to="/about">About</Link>
+          <Link to="/contact">Contact</Link>
           <Link to="/track">Track Project</Link>
           <Link to="/privacy">Privacy</Link>
         </div>
-        <small>© {new Date().getFullYear()} SANJU X DEV</small>
+        <small>© {new Date().getFullYear()} SANJU X DEV. All rights reserved.</small>
       </div>
     </footer>
   );
 }
+
 export function Device({
   p,
   hero = false,
@@ -187,6 +251,7 @@ export function Device({
     </div>
   );
 }
+
 function HomepageAiConsole({ questions }: { questions?: string[] }) {
   const { messages, busy, mode, ask, setFloatingOpen } = useChat();
   const [query, setQuery] = useState("");
@@ -208,7 +273,6 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
     void ask(target);
   };
 
-  // Filter to questions asked during this active session
   const conversationTurns = messages.filter(
     (m) => m.role === "user" || (m.role === "assistant" && m.timestamp),
   );
@@ -216,8 +280,8 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
     conversationTurns.length > 0 ? conversationTurns.slice(-4) : [];
 
   return (
-    <div className="home-ai-card" aria-label="spideyy AI Assistant">
-      <div className="home-ai-header">
+    <div className="home-ai-scrapbook-card" aria-label="Spideyy Assistant">
+      <div className="home-ai-card-header">
         <div className="home-ai-badge">
           <img className="spider" src="/media/spideyy.svg" alt="" />
           <div>
@@ -227,7 +291,7 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
         </div>
         <span className="home-ai-status-pill">
           <span className="live-dot" />{" "}
-          {mode === "AI assistant" ? "AI Online" : "spideyy Active"}
+          {mode === "AI assistant" ? "AI Online" : "Spideyy Active"}
         </span>
       </div>
 
@@ -244,7 +308,7 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
           className="home-ai-input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ask Spideyy about websites, services or your project idea..."
+          placeholder="Ask Spideyy about websites, features, or your project idea..."
           aria-label="Ask spideyy a question"
           disabled={busy}
         />
@@ -254,12 +318,12 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
           disabled={busy || !query.trim()}
           aria-label="Send question to spideyy"
         >
-          <ArrowUp size={20} />
+          <ArrowUp size={18} />
         </button>
       </form>
 
       <div className="home-ai-chips-wrap">
-        <span className="home-ai-chips-label">Try asking:</span>
+        <span className="home-ai-chips-label">Quick questions:</span>
         <div className="home-ai-chips">
           {exampleList.map((qText, idx) => (
             <button
@@ -275,13 +339,12 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
         </div>
       </div>
 
-      {/* Live Conversation Stream right inside homepage */}
       {(busy || latestTurns.length > 0) && (
         <div className="home-ai-stream" aria-live="polite">
           {latestTurns.map((turn, tIdx) => (
-            <div key={tIdx} className={`home-ai-message ${turn.role}`}>
+            <div key={tIdx} className={"home-ai-message " + turn.role}>
               <div className="home-ai-msg-role">
-                {turn.role === "user" ? "You" : "spideyy"}
+                {turn.role === "user" ? "You" : "Spideyy"}
               </div>
               <div className="home-ai-msg-text">
                 {turn.text.split("\n").map((line, li) => (
@@ -305,7 +368,14 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
                         {lnk.label}
                       </a>
                     ) : (
-                      <Link key={lIdx} to={lnk.url} className={`home-ai-link ${lnk.label.includes("Start") ? "action-primary" : ""}`}>
+                      <Link
+                        key={lIdx}
+                        to={lnk.url}
+                        className={
+                          "home-ai-link " +
+                          (lnk.label.includes("Start") ? "action-primary" : "")
+                        }
+                      >
                         {lnk.label} <Arrow />
                       </Link>
                     ),
@@ -316,7 +386,7 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
           ))}
           {busy && (
             <div className="home-ai-message assistant thinking">
-              <span className="live-dot" /> spideyy is thinking…
+              <span className="live-dot" /> Spideyy is thinking…
             </div>
           )}
           <div className="home-ai-footer-actions">
@@ -339,163 +409,268 @@ function Home() {
   const p = s.projects
     .filter((p) => p.published)
     .sort((a, b) => a.order - b.order);
+
+  const [heroMobile, setHeroMobile] = useState(false);
+  const heroProject = p[0] || seed[0];
+
+  const featuredCards = [
+    p.find((x) => x.slug === "ticketx") || p[1] || seed[1],
+    p.find((x) => x.slug === "starx-connect") || p[2] || seed[2],
+    p.find((x) => x.slug === "audiox") || p[3] || seed[3],
+  ];
+
   return (
-    <>
-      <section className="hero wrap hero-centered-layout">
-        <div className="hero-meta hero-centered-meta">
-          <span className="eyebrow">
-            SANJU X DEV · DESIGN & DIGITAL DEVELOPMENT
-          </span>
-          <span className="availability">
-            <i /> Let’s build your next chapter
-          </span>
+    <div className="scrapbook-page-canvas">
+      {/* HERO SECTION — ASYMMETRIC EDITORIAL COLLAGE MATCHING IMAGE 2 */}
+      <section className="scrapbook-hero wrap">
+        {/* Left Margin Pressed Botanical & Map Accent */}
+        <div className="hero-left-botanical-scrap" aria-hidden="true">
+          <div className="map-paper-texture" />
+          <BotanicalSprig className="left-sprig" />
         </div>
-        <div className="hero-centered-content">
-          <h1 className="hero-centered-title">
-            {s.headline.split("\n").map((line, i) => (
-              <span key={i}>{line}</span>
-            ))}
-          </h1>
-          <p className="hero-centered-intro">{s.intro}</p>
-          <div className="hero-centered-actions">
-            <CTA text="Explore Our Work" to="/work" />
-            <Link to="/contact" className="button secondary">
-              Start a Project <ArrowRight size={18} />
+
+        {/* HERO LEFT COLUMN */}
+        <div className="hero-left-column">
+          <div className="hero-top-kicker">
+            <span className="hero-est">EST. 2024</span>
+          </div>
+
+          <div className="hero-title-wrap">
+            <h1 className="hero-editorial-headline">
+              <span>Design.</span>
+              <span>Develop.</span>
+              <span>Create.</span>
+            </h1>
+            <div className="hero-cursive-note" aria-hidden="true">
+              Good Design
+              <br />
+              Brighter Days
+            </div>
+          </div>
+
+          <p className="hero-intro-paragraph">
+            SANJU X DEV creates thoughtfully designed websites, intuitive
+            applications and digital experiences that help ideas and businesses
+            stand out.
+          </p>
+
+          <div className="hero-cta-group">
+            <Link to="/work" className="btn-scrapbook-primary">
+              Explore Our Work <ArrowRight size={17} />
+            </Link>
+            <div className="hero-sub-cta">
+              <Link to="/contact" className="btn-scrapbook-secondary">
+                Start Your Project
+              </Link>
+              <span className="hero-subtext-stamp">
+                THOUGHTFUL DESIGN · REAL IMPACT
+              </span>
+            </div>
+          </div>
+
+          {/* Naturally Integrated Compact Spideyy Input */}
+          <div className="hero-spideyy-embed">
+            <HomepageAiConsole questions={(s as any).homepageQuestions} />
+          </div>
+        </div>
+
+        {/* HERO RIGHT COLUMN — SCRAPBOOK COLLAGE MATCHING IMAGE 2 */}
+        <div className="hero-right-collage" aria-label="Creative studio collage">
+          {/* Postmark stamp top-right with handwritten annotation */}
+          <div className="collage-stamp-group">
+            <PostmarkStamp className="hero-postmark" />
+            <span className="hero-stamp-note">Same Person Different Ideas ...</span>
+          </div>
+
+          {/* Central Polaroid Photo Frame showcasing real StarX Live website */}
+          <div className="polaroid-frame-wrap">
+            <WashiTape className="tape-top-center" />
+            <div className="polaroid-frame">
+              <div className="polaroid-browser-header">
+                <div className="polaroid-browser-dots">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <span className="polaroid-browser-url">
+                  {heroProject.short} · {heroMobile ? "Mobile" : "Desktop"}
+                </span>
+                <div className="polaroid-view-toggle">
+                  <button
+                    type="button"
+                    className={!heroMobile ? "active" : ""}
+                    onClick={() => setHeroMobile(false)}
+                    aria-label="View desktop screenshot"
+                  >
+                    <Monitor size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className={heroMobile ? "active" : ""}
+                    onClick={() => setHeroMobile(true)}
+                    aria-label="View mobile screenshot"
+                  >
+                    <Smartphone size={13} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="polaroid-photo-canvas">
+                <img
+                  src={heroMobile ? heroProject.mobile : heroProject.image}
+                  alt={heroProject.name + " real website showcase"}
+                  className="polaroid-img"
+                  loading="eager"
+                />
+              </div>
+
+              <div className="polaroid-caption">
+                <span className="polaroid-handwriting">
+                  Still building a kinder internet. ☺
+                </span>
+                <Link
+                  to={"/work/" + heroProject.slug}
+                  className="polaroid-case-link"
+                  title="View full case study"
+                >
+                  View Case Study <Arrow />
+                </Link>
+              </div>
+            </div>
+            <WashiTape className="tape-bottom-left" />
+          </div>
+
+          {/* Botanical Wildflower Sprig pressed beside the Polaroid */}
+          <div className="collage-botanical-wrap" aria-hidden="true">
+            <BotanicalSprig className="collage-botanical-sprig" />
+          </div>
+
+          {/* Pinned Torn Memo Scrap on far right */}
+          <div className="collage-memo-wrap">
+            <TornMemoScrap className="collage-memo" />
+          </div>
+
+          {/* Web Development / Digital Craft Paper Elements */}
+          <div className="collage-dev-tag" aria-hidden="true">
+            <code>&lt;design /&gt;</code>
+            <span>// crafted with intention</span>
+          </div>
+        </div>
+      </section>
+
+      {/* BOTTOM SECTION — 2 COLUMNS MATCHING IMAGE 2 EXACTLY */}
+      <section className="scrapbook-bottom-section wrap">
+        {/* LEFT COLUMN: FEATURED PROJECTS (3 HORIZONTAL SCRAPBOOK PHOTO CARDS) */}
+        <div className="bottom-featured-column">
+          <div className="bottom-section-header">
+            <span className="bottom-header-title">FEATURED PROJECTS</span>
+            <Link to="/work" className="bottom-header-link">
+              VIEW ALL →
             </Link>
           </div>
-          <HomepageAiConsole questions={(s as any).homepageQuestions} />
+
+          <div className="featured-cards-row">
+            {featuredCards.map((card, idx) => (
+              <article key={card.slug} className="scrapbook-photo-card">
+                <Link
+                  to={"/work/" + card.slug}
+                  className="photo-card-media"
+                  style={{ "--project-tint": card.color } as React.CSSProperties}
+                >
+                  <img
+                    src={card.slug === "starx-connect" ? card.mobile : card.image}
+                    alt={card.short + " website preview"}
+                    loading="lazy"
+                  />
+                  <span className="photo-card-arrow">
+                    <ArrowRight size={14} />
+                  </span>
+                </Link>
+                <div className="photo-card-details">
+                  <h3 className="photo-card-title">
+                    <Link to={"/work/" + card.slug}>{card.short}</Link>
+                  </h3>
+                  <p className="photo-card-desc">
+                    {idx === 0
+                      ? "A modern cinema & event ticketing platform."
+                      : idx === 1
+                      ? "Digital business card & smart links hub."
+                      : "Creative audio & music streaming experience."}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
-        {p[0] && (
-          <div className="hero-featured-showcase">
-            <div className="paper-label">Selected work · No. 01</div>
-            <div className="pinned-project">
-              <Device p={p[0]} hero />
-              <Link to={"/work/" + p[0].slug} className="paper-caption">
-                <span>
-                  {p[0].short}
-                  <small>View case study ↗</small>
-                </span>
-                <Arrow />
-              </Link>
-            </div>
-            <div className="studio-note">
-              <span className="eyebrow">The studio approach</span>
-              <p>
-                Good ideas.
-                <br />
-                <em>Carefully made.</em>
-              </p>
-              <span>Strategy / Design / Development</span>
-            </div>
-            <span className="editorial-stamp" aria-hidden="true">
-              DESIGN WITH
-              <br />
-              PURPOSE
-              <br />✦
+
+        {/* RIGHT COLUMN: ABOUT ME (MATCHING IMAGE 2) */}
+        <div className="bottom-about-column">
+          <div className="bottom-section-header">
+            <span className="bottom-header-title">ABOUT ME</span>
+            <span className="bottom-cursive-signature" aria-hidden="true">
+              Curious mind Always building - Sanju
             </span>
           </div>
-        )}
-        <div className="hero-bottom">
-          <span>STRATEGY / DESIGN / DEVELOPMENT</span>
-          <span>SCROLL TO EXPLORE ↓</span>
-        </div>
-      </section>
-      <section className="intro-line wrap">
-        <span className="eyebrow">Designed with intention</span>
-        <h2>
-          Your website should do more
-          <br />
-          than <em>look the part.</em>
-        </h2>
-        <p>
-          It should make your business easier to understand, easier to trust and
-          easier to choose. That’s where we begin.
-        </p>
-      </section>
-      <section className="work-section wrap">
-        <div className="section-head">
-          <div>
-            <span className="eyebrow">
-              The work / Real interfaces, distinct challenges
-            </span>
-            <h2>
-              Different ideas.
-              <br />
-              <em>Considered outcomes.</em>
-            </h2>
-          </div>
-          <CTA text="View all projects" to="/work" light />
-        </div>
-        <div className="work-grid">
-          {p.slice(1).map((p, i) => (
-            <ProjectCard key={p.slug} p={p} index={i + 2} />
-          ))}
-        </div>
-      </section>
-      <section className="services-section">
-        <div className="wrap">
-          <div className="section-head">
-            <div>
-              <span className="eyebrow">What we do</span>
-              <h2>
-                From the first idea
-                <br />
-                to the final detail.
+
+          <div className="about-scrapbook-card">
+            <div className="about-engraving-container">
+              <StudioEngraving className="about-studio-engraving" />
+            </div>
+
+            <div className="about-editorial-text">
+              <h2 className="about-credo-headline">
+                I believe in slow ideas, clean design and a kinder internet.
               </h2>
+              <p className="about-credo-bio">
+                I’m a designer & developer passionate about creating digital
+                spaces that feel human. I love mixing design, code and
+                storytelling to build things that matter.
+              </p>
+
+              {/* 4 Micro-Badges with Illustrated Icons */}
+              <div className="about-micro-badges">
+                <div className="about-micro-badge">
+                  <span className="badge-icon">☕</span>
+                  <span className="badge-text">
+                    <b>Coffee</b>
+                    <small>Fuel</small>
+                  </span>
+                </div>
+                <div className="about-micro-badge">
+                  <span className="badge-icon">💻</span>
+                  <span className="badge-text">
+                    <b>Design</b>
+                    <small>Expression</small>
+                  </span>
+                </div>
+                <div className="about-micro-badge">
+                  <span className="badge-icon">🌿</span>
+                  <span className="badge-text">
+                    <b>Code</b>
+                    <small>Freedom</small>
+                  </span>
+                </div>
+                <div className="about-micro-badge">
+                  <span className="badge-icon">⛰️</span>
+                  <span className="badge-text">
+                    <b>Explore</b>
+                    <small>Balance</small>
+                  </span>
+                </div>
+              </div>
             </div>
-            <p>
-              A connected set of services.
-              <br />
-              Built around what your business needs.
-            </p>
           </div>
-          <ServiceList />
         </div>
       </section>
-      <section className="wrap process">
-        <span className="eyebrow">A clear way forward</span>
-        <h2>
-          Good work starts
-          <br />
-          with good questions.
-        </h2>
-        <div className="process-grid">
-          {[
-            [
-              "01",
-              "Understand",
-              "Your business, your audience, and the job your website needs to do.",
-            ],
-            [
-              "02",
-              "Shape",
-              "A clear structure, a distinct visual direction, and a purposeful user journey.",
-            ],
-            [
-              "03",
-              "Build",
-              "Responsive development, useful integrations, and attention to the details.",
-            ],
-            [
-              "04",
-              "Refine",
-              "Review together, test the experience, and prepare for a considered launch.",
-            ],
-          ].map(([n, t, d]) => (
-            <div key={n}>
-              <span>{n}</span>
-              <h3>{t}</h3>
-              <p>{d}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      <div className="wrap">
+
+      {/* SEPARATE PROFESSIONAL AFFILIATION */}
+      <div className="wrap affiliation-wrap">
         <Affiliation />
       </div>
-    </>
+    </div>
   );
 }
+
 function ProjectCard({
   p,
   index,
@@ -523,38 +698,42 @@ function ProjectCard({
         <span className="eyebrow">
           {String(index).padStart(2, "0")} / {p.category}
         </span>
-        <h3>
-          <Link to={"/work/" + p.slug}>{p.short}</Link>
-        </h3>
+        <h3>{p.name}</h3>
         <p>{p.summary}</p>
+        <Link to={"/work/" + p.slug} className="text-link">
+          Explore case study <Arrow />
+        </Link>
       </div>
     </article>
   );
 }
+
 function Work() {
   const s = useSite();
-  const [q, setQ] = useState(""),
-    [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState("All");
+  const [q, setQ] = useState("");
   const all = s.projects
     .filter((p) => p.published)
     .sort((a, b) => a.order - b.order);
-  const shown = all.filter(
-    (p) =>
-      (filter === "All" || p.kind === filter) &&
-      (p.name + " " + p.category).toLowerCase().includes(q.toLowerCase()),
-  );
+
+  const shown = all.filter((p) => {
+    const matchF = filter === "All" || p.kind === filter;
+    const matchQ =
+      !q.trim() ||
+      (p.name + p.summary + p.story)
+        .toLowerCase()
+        .includes(q.toLowerCase().trim());
+    return matchF && matchQ;
+  });
+
   return (
-    <section className="wrap page">
-      <span className="eyebrow">Selected work</span>
-      <h1>
-        Proof in
-        <br />
-        <em>the experience.</em>
-      </h1>
+    <section className="page wrap">
+      <span className="eyebrow">Our Work</span>
+      <h1>Selected Projects</h1>
       <p className="lede">
-        Five real projects. Different audiences, different challenges.
-        <br />
-        Explore the interfaces and the thinking behind them.
+        Five verified public projects built for entertainment, discovery and
+        direct business action. Explore the interfaces and the thinking behind
+        them.
       </p>
       <div className="filters">
         <div>
@@ -590,11 +769,13 @@ function Work() {
     </section>
   );
 }
+
 function CaseStudy() {
   const { slug } = useParams();
   const s = useSite();
   const p = s.projects.find((p) => p.slug === slug && p.published);
   if (!p) return <NotFound />;
+
   return (
     <article className="page wrap case">
       <Link className="text-link" to="/work">
@@ -637,9 +818,11 @@ function CaseStudy() {
     </article>
   );
 }
+
 function ServiceList() {
   const s = useSite();
   const [open, setOpen] = useState(0);
+
   return (
     <div className="service-list">
       {s.services.map((x, i) => (
@@ -669,6 +852,7 @@ function ServiceList() {
     </div>
   );
 }
+
 function Services() {
   return (
     <section className="page wrap">
@@ -692,6 +876,7 @@ function Services() {
     </section>
   );
 }
+
 function About() {
   const s = useSite();
   return (
@@ -706,7 +891,7 @@ function About() {
         <div className="logo-object">
           <img
             src="/media/official-logo.webp"
-            alt="SANJU X DEV official silver and crimson logo"
+            alt="SANJU X DEV official logo"
           />
         </div>
         <div>
@@ -728,6 +913,7 @@ function About() {
     </section>
   );
 }
+
 function Privacy() {
   return (
     <section className="page wrap prose">
@@ -748,8 +934,7 @@ function Privacy() {
       </p>
       <h2>Your choices</h2>
       <p>
-        Theme preference is stored on your device. Intro playback uses session
-        storage. Owner authentication uses authentication storage and a secure
+        Owner authentication uses authentication storage and a secure
         session cookie. We do not use advertising cookies or sell enquiry
         details.
       </p>
@@ -763,6 +948,7 @@ function Privacy() {
     </section>
   );
 }
+
 function NotFound() {
   return (
     <section className="page wrap">
@@ -776,50 +962,41 @@ function NotFound() {
     </section>
   );
 }
+
 export default function App() {
-  const [site, setSite] = useState(defaults),
-    [theme, setTheme] = useState(
-      () => localStorage.getItem("sxd-theme") || "silver",
-    ),
-    [menu, setMenu] = useState(false),
-    [intro, setIntro] = useState(
-      () =>
-        location.pathname === "/" &&
-        !sessionStorage.getItem("sxd-intro") &&
-        !matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
+  const [site, setSite] = useState(defaults);
+  const [menu, setMenu] = useState(false);
+  const [intro, setIntro] = useState(
+    () =>
+      location.pathname === "/" &&
+      !sessionStorage.getItem("sxd-intro") &&
+      !matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const loc = useLocation();
+
   const finish = () => {
     setIntro(false);
     sessionStorage.setItem("sxd-intro", "1");
   };
+
   useEffect(() => {
     fetch("/api/site")
       .then((r) => r.json())
       .then((d) => {
         if (d.site) {
           setSite(d.site);
-          // Enforce single theme
-          document.documentElement.dataset.theme = "silver";
           if (!d.site.introEnabled) setIntro(false);
         }
       })
       .catch(() => {});
   }, []);
-  useEffect(() => {
-    document.documentElement.dataset.theme = [
-      "silver",
-      "gold",
-      "dark",
-    ].includes(theme)
-      ? theme
-      : "silver";
-  }, [theme]);
+
   useEffect(() => {
     if (!intro) return;
     const id = setTimeout(finish, 3600);
     return () => clearTimeout(id);
   }, [intro]);
+
   useEffect(() => {
     setMenu(false);
     window.scrollTo(0, 0);
@@ -833,7 +1010,7 @@ export default function App() {
                 {
                   "/": "",
                   "/work": "Our Work",
-                  "/about": "About the Business",
+                  "/about": "About",
                   "/services": "Services",
                   "/contact": "Start a Project",
                   "/privacy": "Privacy",
@@ -842,114 +1019,108 @@ export default function App() {
                 } as Record<string, string>
               )[loc.pathname] ?? "Page not found")) + " — ") + site.seoTitle;
   }, [loc.pathname, site]);
+
   return (
     <Context.Provider value={site}>
       <ChatProvider>
         <a className="skip" href="#main">
           Skip to content
         </a>
-      {intro && (
-        <div
-          className="intro"
-          role="dialog"
-          aria-label="SANJU X DEV introduction"
-          aria-modal="true"
-        >
-          <div className="intro-mark">
-            <img
-              src="/media/official-logo.webp"
-              alt="SANJU X DEV official logo"
-            />
-            <h2>SANJU X DEV</h2>
-            <p>Digital Experiences. Designed to Stand Out.</p>
-          </div>
-          <button autoFocus onClick={finish}>
-            Skip introduction <Arrow />
-          </button>
-        </div>
-      )}
-      <div {...((intro ? { inert: "" } : {}) as any)}>
-        <header>
-          <div className="nav-wrap">
-            <Brand />
-            <button
-              className="menu-toggle"
-              aria-expanded={menu}
-              aria-label="Toggle navigation"
-              onClick={() => setMenu(!menu)}
-            >
-              {menu ? <X /> : <Menu />}
+        {intro && (
+          <div
+            className="intro"
+            role="dialog"
+            aria-label="SANJU X DEV introduction"
+            aria-modal="true"
+          >
+            <div className="intro-mark">
+              <img
+                src="/media/official-logo.webp"
+                alt="SANJU X DEV official logo"
+              />
+              <h2>SANJU X DEV</h2>
+              <p>Digital Experiences. Designed to Stand Out.</p>
+            </div>
+            <button autoFocus onClick={finish}>
+              Skip introduction <Arrow />
             </button>
-            <nav className={menu ? "expanded" : ""}>
-              {[
-                ["/work", "Our work"],
-                ["/services", "Services"],
-                ["/about", "The business"],
-              ].map(([to, t]) => (
-                <NavLink key={to} to={to}>
-                  {t}
-                </NavLink>
-              ))}
-              <Link to="/contact" className="nav-cta">
-                Let’s talk <Arrow />
-              </Link>
-            </nav>
-            <select
-              aria-label="Website theme"
-              value={theme}
-              onChange={(e) => {
-                setTheme(e.target.value);
-                localStorage.setItem("sxd-theme", e.target.value);
-              }}
-            >
-              <option value="silver">Paper / Crimson</option>
-              <option value="gold">White / Gold</option>
-              <option value="dark">Red / Black</option>
-            </select>
           </div>
-        </header>
-        <main id="main">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/work" element={<Work />} />
-            <Route path="/work/:slug" element={<CaseStudy />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route
-              path="/track"
-              element={
-                <Suspense
-                  fallback={
-                    <p className="wrap page">Loading project tracking…</p>
-                  }
-                >
-                  <Track />
-                </Suspense>
-              }
-            />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route
-              path="/spideyy"
-              element={
-                <Suspense
-                  fallback={
-                    <p className="wrap page">Loading owner workspace…</p>
-                  }
-                >
-                  <Admin />
-                </Suspense>
-              }
-            />
-            <Route path="/admin" element={<Navigate to="/spideyy" replace />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        <Footer />
-        {site.assistantEnabled &&
-          !loc.pathname.startsWith("/spideyy") &&
-          !loc.pathname.startsWith("/admin") && <Assistant />}
-      </div>
+        )}
+        <div {...((intro ? { inert: "" } : {}) as any)}>
+          <header className="scrapbook-header">
+            <div className="nav-wrap">
+              <Brand />
+              <button
+                className="menu-toggle"
+                aria-expanded={menu}
+                aria-label="Toggle navigation"
+                onClick={() => setMenu(!menu)}
+              >
+                {menu ? <X /> : <Menu />}
+              </button>
+              <nav className={menu ? "expanded" : ""}>
+                {[
+                  ["/", "Home"],
+                  ["/work", "Our Work"],
+                  ["/services", "Services"],
+                  ["/about", "About"],
+                  ["/contact", "Contact"],
+                ].map(([to, t]) => (
+                  <NavLink key={to} to={to} end={to === "/"}>
+                    {t}
+                  </NavLink>
+                ))}
+                <Link to="/contact" className="nav-cta-btn">
+                  Start Your Project <ArrowRight size={15} />
+                </Link>
+              </nav>
+            </div>
+          </header>
+          <main id="main">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/work" element={<Work />} />
+              <Route path="/work/:slug" element={<CaseStudy />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route
+                path="/track"
+                element={
+                  <Suspense
+                    fallback={
+                      <p className="wrap page">Loading project tracking…</p>
+                    }
+                  >
+                    <Track />
+                  </Suspense>
+                }
+              />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route
+                path="/spideyy"
+                element={
+                  <Suspense
+                    fallback={
+                      <p className="wrap page">Loading owner workspace…</p>
+                    }
+                  >
+                    <Admin />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/admin"
+                element={<Navigate to="/spideyy" replace />}
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+          <Footer />
+          {site.assistantEnabled &&
+            !loc.pathname.startsWith("/spideyy") &&
+            !loc.pathname.startsWith("/admin") && <Assistant />}
+        </div>
       </ChatProvider>
     </Context.Provider>
   );
