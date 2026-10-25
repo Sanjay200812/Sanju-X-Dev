@@ -236,7 +236,7 @@ export default function Admin() {
     "Overview",
     "Active Projects",
     "Enquiries",
-    "Enquiry Form",
+    "Services & Enquiry Form",
     "Email Outbox",
     "Projects",
     "Page content",
@@ -1118,8 +1118,23 @@ export default function Admin() {
                           }}
                         />
                       )}
+                      <span
+                        style={{
+                          fontFamily: "ui-monospace, Menlo, Consolas, monospace",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "var(--accent)",
+                          background: "var(--soft)",
+                          border: "1px solid var(--accent)",
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                        }}
+                      >
+                        {r.tracking_code || r.data?.tracking_code || "SXD-001"}
+                      </span>
                       <span>
                         <strong>{r.data.name}</strong> · {r.data.service}
+                        {r.data.company ? ` (${r.data.company})` : ""}
                       </span>
                     </div>
 
@@ -1136,7 +1151,11 @@ export default function Admin() {
                               ? "var(--accent)"
                               : r.status === "in-progress"
                                 ? "#b78103"
-                                : "var(--muted)",
+                                : r.status === "accepted"
+                                  ? "#1976d2"
+                                  : r.status === "declined"
+                                    ? "#d32f2f"
+                                    : "var(--muted)",
                           color: "#fff",
                         }}
                       >
@@ -1149,18 +1168,31 @@ export default function Admin() {
                   </summary>
 
                   <div style={{ padding: "16px", borderTop: "1px solid var(--line)" }}>
+                    {/* Primary Metadata Grid */}
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
                         gap: 12,
                         marginBottom: 16,
                       }}
                     >
                       <div>
-                        <small style={{ color: "var(--muted)" }}>Client Email</small>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <a href={"mailto:" + r.data.email} style={{ fontWeight: 600 }}>
+                        <small style={{ color: "var(--muted)", display: "block" }}>SXD Tracking ID</small>
+                        <div style={{ fontFamily: "ui-monospace, Menlo, monospace", fontWeight: 700, color: "var(--accent)" }}>
+                          {r.tracking_code || r.data?.tracking_code || "SXD-001"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Customer Name</small>
+                        <div style={{ fontWeight: 600 }}>{r.data.name}</div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Email Address</small>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <a href={"mailto:" + r.data.email} style={{ fontWeight: 600, color: "var(--accent)" }}>
                             {r.data.email}
                           </a>
                           <button
@@ -1176,56 +1208,137 @@ export default function Admin() {
                               borderRadius: 4,
                             }}
                           >
-                            {copiedId === r.id ? (
-                              <>
-                                <Check size={12} color="green" /> Copied
-                              </>
-                            ) : (
-                              <>
-                                <Copy size={12} /> Copy
-                              </>
-                            )}
+                            {copiedId === r.id ? <Check size={12} color="green" /> : <Copy size={12} />}
                           </button>
                         </div>
                       </div>
 
-                      {r.data.company && (
-                        <div>
-                          <small style={{ color: "var(--muted)" }}>Company</small>
-                          <div style={{ fontWeight: 600 }}>{r.data.company}</div>
-                        </div>
-                      )}
-
                       <div>
-                        <small style={{ color: "var(--muted)" }}>Timeline / Budget</small>
-                        <div>
-                          {r.data.timeline || "Flexible"}{" "}
-                          {r.data.budget ? `· Budget: ${r.data.budget}` : ""}
+                        <small style={{ color: "var(--muted)", display: "block" }}>Phone / WhatsApp</small>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span>{r.phone || r.data.phone || "Not provided"}</span>
+                          {(r.phone || r.data.phone) && (
+                            <a
+                              href={`https://wa.me/${(r.phone || r.data.phone).replace(/[^0-9]/g, "")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                fontSize: 11,
+                                color: "#25d366",
+                                fontWeight: 600,
+                                textDecoration: "underline",
+                              }}
+                            >
+                              WhatsApp
+                            </a>
+                          )}
                         </div>
                       </div>
 
                       <div>
-                        <small style={{ color: "var(--muted)" }}>Email Notification</small>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Business / Brand Name</small>
+                        <div>{r.data.company || r.data.business_name || (r.data.is_individual ? "For Myself (Individual)" : "None")}</div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Website Type</small>
+                        <div style={{ fontWeight: 600 }}>{r.data.service}</div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Design Preference</small>
+                        <div>{r.data.design_preference || "Standard"}</div>
+                      </div>
+
+                      {r.data.reference_url && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>Reference Website</small>
+                          <a href={r.data.reference_url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline", color: "var(--accent)", fontSize: 12 }}>
+                            {r.data.reference_url} ↗
+                          </a>
+                        </div>
+                      )}
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Existing Website</small>
+                        <div>
+                          {r.data.website_url || r.data.existing_website_url ? (
+                            <a href={r.data.website_url || r.data.existing_website_url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
+                              {r.data.website_url || r.data.existing_website_url} ↗
+                            </a>
+                          ) : (
+                            r.data.has_existing_website || "No existing site"
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Domain Preference</small>
+                        <div>{r.data.has_domain || "Not Sure"}</div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Timeline & Budget</small>
+                        <div>{r.data.timeline || "Flexible"} · {r.data.budget || "No budget specified"}</div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Preferred Contact</small>
+                        <div style={{ fontWeight: 600 }}>{r.preferred_contact || r.data.preferred_contact || "Email"}</div>
+                      </div>
+
+                      {r.data.city && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>Location</small>
+                          <div>{r.data.city}</div>
+                        </div>
+                      )}
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Submission Date</small>
+                        <div>{new Date(r.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Email Notification Status</small>
                         <div>
                           {r.email_status === "sent" ? (
-                            <span style={{ color: "green", fontSize: 12, fontWeight: 600 }}>
-                              ✓ Delivered to Owner
-                            </span>
+                            <span style={{ color: "green", fontSize: 12, fontWeight: 600 }}>✓ Delivered to Owner</span>
                           ) : r.email_status === "failed" ? (
-                            <span style={{ color: "var(--accent)", fontSize: 12 }}>
-                              ⚠ Delivery Failed (Check Resend)
-                            </span>
+                            <span style={{ color: "var(--accent)", fontSize: 12 }}>⚠ Delivery Failed</span>
                           ) : (
-                            <span style={{ color: "var(--muted)", fontSize: 12 }}>
-                              Saved in Database
-                            </span>
+                            <span style={{ color: "var(--muted)", fontSize: 12 }}>Saved in Database</span>
                           )}
                         </div>
                       </div>
                     </div>
 
+                    {/* Selected Features */}
+                    {r.data.features && (
+                      <div style={{ marginBottom: 16 }}>
+                        <small style={{ color: "var(--muted)", display: "block", marginBottom: 6 }}>Selected Features</small>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {(Array.isArray(r.data.features) ? r.data.features : [r.data.features]).map((f: string, idx: number) => (
+                            <span
+                              key={idx}
+                              style={{
+                                background: "var(--panel)",
+                                border: "1px solid var(--line)",
+                                padding: "3px 8px",
+                                borderRadius: 4,
+                                fontSize: 12,
+                              }}
+                            >
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Project Description */}
                     <div style={{ marginBottom: 16 }}>
-                      <small style={{ color: "var(--muted)" }}>Project Description</small>
+                      <small style={{ color: "var(--muted)" }}>Project Description / Idea</small>
                       <div
                         style={{
                           background: "var(--panel)",
@@ -1233,27 +1346,30 @@ export default function Admin() {
                           borderRadius: 4,
                           marginTop: 4,
                           whiteSpace: "pre-wrap",
-                          fontSize: 14,
+                          fontSize: 13.5,
+                          lineHeight: 1.6,
                         }}
                       >
-                        {r.data.description}
+                        {r.data.description || "No written description provided (selected categories and features above)."}
                       </div>
                     </div>
 
-                    {r.data.features && (
+                    {/* Additional Message */}
+                    {r.data.additional_message && (
                       <div style={{ marginBottom: 16 }}>
-                        <small style={{ color: "var(--muted)" }}>Requested Features</small>
+                        <small style={{ color: "var(--muted)" }}>Additional Client Message</small>
                         <div
                           style={{
                             background: "var(--panel)",
+                            borderLeft: "3px solid var(--accent)",
                             padding: 12,
-                            borderRadius: 4,
+                            borderRadius: "0 4px 4px 0",
                             marginTop: 4,
                             whiteSpace: "pre-wrap",
-                            fontSize: 14,
+                            fontSize: 13.5,
                           }}
                         >
-                          {r.data.features}
+                          {r.data.additional_message}
                         </div>
                       </div>
                     )}
@@ -1281,6 +1397,8 @@ export default function Admin() {
                           <select name="status" defaultValue={r.status}>
                             <option value="new">New</option>
                             <option value="in-progress">In-progress</option>
+                            <option value="accepted">Accepted</option>
+                            <option value="declined">Declined</option>
                             <option value="closed">Closed</option>
                           </select>
                         </label>
@@ -1903,18 +2021,112 @@ export default function Admin() {
             </div>
           )}
 
-          {/* ENQUIRY FORM TAB */}
-          {tab === "Enquiry Form" && (
+          {/* SERVICES & ENQUIRY FORM TAB */}
+          {tab === "Services & Enquiry Form" && (
             <div className="admin-card">
-              <h3>Client Enquiry Form & Options</h3>
-              <p style={{ color: "var(--muted)", fontSize: 13 }}>
-                Customize the service categories, descriptions, feature tags, and choices presented to customers on the Contact page.
-              </p>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginBottom: 20,
+                  borderBottom: "1px solid var(--line)",
+                  paddingBottom: 16,
+                }}
+              >
+                <div>
+                  <h3 style={{ margin: "0 0 4px 0" }}>Services & Enquiry Form Management</h3>
+                  <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>
+                    Customize the 5 website categories, descriptions, example tags, relevant feature matrices, design styles, and form defaults.
+                  </p>
+                </div>
 
-              <div style={{ marginTop: 20 }}>
-                <h4>Service Categories & Descriptions (Step 1 Selection)</h4>
-                {((site as any).enquiryCategories || []).map((cat: any, i: number) => (
-                  <div key={i} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 12, marginBottom: 14 }}>
+                <a
+                  href="/contact"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="button secondary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, padding: "8px 14px" }}
+                >
+                  <ExternalLink size={14} /> Preview Live Enquiry Form
+                </a>
+              </div>
+
+              {/* 1. EDIT THE FIVE WEBSITE CATEGORIES */}
+              <div>
+                <h4 style={{ margin: "0 0 12px 0", fontSize: 16 }}>
+                  1. Website Categories & Dynamic Feature Matrices
+                </h4>
+                <p style={{ fontSize: 12.5, color: "var(--muted)", margin: "0 0 16px 0" }}>
+                  The enquiry builder displays exactly five main website categories. You can edit names, descriptions, example pills, and tailor the feature checkboxes for each category.
+                </p>
+
+                {((site as any).websiteCategories || defaults.websiteCategories || []).map((cat: any, i: number) => (
+                  <div
+                    key={cat.id || i}
+                    style={{
+                      background: "var(--panel)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 8,
+                      padding: 16,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span
+                          style={{
+                            background: "var(--accent)",
+                            color: "#fff",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: 10,
+                          }}
+                        >
+                          Option {i + 1}
+                        </span>
+                        <strong style={{ fontSize: 15 }}>{cat.label}</strong>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {i > 0 && (
+                          <button
+                            type="button"
+                            title="Move Up"
+                            style={{ padding: "4px 8px", fontSize: 12 }}
+                            onClick={() => {
+                              const list = [...((site as any).websiteCategories || defaults.websiteCategories)];
+                              const temp = list[i - 1];
+                              list[i - 1] = list[i];
+                              list[i] = temp;
+                              setSite({ ...site, websiteCategories: list });
+                            }}
+                          >
+                            ↑
+                          </button>
+                        )}
+                        {i < ((site as any).websiteCategories || defaults.websiteCategories).length - 1 && (
+                          <button
+                            type="button"
+                            title="Move Down"
+                            style={{ padding: "4px 8px", fontSize: 12 }}
+                            onClick={() => {
+                              const list = [...((site as any).websiteCategories || defaults.websiteCategories)];
+                              const temp = list[i + 1];
+                              list[i + 1] = list[i];
+                              list[i] = temp;
+                              setSite({ ...site, websiteCategories: list });
+                            }}
+                          >
+                            ↓
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="form-grid">
                       <label>
                         Category Label
@@ -1923,112 +2135,230 @@ export default function Admin() {
                           onChange={(e) =>
                             setSite({
                               ...site,
-                              enquiryCategories: ((site as any).enquiryCategories || []).map((x: any, j: number) =>
-                                j === i ? { ...x, label: e.target.value } : x,
+                              websiteCategories: ((site as any).websiteCategories || defaults.websiteCategories).map(
+                                (c: any, j: number) => (j === i ? { ...c, label: e.target.value } : c),
                               ),
                             })
                           }
                         />
                       </label>
+
                       <label>
-                        Customer-Facing Description
+                        One-Line Description
                         <input
                           value={cat.desc}
                           onChange={(e) =>
                             setSite({
                               ...site,
-                              enquiryCategories: ((site as any).enquiryCategories || []).map((x: any, j: number) =>
-                                j === i ? { ...x, desc: e.target.value } : x,
+                              websiteCategories: ((site as any).websiteCategories || defaults.websiteCategories).map(
+                                (c: any, j: number) => (j === i ? { ...c, desc: e.target.value } : c),
                               ),
                             })
                           }
                         />
                       </label>
                     </div>
-                    <button
-                      type="button"
-                      style={{ fontSize: 11, color: "var(--accent)", padding: "4px 8px" }}
-                      onClick={() =>
-                        setSite({
-                          ...site,
-                          enquiryCategories: ((site as any).enquiryCategories || []).filter((_: any, j: number) => j !== i),
-                        })
-                      }
-                    >
-                      Remove Category
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="button secondary"
-                  style={{ fontSize: 12, padding: "8px 14px", marginTop: 6 }}
-                  onClick={() =>
-                    setSite({
-                      ...site,
-                      enquiryCategories: [
-                        ...((site as any).enquiryCategories || []),
-                        { id: "custom-" + Date.now(), label: "New Service", desc: "Description of what this service offers." },
-                      ],
-                    })
-                  }
-                >
-                  + Add Service Category
-                </button>
-              </div>
 
-              <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
-                <h4>Helpful Feature Choices (Optional Chips)</h4>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                  {((site as any).enquiryFeatures || []).map((feat: string, i: number) => (
-                    <div
-                      key={i}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        background: "var(--panel)",
-                        border: "1px solid var(--line)",
-                        padding: "4px 10px",
-                        borderRadius: 20,
-                        fontSize: 12,
-                      }}
-                    >
-                      <span>{feat}</span>
-                      <button
-                        type="button"
-                        style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--accent)", fontSize: 13 }}
-                        onClick={() =>
+                    <label style={{ display: "block", marginTop: 8 }}>
+                      Examples (Comma-separated)
+                      <input
+                        value={Array.isArray(cat.examples) ? cat.examples.join(", ") : (cat.examples || "")}
+                        onChange={(e) => {
+                          const exList = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
                           setSite({
                             ...site,
-                            enquiryFeatures: ((site as any).enquiryFeatures || []).filter((_: any, j: number) => j !== i),
-                          })
-                        }
+                            websiteCategories: ((site as any).websiteCategories || defaults.websiteCategories).map(
+                              (c: any, j: number) => (j === i ? { ...c, examples: exList } : c),
+                            ),
+                          });
+                        }}
+                      />
+                    </label>
+
+                    {/* Features checklist for this category */}
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6 }}>
+                        Relevant Selectable Features for {cat.label}:
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                        {(cat.features || []).map((feat: string, fIdx: number) => (
+                          <span
+                            key={fIdx}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: "var(--paper)",
+                              border: "1px solid var(--line)",
+                              borderRadius: 4,
+                              padding: "3px 8px",
+                              fontSize: 12,
+                            }}
+                          >
+                            {feat}
+                            <button
+                              type="button"
+                              style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--accent)", fontSize: 12 }}
+                              onClick={() => {
+                                const newFeats = cat.features.filter((_: string, k: number) => k !== fIdx);
+                                setSite({
+                                  ...site,
+                                  websiteCategories: ((site as any).websiteCategories || defaults.websiteCategories).map(
+                                    (c: any, j: number) => (j === i ? { ...c, features: newFeats } : c),
+                                  ),
+                                });
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const input = e.currentTarget.elements.namedItem("addFeature") as HTMLInputElement;
+                          const val = input.value.trim();
+                          if (!val) return;
+                          const newFeats = [...(cat.features || []), val];
+                          setSite({
+                            ...site,
+                            websiteCategories: ((site as any).websiteCategories || defaults.websiteCategories).map(
+                              (c: any, j: number) => (j === i ? { ...c, features: newFeats } : c),
+                            ),
+                          });
+                          input.value = "";
+                        }}
+                        style={{ display: "flex", gap: 8, maxWidth: 350 }}
                       >
-                        ✕
-                      </button>
+                        <input name="addFeature" placeholder={`Add feature to ${cat.label}...`} style={{ flex: 1, fontSize: 12 }} />
+                        <button type="submit" className="button secondary" style={{ fontSize: 12, padding: "4px 10px" }}>
+                          Add
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 2. DESIGN PREFERENCES */}
+              <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: 16 }}>2. Design Style Preferences</h4>
+                <p style={{ fontSize: 12.5, color: "var(--muted)", margin: "0 0 14px 0" }}>
+                  Options displayed in Step 2 to capture the client&apos;s aesthetic direction.
+                </p>
+
+                <div className="builder-radio-group">
+                  {((site as any).designStyles || defaults.designStyles || []).map((style: any, sIdx: number) => (
+                    <div
+                      key={sIdx}
+                      style={{
+                        background: "var(--panel)",
+                        border: "1px solid var(--line)",
+                        borderRadius: 6,
+                        padding: 12,
+                      }}
+                    >
+                      <input
+                        value={style.label}
+                        style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}
+                        onChange={(e) => {
+                          const updated = ((site as any).designStyles || defaults.designStyles).map(
+                            (st: any, k: number) => (k === sIdx ? { ...st, label: e.target.value } : st),
+                          );
+                          setSite({ ...site, designStyles: updated });
+                        }}
+                      />
+                      <input
+                        value={style.desc}
+                        style={{ fontSize: 11.5, color: "var(--muted)" }}
+                        onChange={(e) => {
+                          const updated = ((site as any).designStyles || defaults.designStyles).map(
+                            (st: any, k: number) => (k === sIdx ? { ...st, desc: e.target.value } : st),
+                          );
+                          setSite({ ...site, designStyles: updated });
+                        }}
+                      />
                     </div>
                   ))}
                 </div>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const input = e.currentTarget.elements.namedItem("newFeature") as HTMLInputElement;
-                    const val = input.value.trim();
-                    if (!val) return;
-                    setSite({
-                      ...site,
-                      enquiryFeatures: [...((site as any).enquiryFeatures || []), val],
-                    });
-                    input.value = "";
-                  }}
-                  style={{ display: "flex", gap: 8, maxWidth: 400 }}
-                >
-                  <input name="newFeature" placeholder="Add feature option (e.g. Multi-Language)" style={{ flex: 1, fontSize: 12 }} />
-                  <button type="submit" className="button secondary" style={{ fontSize: 12, padding: "6px 12px" }}>
-                    Add
-                  </button>
-                </form>
+              </div>
+
+              {/* 3. TIMELINE & BUDGET OPTIONS */}
+              <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: 16 }}>3. Timeline & Budget Choices</h4>
+                <div className="form-grid">
+                  <div>
+                    <label>
+                      Timeline Options (Comma-separated)
+                      <input
+                        value={(((site as any).timelineChoices || defaults.timelineChoices) || []).join(", ")}
+                        onChange={(e) => {
+                          const list = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
+                          setSite({ ...site, timelineChoices: list });
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div>
+                    <label>
+                      Budget Range Choices (Comma-separated)
+                      <input
+                        value={(((site as any).budgetChoices || defaults.budgetChoices) || []).join(", ")}
+                        onChange={(e) => {
+                          const list = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
+                          setSite({ ...site, budgetChoices: list });
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. FORM DEFAULTS & SETTINGS */}
+              <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: 16 }}>4. Form Defaults & Rules</h4>
+                <div className="form-grid">
+                  <label>
+                    Default Category Selected on Open
+                    <select
+                      value={(site as any).formConfig?.defaultCategory || "Business Website"}
+                      onChange={(e) =>
+                        setSite({
+                          ...site,
+                          formConfig: { ...((site as any).formConfig || {}), defaultCategory: e.target.value },
+                        })
+                      }
+                    >
+                      {((site as any).websiteCategories || defaults.websiteCategories || []).map((cat: any) => (
+                        <option key={cat.label} value={cat.label}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Default Design Style
+                    <select
+                      value={(site as any).formConfig?.defaultDesignStyle || "Clean & Simple"}
+                      onChange={(e) =>
+                        setSite({
+                          ...site,
+                          formConfig: { ...((site as any).formConfig || {}), defaultDesignStyle: e.target.value },
+                        })
+                      }
+                    >
+                      {((site as any).designStyles || defaults.designStyles || []).map((st: any) => (
+                        <option key={st.label} value={st.label}>
+                          {st.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
             </div>
           )}

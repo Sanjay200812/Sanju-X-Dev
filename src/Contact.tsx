@@ -1,115 +1,111 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Copy, Check, ChevronDown, Search, ArrowRight } from "lucide-react";
+import {
+  Copy,
+  Check,
+  ChevronDown,
+  ArrowRight,
+  ArrowLeft,
+  User,
+  BookOpen,
+  Building2,
+  Layers,
+  ShoppingBag,
+  Sparkles,
+} from "lucide-react";
 import { useSite, Arrow } from "./App";
-
-interface ServiceCategory {
-  id: string;
-  label: string;
-  desc: string;
-}
-
-const DEFAULT_CATEGORIES: ServiceCategory[] = [
-  { id: "business", label: "Business Website", desc: "Help customers find and contact my business." },
-  { id: "store", label: "Online Store", desc: "Sell products online." },
-  { id: "portfolio", label: "Portfolio Website", desc: "Showcase my work or skills." },
-  { id: "booking", label: "Booking Website", desc: "Let customers book appointments." },
-  { id: "education", label: "Educational Website", desc: "Courses, school, tuition or learning platform." },
-  { id: "webapp", label: "Business Application", desc: "A custom system for my business." },
-  { id: "redesign", label: "Existing Website Changes", desc: "Fix, redesign or improve my website." },
-  { id: "other", label: "Other Project", desc: "Something different." },
-  { id: "notsure", label: "Not Sure", desc: "Help me decide." },
-];
-
-const SEARCHABLE_CATEGORIES: ServiceCategory[] = [
-  { id: "realestate", label: "Real Estate & Properties", desc: "Property listings, virtual tours & enquiry forms." },
-  { id: "healthcare", label: "Healthcare & Clinic", desc: "Doctor profiles, patient booking & treatment info." },
-  { id: "hospitality", label: "Travel & Hospitality", desc: "Hotel, tour itineraries, booking & inquiries." },
-  { id: "events", label: "Events & Entertainment", desc: "Show agendas, ticket bookings & attendee portals." },
-  { id: "restaurants", label: "Restaurants & Cafes", desc: "Digital menus, table reservations & pickup orders." },
-  { id: "membership", label: "Membership & Community", desc: "Member directory, subscription access & private forums." },
-  { id: "saas", label: "Custom SaaS Platform", desc: "High-scalability cloud software & user dashboards." },
-  { id: "nonprofit", label: "Non-Profit & NGO", desc: "Donor contributions, cause awareness & impact showcase." },
-  { id: "editorial", label: "Blog & Media Publication", desc: "Editorial articles, newsletters & author profiles." },
-  { id: "fitness", label: "Fitness & Wellness Studio", desc: "Class timetable schedules & membership booking." },
-];
-
-const DEFAULT_FEATURES = [
-  "WhatsApp button",
-  "Online payments",
-  "Product listing",
-  "Booking",
-  "Customer login",
-  "Admin dashboard",
-  "AI chatbot",
-  "Something else",
-  "Not sure",
-];
-
-const TIMELINE_CHOICES = [
-  "Flexible / No rush",
-  "Within 2 to 4 weeks",
-  "1 to 2 months",
-  "Not sure yet",
-];
-
-const BUDGET_CHOICES = [
-  "Need guidance / Let's discuss scope",
-  "Standard business tier (focused website)",
-  "Growth / custom application",
-  "Flexible",
-];
+import {
+  DEFAULT_WEBSITE_CATEGORIES,
+  DESIGN_STYLES,
+  TIMELINE_CHOICES,
+  BUDGET_CHOICES,
+  type WebsiteCategory,
+} from "./content";
 
 export default function Contact() {
   const s = useSite();
   const [params] = useSearchParams();
 
-  // 2 steps: 0 = "Tell us what you need", 1 = "How can we contact you?"
+  // 3-step builder: 0 = Category, 1 = Features & Preferences, 2 = Contact Details
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [sent, setSent] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showOptionalContact, setShowOptionalContact] = useState(false);
 
-  // Searchable categories toggle
-  const [showAllServices, setShowAllServices] = useState(false);
-  const [serviceSearch, setServiceSearch] = useState("");
+  // Available categories from owner dashboard or default 5
+  const categories: WebsiteCategory[] = useMemo(() => {
+    const fromSite = (s as any).websiteCategories;
+    if (Array.isArray(fromSite) && fromSite.length > 0) {
+      return fromSite.filter((c: any) => c.enabled !== false);
+    }
+    return DEFAULT_WEBSITE_CATEGORIES;
+  }, [s]);
 
-  // Collapsible optional contact details
-  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
+  // Design styles, timeline and budget options
+  const designStyles = useMemo(() => {
+    return Array.isArray((s as any).designStyles) && (s as any).designStyles.length > 0
+      ? (s as any).designStyles
+      : DESIGN_STYLES;
+  }, [s]);
 
-  // Available categories & features from owner dashboard or fallback
-  const categories: ServiceCategory[] =
-    Array.isArray((s as any).enquiryCategories) && (s as any).enquiryCategories.length > 0
-      ? (s as any).enquiryCategories
-      : DEFAULT_CATEGORIES;
+  const timelineChoices = useMemo(() => {
+    return Array.isArray((s as any).timelineChoices) && (s as any).timelineChoices.length > 0
+      ? (s as any).timelineChoices
+      : TIMELINE_CHOICES;
+  }, [s]);
 
-  const featuresList: string[] =
-    Array.isArray((s as any).enquiryFeatures) && (s as any).enquiryFeatures.length > 0
-      ? (s as any).enquiryFeatures
-      : DEFAULT_FEATURES;
+  const budgetChoices = useMemo(() => {
+    return Array.isArray((s as any).budgetChoices) && (s as any).budgetChoices.length > 0
+      ? (s as any).budgetChoices
+      : BUDGET_CHOICES;
+  }, [s]);
 
+  // Initial category from URL param (spideyy recommendation) or default
+  const initialCategory = useMemo(() => {
+    const paramVal = params.get("category") || params.get("service");
+    if (paramVal) {
+      const match = categories.find(
+        (c) =>
+          c.label.toLowerCase() === paramVal.toLowerCase() ||
+          c.id.toLowerCase() === paramVal.toLowerCase(),
+      );
+      if (match) return match.label;
+    }
+    return categories[2]?.label || "Business Website";
+  }, [params, categories]);
+
+  // Form State
   const [form, setForm] = useState({
-    // Step 1: Project Needs
-    selectedCategories: (params.get("service")
-      ? [params.get("service") as string]
-      : ["Business Website"]) as string[],
-    description: "",
-    selectedFeatures: [] as string[],
-    timeline: "Flexible / No rush",
-    budget: "Need guidance / Let's discuss scope",
+    // Step 1: Category
+    selectedCategory: initialCategory,
 
-    // Step 2: Contact Details
+    // Step 2: Features & Preferences
+    selectedFeatures: [] as string[],
+    otherFeatureText: "",
+    includeOtherFeature: false,
+    includeNotSureFeature: false,
+    designStyle: "Clean & Simple",
+    referenceUrl: "",
+    hasExistingWebsite: "No, I need a new website.",
+    existingWebsiteUrl: "",
+    hasDomain: "Not Sure",
+    timeline: "Flexible",
+    budget: "Not Sure Yet",
+    description: "",
+
+    // Step 3: Contact Details
     name: "",
     email: "",
-    phone: "",
     countryCode: "+91",
-    preferred_contact: "email",
-    company: "",
-    is_individual: false,
-    website_url: "",
+    phone: "",
+    isBusiness: false,
+    businessName: "",
     city: "",
+    additionalMessage: "",
+    preferredContact: "WhatsApp",
     consent: false,
     website: "", // Honeypot
   });
@@ -117,18 +113,16 @@ export default function Contact() {
   const update = (k: string, v: any) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const toggleCategory = (catLabel: string) => {
-    setForm((f) => {
-      const exists = f.selectedCategories.includes(catLabel);
-      if (exists) {
-        const remaining = f.selectedCategories.filter((c) => c !== catLabel);
-        return { ...f, selectedCategories: remaining.length ? remaining : [catLabel] };
-      } else {
-        return { ...f, selectedCategories: [...f.selectedCategories, catLabel] };
-      }
-    });
-  };
+  // Find active category object
+  const activeCategory = useMemo(() => {
+    return (
+      categories.find((c) => c.label === form.selectedCategory) ||
+      categories[0] ||
+      DEFAULT_WEBSITE_CATEGORIES[0]
+    );
+  }, [categories, form.selectedCategory]);
 
+  // Toggle feature selection
   const toggleFeature = (feat: string) => {
     setForm((f) => {
       const exists = f.selectedFeatures.includes(feat);
@@ -142,34 +136,47 @@ export default function Contact() {
   };
 
   const skipFeatures = () => {
-    setForm((f) => ({ ...f, selectedFeatures: [] }));
+    setForm((f) => ({
+      ...f,
+      selectedFeatures: [],
+      includeOtherFeature: false,
+      includeNotSureFeature: true,
+    }));
   };
 
-  // Filter searchable services
-  const filteredSearchServices = SEARCHABLE_CATEGORIES.filter((cat) => {
-    const q = serviceSearch.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      cat.label.toLowerCase().includes(q) ||
-      cat.desc.toLowerCase().includes(q)
-    );
-  });
-
-  function handleContinueToContact(e: React.FormEvent) {
+  // Step 1 -> Step 2 validation
+  function handleGoToStep2(e: React.FormEvent) {
     e.preventDefault();
-    if (form.description.trim().length < 10) {
-      setStatus("Please share a short sentence (at least 10 characters) about your idea.");
+    if (!form.selectedCategory) {
+      setStatus("Please select a website type to continue.");
       return;
     }
     setStatus("");
     setStep(1);
-    window.scrollTo({ top: 200, behavior: "smooth" });
+    window.scrollTo({ top: 180, behavior: "smooth" });
   }
 
+  // Step 2 -> Step 3 validation
+  function handleGoToStep3(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("");
+    setStep(2);
+    window.scrollTo({ top: 180, behavior: "smooth" });
+  }
+
+  // Final Step 3 submission
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim()) {
       setStatus("Please enter your name and email address.");
+      return;
+    }
+    if (!form.phone.trim()) {
+      setStatus("Please enter your mobile or WhatsApp number.");
+      return;
+    }
+    if (form.isBusiness && !form.businessName.trim()) {
+      setStatus("Please enter your business or brand name.");
       return;
     }
     if (!form.consent) {
@@ -185,26 +192,42 @@ export default function Contact() {
         ? `${form.countryCode} ${form.phone.trim()}`
         : "";
 
-      const primaryService = form.selectedCategories[0] || "Business Website";
+      // Compile features list including custom note if entered
+      const compiledFeatures = [...form.selectedFeatures];
+      if (form.includeOtherFeature && form.otherFeatureText.trim()) {
+        compiledFeatures.push(`Other: ${form.otherFeatureText.trim()}`);
+      } else if (form.includeOtherFeature) {
+        compiledFeatures.push("Other Feature — Tell Us What You Need");
+      }
+      if (form.includeNotSureFeature) {
+        compiledFeatures.push("Not Sure — Help Me Decide");
+      }
 
+      // Build structured payload
       const payload = {
         name: form.name.trim(),
         email: form.email.trim(),
         phone: fullPhone,
-        whatsapp: form.preferred_contact === "whatsapp" ? fullPhone : "",
-        preferred_contact: form.preferred_contact,
-        company: form.is_individual
-          ? "Individual / Personal Project"
-          : form.company.trim(),
-        is_individual: form.is_individual,
-        website_url: form.website_url.trim(),
-        city: form.city.trim(),
-        service: primaryService,
-        categories: form.selectedCategories,
-        features: form.selectedFeatures,
-        description: form.description.trim(),
+        whatsapp: form.preferredContact === "WhatsApp" ? fullPhone : "",
+        preferred_contact: form.preferredContact,
+        company: form.isBusiness ? form.businessName.trim() : "",
+        business_name: form.isBusiness ? form.businessName.trim() : "",
+        is_business: form.isBusiness,
+        is_individual: !form.isBusiness,
+        service: form.selectedCategory,
+        categories: [form.selectedCategory],
+        features: compiledFeatures,
+        design_preference: form.designStyle,
+        reference_url: form.referenceUrl.trim(),
+        has_existing_website: form.hasExistingWebsite,
+        existing_website_url: form.existingWebsiteUrl.trim(),
+        website_url: form.existingWebsiteUrl.trim(),
+        has_domain: form.hasDomain,
         timeline: form.timeline,
         budget: form.budget,
+        description: form.description.trim(),
+        city: form.city.trim(),
+        additional_message: form.additionalMessage.trim(),
         consent: form.consent,
         website: form.website, // honeypot
       };
@@ -236,30 +259,61 @@ export default function Contact() {
     }
   }
 
+  // Icons for 5 categories
+  function renderCategoryIcon(id: string) {
+    switch (id) {
+      case "portfolio":
+        return <User size={18} />;
+      case "blog":
+        return <BookOpen size={18} />;
+      case "business":
+        return <Building2 size={18} />;
+      case "agency":
+        return <Layers size={18} />;
+      case "ecommerce":
+        return <ShoppingBag size={18} />;
+      default:
+        return <Sparkles size={18} />;
+    }
+  }
+
   return (
     <section className="page wrap">
       <span className="eyebrow">Start a project</span>
-      <h1>
-        Your next chapter<br />
-        <em>starts here.</em>
-      </h1>
+      <h1 style={{ marginBottom: 12 }}>Let&apos;s Build Your Website</h1>
+      <p
+        style={{
+          fontSize: 16,
+          lineHeight: 1.6,
+          color: "var(--text)",
+          maxWidth: 620,
+          margin: "0 0 8px 0",
+        }}
+      >
+        Choose the kind of website you need. Tell us a little about your idea,
+        and we&apos;ll help you take it forward.
+      </p>
+      <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 32px 0" }}>
+        No technical knowledge needed. No payment required to enquire.
+      </p>
 
       <div className="contact-grid">
+        {/* Left Column: Context & Helpful Links */}
         <aside className="contact-aside">
           <h2>
-            Tell us what<br />
-            you have in mind.
+            Simple, honest<br />
+            consultation.
           </h2>
           <p>
-            A few simple details in normal words are all we need to begin. No
-            technical jargon or forced fields — just an honest conversation about
-            your project.
+            You don&apos;t need to worry about servers, code frameworks, or
+            complex databases. We handle the full technical architecture so you
+            can focus on your business or brand.
           </p>
 
           <a href={"mailto:" + s.email}>{s.email}</a>
 
           <div style={{ marginTop: 28 }}>
-            <p style={{ margin: "6px 0 10px 0" }}>Already have a project with us?</p>
+            <p style={{ margin: "6px 0 10px 0" }}>Already have an SXD enquiry?</p>
             <Link className="text-link" to="/track">
               Track project status <Arrow />
             </Link>
@@ -271,27 +325,46 @@ export default function Contact() {
           </Link>
         </aside>
 
+        {/* Right Column: 3-Step Enquiry Builder */}
         <div className="form-panel">
-          {/* 2-Step Progress Indicator */}
-          <div className="simple-steps">
-            <div className={`simple-step-pill ${step === 0 ? "active" : ""}`}>
-              <span className="simple-step-num">1</span>
-              <span>Tell us what you need</span>
+          {/* 3-Step Progress Indicator */}
+          {!sent && (
+            <div className="builder-steps" role="navigation" aria-label="Enquiry steps">
+              <div
+                className={`builder-step-pill ${step === 0 ? "active" : step > 0 ? "completed" : ""}`}
+                onClick={() => setStep(0)}
+                style={{ cursor: step > 0 ? "pointer" : "default" }}
+              >
+                <span className="builder-step-num">{step > 0 ? "✓" : "1"}</span>
+                <span>Website Type</span>
+              </div>
+              <div
+                className={`builder-step-pill ${step === 1 ? "active" : step > 1 ? "completed" : ""}`}
+                onClick={() => {
+                  if (form.selectedCategory) setStep(1);
+                }}
+                style={{ cursor: step > 1 ? "pointer" : "default" }}
+              >
+                <span className="builder-step-num">{step > 1 ? "✓" : "2"}</span>
+                <span>What You Need</span>
+              </div>
+              <div
+                className={`builder-step-pill ${step === 2 ? "active" : ""}`}
+              >
+                <span className="builder-step-num">3</span>
+                <span>Contact Details</span>
+              </div>
             </div>
-            <div className={`simple-step-pill ${step === 1 ? "active" : ""}`}>
-              <span className="simple-step-num">2</span>
-              <span>How can we contact you?</span>
-            </div>
-          </div>
+          )}
 
           {/* SUBMISSION CONFIRMATION SCREEN */}
           {sent ? (
-            <div style={{ textAlign: "center", padding: "12px 0 24px" }}>
+            <div style={{ textAlign: "center", padding: "16px 0 28px" }}>
               <span className="eyebrow" style={{ color: "var(--accent)" }}>
                 Enquiry Received Successfully
               </span>
               <h2 style={{ margin: "10px 0 16px", fontSize: 28 }}>
-                Thank you! We’ve received your enquiry.
+                Thank You! We&apos;ve Received Your Enquiry.
               </h2>
               <p
                 style={{
@@ -301,10 +374,12 @@ export default function Contact() {
                   lineHeight: 1.7,
                 }}
               >
-                Thank you, <strong>{form.name}</strong>. An acknowledgement email with your project details has been sent to <strong>{form.email}</strong>.
+                Your request has been submitted successfully. A confirmation email
+                with your requirements has been dispatched to{" "}
+                <strong>{form.email}</strong>.
               </p>
 
-              {/* Unique Tracking ID Badge */}
+              {/* Sequential SXD Tracking ID Badge */}
               <div
                 style={{
                   background: "var(--soft)",
@@ -324,20 +399,23 @@ export default function Contact() {
                     marginBottom: 6,
                   }}
                 >
-                  Your Tracking ID
+                  Your Tracking Code
                 </div>
                 <div
                   style={{
                     fontFamily: "ui-monospace, Menlo, Consolas, monospace",
-                    fontSize: 28,
+                    fontSize: 30,
                     fontWeight: 700,
                     color: "var(--accent)",
                     letterSpacing: "0.08em",
-                    marginBottom: 14,
+                    marginBottom: 8,
                   }}
                 >
                   {trackingCode}
                 </div>
+                <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 16px" }}>
+                  This number helps you check the progress of your request.
+                </p>
 
                 <button
                   type="button"
@@ -356,7 +434,11 @@ export default function Contact() {
                     color: "var(--text)",
                   }}
                 >
-                  {copied ? <Check size={16} style={{ color: "#25d366" }} /> : <Copy size={16} />}
+                  {copied ? (
+                    <Check size={16} style={{ color: "#25d366" }} />
+                  ) : (
+                    <Copy size={16} />
+                  )}
                   {copied ? "Copied to Clipboard!" : "Copy Tracking ID"}
                 </button>
               </div>
@@ -371,7 +453,7 @@ export default function Contact() {
                 }}
               >
                 <Link to={`/track?code=${trackingCode}`} className="button">
-                  Track My Project <Arrow />
+                  Track My Request <Arrow />
                 </Link>
                 <Link to="/" className="button secondary">
                   Back to Home
@@ -380,212 +462,66 @@ export default function Contact() {
             </div>
           ) : (
             <>
-              {/* STEP 1: TELL US WHAT YOU NEED */}
+              {/* ==============================================================
+                  STEP 1 — WHAT KIND OF WEBSITE DO YOU NEED?
+                  ============================================================== */}
               {step === 0 && (
-                <form onSubmit={handleContinueToContact}>
+                <form onSubmit={handleGoToStep2}>
                   <div style={{ marginBottom: 18 }}>
                     <h3 style={{ margin: "0 0 6px 0", fontSize: 20 }}>
-                      What kind of website or project do you need?
+                      What kind of website do you need?
                     </h3>
                     <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
-                      Choose one or more options that fit your idea. You can also pick &apos;Not Sure&apos; and we will help you decide.
+                      Select the primary website type you are looking to build.
+                      Category selection is required to show relevant features in the next step.
                     </p>
                   </div>
 
-                  {/* 9 Simple Selection Cards */}
-                  <div className="simple-service-grid">
-                    {categories.map((cat) => {
-                      const isSelected = form.selectedCategories.includes(cat.label);
+                  {/* Exactly 5 Main Website Category Cards */}
+                  <div className="builder-categories-grid">
+                    {categories.slice(0, 5).map((cat) => {
+                      const isSelected = form.selectedCategory === cat.label;
                       return (
                         <div
                           key={cat.id || cat.label}
-                          className={`simple-service-card ${isSelected ? "selected" : ""}`}
-                          onClick={() => toggleCategory(cat.label)}
-                          role="checkbox"
+                          className={`builder-category-card ${isSelected ? "selected" : ""}`}
+                          onClick={() => update("selectedCategory", cat.label)}
+                          role="radio"
                           aria-checked={isSelected}
                           tabIndex={0}
                           onKeyDown={(e) => {
                             if (e.key === " " || e.key === "Enter") {
                               e.preventDefault();
-                              toggleCategory(cat.label);
+                              update("selectedCategory", cat.label);
                             }
                           }}
                         >
                           <div>
-                            <div className="simple-service-title">
-                              <span>{cat.label}</span>
-                              <span
-                                style={{
-                                  fontSize: 14,
-                                  color: isSelected ? "var(--accent)" : "var(--line)",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {isSelected ? "✓" : "+"}
-                              </span>
+                            <div className="builder-cat-header">
+                              <div className="builder-cat-icon">
+                                {renderCategoryIcon(cat.id)}
+                              </div>
+                              <div className="builder-cat-check">
+                                {isSelected ? "✓" : ""}
+                              </div>
                             </div>
-                            <div className="simple-service-desc">{cat.desc}</div>
+
+                            <div className="builder-cat-title">{cat.label}</div>
+                            <div className="builder-cat-desc">{cat.desc}</div>
                           </div>
+
+                          {cat.examples?.length > 0 && (
+                            <div className="builder-cat-examples">
+                              {cat.examples.map((ex: string, idx: number) => (
+                                <span key={idx} className="builder-example-tag">
+                                  {ex}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
-                  </div>
-
-                  {/* Searchable View All Services Toggle */}
-                  <div style={{ margin: "14px 0 24px" }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowAllServices(!showAllServices)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "var(--accent)",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: 0,
-                      }}
-                    >
-                      <Search size={14} />
-                      <span>{showAllServices ? "Hide specialized categories" : "View all specialized industries & services"}</span>
-                      <ChevronDown
-                        size={14}
-                        style={{
-                          transform: showAllServices ? "rotate(180deg)" : "none",
-                          transition: "transform 0.2s",
-                        }}
-                      />
-                    </button>
-
-                    {showAllServices && (
-                      <div className="all-services-box">
-                        <input
-                          type="text"
-                          className="all-services-search"
-                          placeholder="Search real estate, healthcare, travel, restaurant, SaaS..."
-                          value={serviceSearch}
-                          onChange={(e) => setServiceSearch(e.target.value)}
-                        />
-                        <div className="all-services-tags">
-                          {filteredSearchServices.map((cat) => {
-                            const isSelected = form.selectedCategories.includes(cat.label);
-                            return (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                className={`feature-chip ${isSelected ? "selected" : ""}`}
-                                onClick={() => toggleCategory(cat.label)}
-                              >
-                                {isSelected ? "✓ " : "+ "}
-                                {cat.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Simple Requirements Description */}
-                  <label style={{ display: "block", marginBottom: 20 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>
-                      Tell us a little about your idea *
-                    </div>
-                    <textarea
-                      required
-                      minLength={10}
-                      maxLength={5000}
-                      rows={4}
-                      value={form.description}
-                      onChange={(e) => update("description", e.target.value)}
-                      placeholder="Example: I have a small clothing business. I want a website where customers can see my products and contact me on WhatsApp."
-                      style={{ width: "100%", fontSize: 13, lineHeight: 1.6 }}
-                    />
-                    <small style={{ color: "var(--muted)", fontSize: 11, display: "block", marginTop: 4 }}>
-                      Normal words are best. You don&apos;t need to know any technical terms like API, CMS, or backend.
-                    </small>
-                  </label>
-
-                  {/* Optional Helpful Feature Selections */}
-                  <div style={{ marginBottom: 22 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>
-                        Helpful features (Optional)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={skipFeatures}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          fontSize: 11.5,
-                          color: "var(--muted)",
-                          textDecoration: "underline",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Skip feature selection
-                      </button>
-                    </div>
-
-                    <div className="feature-chips-wrap">
-                      {featuresList.map((feat) => {
-                        const isSelected = form.selectedFeatures.includes(feat);
-                        return (
-                          <button
-                            type="button"
-                            key={feat}
-                            className={`feature-chip ${isSelected ? "selected" : ""}`}
-                            onClick={() => toggleFeature(feat)}
-                          >
-                            {isSelected ? "✓ " : "+ "}
-                            {feat}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Optional Budget & Timeline (Non-binding) */}
-                  <div className="form-grid" style={{ marginBottom: 20 }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
-                        Timeline (Optional, non-binding)
-                      </div>
-                      <div className="option-chips-wrap">
-                        {TIMELINE_CHOICES.map((t) => (
-                          <button
-                            key={t}
-                            type="button"
-                            className={`option-chip ${form.timeline === t ? "selected" : ""}`}
-                            onClick={() => update("timeline", t)}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
-                        Budget estimate (Optional, non-binding)
-                      </div>
-                      <div className="option-chips-wrap">
-                        {BUDGET_CHOICES.map((b) => (
-                          <button
-                            key={b}
-                            type="button"
-                            className={`option-chip ${form.budget === b ? "selected" : ""}`}
-                            onClick={() => update("budget", b)}
-                          >
-                            {b}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                   </div>
 
                   {status && (
@@ -596,17 +532,368 @@ export default function Contact() {
 
                   <div className="form-actions" style={{ justifyContent: "flex-end" }}>
                     <button type="submit" className="button">
-                      Continue to Step 2: Contact Details <ArrowRight size={18} />
+                      Continue to Step 2: Choose Features <ArrowRight size={18} />
                     </button>
                   </div>
                 </form>
               )}
 
-              {/* STEP 2: HOW CAN WE CONTACT YOU? */}
+              {/* ==============================================================
+                  STEP 2 — WHAT WOULD YOU LIKE ON YOUR WEBSITE?
+                  ============================================================== */}
               {step === 1 && (
+                <form onSubmit={handleGoToStep3}>
+                  <div style={{ marginBottom: 20 }}>
+                    <div
+                      style={{
+                        display: "inline-block",
+                        fontSize: 11,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.15em",
+                        color: "var(--accent)",
+                        fontWeight: 700,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Step 2 · For {form.selectedCategory}
+                    </div>
+                    <h3 style={{ margin: "0 0 6px 0", fontSize: 22 }}>
+                      Choose What You Need
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
+                      Select anything you&apos;d like. Not sure? You can skip this part
+                      and we&apos;ll help you decide.
+                    </p>
+                  </div>
+
+                  {/* Feature Checklist Header with Skip button */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      margin: "18px 0 8px",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, fontSize: 13.5 }}>
+                      Relevant Features for {form.selectedCategory}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={skipFeatures}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        fontSize: 12,
+                        color: "var(--muted)",
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Skip this part
+                    </button>
+                  </div>
+
+                  {/* Dynamic Relevant Features Grid */}
+                  <div className="builder-feature-grid">
+                    {(activeCategory.features || []).map((feat: string) => {
+                      const isSelected = form.selectedFeatures.includes(feat);
+                      const note = activeCategory.featureNotes?.[feat];
+                      return (
+                        <div
+                          key={feat}
+                          className={`builder-feature-card ${isSelected ? "selected" : ""}`}
+                          onClick={() => toggleFeature(feat)}
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === " " || e.key === "Enter") {
+                              e.preventDefault();
+                              toggleFeature(feat);
+                            }
+                          }}
+                        >
+                          <div>
+                            <div className="builder-feature-label">{feat}</div>
+                            {note && <div className="builder-feature-sub">{note}</div>}
+                          </div>
+                          <div className="builder-checkbox-box">
+                            {isSelected ? "✓" : ""}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Standard: Other Feature Option */}
+                    <div
+                      className={`builder-feature-card ${form.includeOtherFeature ? "selected" : ""}`}
+                      onClick={() =>
+                        update("includeOtherFeature", !form.includeOtherFeature)
+                      }
+                      role="checkbox"
+                      aria-checked={form.includeOtherFeature}
+                      tabIndex={0}
+                    >
+                      <div>
+                        <div className="builder-feature-label">
+                          Other Feature — Tell Us What You Need
+                        </div>
+                        <div className="builder-feature-sub">
+                          Add a custom feature or requirement
+                        </div>
+                      </div>
+                      <div className="builder-checkbox-box">
+                        {form.includeOtherFeature ? "✓" : ""}
+                      </div>
+                    </div>
+
+                    {/* Standard: Not Sure Help Me Decide */}
+                    <div
+                      className={`builder-feature-card ${form.includeNotSureFeature ? "selected" : ""}`}
+                      onClick={() =>
+                        update("includeNotSureFeature", !form.includeNotSureFeature)
+                      }
+                      role="checkbox"
+                      aria-checked={form.includeNotSureFeature}
+                      tabIndex={0}
+                    >
+                      <div>
+                        <div className="builder-feature-label">
+                          Not Sure — Help Me Decide
+                        </div>
+                        <div className="builder-feature-sub">
+                          We will recommend the best features for you
+                        </div>
+                      </div>
+                      <div className="builder-checkbox-box">
+                        {form.includeNotSureFeature ? "✓" : ""}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Other Feature Text Field when checked */}
+                  {form.includeOtherFeature && (
+                    <div style={{ marginBottom: 20 }}>
+                      <label>
+                        Describe your custom feature:
+                        <input
+                          type="text"
+                          value={form.otherFeatureText}
+                          onChange={(e) => update("otherFeatureText", e.target.value)}
+                          placeholder="e.g. Real-time calendar sync, custom calculator, member portal..."
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {/* DESIGN PREFERENCE */}
+                  <div style={{ margin: "28px 0 16px", paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+                      What style would you like?
+                    </div>
+                    <p style={{ margin: "0 0 10px 0", fontSize: 12.5, color: "var(--muted)" }}>
+                      These are preferences to guide our design direction.
+                    </p>
+
+                    <div className="builder-radio-group">
+                      {designStyles.map((style: any) => {
+                        const isSelected = form.designStyle === style.label;
+                        return (
+                          <div
+                            key={style.id || style.label}
+                            className={`builder-radio-card ${isSelected ? "selected" : ""}`}
+                            onClick={() => update("designStyle", style.label)}
+                          >
+                            <div className="builder-radio-title">{style.label}</div>
+                            <div className="builder-radio-desc">{style.desc}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* If Inspired by a website is chosen: optional reference link */}
+                    {form.designStyle === "Inspired by a Website" && (
+                      <label style={{ display: "block", marginTop: 10 }}>
+                        Reference Website URL (Optional)
+                        <input
+                          type="url"
+                          value={form.referenceUrl}
+                          onChange={(e) => update("referenceUrl", e.target.value)}
+                          placeholder="https://example.com"
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* OPTIONAL WEBSITE DETAILS */}
+                  <div style={{ margin: "24px 0 16px", paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                    <div className="form-grid">
+                      {/* Existing Website Question */}
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
+                          Do you already have a website?
+                        </div>
+                        <div className="pill-toggle-group">
+                          {[
+                            "No, I need a new website.",
+                            "Yes, I want to improve my existing website.",
+                          ].map((choice) => (
+                            <button
+                              key={choice}
+                              type="button"
+                              className={`pill-toggle-btn ${form.hasExistingWebsite === choice ? "selected" : ""}`}
+                              onClick={() => update("hasExistingWebsite", choice)}
+                            >
+                              {choice}
+                            </button>
+                          ))}
+                        </div>
+
+                        {form.hasExistingWebsite.includes("Yes") && (
+                          <input
+                            type="url"
+                            value={form.existingWebsiteUrl}
+                            onChange={(e) => update("existingWebsiteUrl", e.target.value)}
+                            placeholder="https://mycurrentsite.com"
+                            style={{ marginTop: 6 }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Domain Name Question */}
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
+                          Do you already have a domain name?
+                        </div>
+                        <p style={{ margin: "0 0 6px 0", fontSize: 11.5, color: "var(--muted)" }}>
+                          A domain name is your website address, like yourbusiness.com.
+                        </p>
+                        <div className="pill-toggle-group">
+                          {["Yes", "No", "Not Sure"].map((choice) => (
+                            <button
+                              key={choice}
+                              type="button"
+                              className={`pill-toggle-btn ${form.hasDomain === choice ? "selected" : ""}`}
+                              onClick={() => update("hasDomain", choice)}
+                            >
+                              {choice}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TIMELINE & BUDGET */}
+                  <div style={{ margin: "24px 0 16px", paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                    <div className="form-grid">
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
+                          When would you like your website ready?
+                        </div>
+                        <p style={{ margin: "0 0 6px 0", fontSize: 11.5, color: "var(--muted)" }}>
+                          Preferences, not promised delivery dates.
+                        </p>
+                        <div className="pill-toggle-group">
+                          {timelineChoices.map((t: string) => (
+                            <button
+                              key={t}
+                              type="button"
+                              className={`pill-toggle-btn ${form.timeline === t ? "selected" : ""}`}
+                              onClick={() => update("timeline", t)}
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
+                          Do you have a budget in mind? (Optional)
+                        </div>
+                        <p style={{ margin: "0 0 6px 0", fontSize: 11.5, color: "var(--muted)" }}>
+                          Help us tailor our proposal. No advance payment required.
+                        </p>
+                        <div className="pill-toggle-group">
+                          {budgetChoices.map((b: string) => (
+                            <button
+                              key={b}
+                              type="button"
+                              className={`pill-toggle-btn ${form.budget === b ? "selected" : ""}`}
+                              onClick={() => update("budget", b)}
+                            >
+                              {b}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PROJECT IDEA */}
+                  <div style={{ margin: "24px 0 16px", paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                    <label style={{ display: "block" }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+                        Tell us a little about your idea
+                      </div>
+                      <textarea
+                        rows={3}
+                        maxLength={5000}
+                        value={form.description}
+                        onChange={(e) => update("description", e.target.value)}
+                        placeholder="I have a clothing brand and want a website to show my products and let customers contact me through WhatsApp."
+                        style={{ width: "100%", fontSize: 13, lineHeight: 1.6 }}
+                      />
+                      <small style={{ color: "var(--muted)", fontSize: 11, display: "block", marginTop: 4 }}>
+                        Optional if you&apos;ve selected sufficient choices, but a short sentence helps us understand your vision.
+                      </small>
+                    </label>
+                  </div>
+
+                  {status && (
+                    <p role="alert" className="status" style={{ color: "var(--accent)", marginBottom: 16 }}>
+                      {status}
+                    </p>
+                  )}
+
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      onClick={() => setStep(0)}
+                      className="button secondary"
+                    >
+                      <ArrowLeft size={16} /> Back to Step 1
+                    </button>
+
+                    <button type="submit" className="button">
+                      Continue to Step 3: Contact Details <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* ==============================================================
+                  STEP 3 — HOW CAN WE CONTACT YOU?
+                  ============================================================== */}
+              {step === 2 && (
                 <form onSubmit={handleSubmit}>
-                  <div style={{ marginBottom: 18 }}>
-                    <h3 style={{ margin: "0 0 6px 0", fontSize: 20 }}>
+                  <div style={{ marginBottom: 20 }}>
+                    <div
+                      style={{
+                        display: "inline-block",
+                        fontSize: 11,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.15em",
+                        color: "var(--accent)",
+                        fontWeight: 700,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Step 3 · Final Step
+                    </div>
+                    <h3 style={{ margin: "0 0 6px 0", fontSize: 22 }}>
                       How can we contact you?
                     </h3>
                     <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
@@ -614,7 +901,7 @@ export default function Contact() {
                     </p>
                   </div>
 
-                  {/* Prominent Core Fields */}
+                  {/* Core Required Contact Fields */}
                   <div className="form-grid">
                     <label>
                       Your Full Name *
@@ -643,7 +930,7 @@ export default function Contact() {
 
                   <div className="form-grid">
                     <label>
-                      Mobile / WhatsApp Number
+                      Mobile / WhatsApp Number *
                       <div style={{ display: "flex", gap: 8 }}>
                         <input
                           type="text"
@@ -653,6 +940,7 @@ export default function Contact() {
                           placeholder="+91"
                         />
                         <input
+                          required
                           type="tel"
                           autoComplete="tel"
                           style={{ flex: 1 }}
@@ -661,104 +949,137 @@ export default function Contact() {
                           placeholder="e.g. 9876543210"
                         />
                       </div>
-                      <small style={{ color: "var(--muted)", fontSize: 11, marginTop: 4, display: "block" }}>
-                        Include country code for WhatsApp updates.
-                      </small>
                     </label>
 
                     <label>
                       Preferred Contact Method
                       <select
-                        value={form.preferred_contact}
-                        onChange={(e) => update("preferred_contact", e.target.value)}
+                        value={form.preferredContact}
+                        onChange={(e) => update("preferredContact", e.target.value)}
                       >
-                        <option value="email">Email</option>
-                        <option value="whatsapp">WhatsApp Message</option>
-                        <option value="phone">Phone Call</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Phone Call">Phone Call</option>
+                        <option value="Email">Email</option>
                       </select>
                     </label>
                   </div>
 
-                  {/* Collapsible Section for Optional Business Details */}
+                  {/* Enquiring for Myself or Business */}
+                  <div style={{ margin: "16px 0" }}>
+                    <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 6 }}>
+                      Are you enquiring for yourself or a business?
+                    </div>
+                    <div className="pill-toggle-group">
+                      <button
+                        type="button"
+                        className={`pill-toggle-btn ${!form.isBusiness ? "selected" : ""}`}
+                        onClick={() => update("isBusiness", false)}
+                      >
+                        For Myself
+                      </button>
+                      <button
+                        type="button"
+                        className={`pill-toggle-btn ${form.isBusiness ? "selected" : ""}`}
+                        onClick={() => update("isBusiness", true)}
+                      >
+                        For My Business / Organization
+                      </button>
+                    </div>
+
+                    {form.isBusiness && (
+                      <label style={{ display: "block", marginTop: 8 }}>
+                        Business / Brand Name *
+                        <input
+                          required
+                          type="text"
+                          value={form.businessName}
+                          onChange={(e) => update("businessName", e.target.value)}
+                          placeholder="e.g. Bloom Apparel, Apex Logistics..."
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Collapsible Optional Contact Info */}
                   <div style={{ margin: "14px 0" }}>
                     <button
                       type="button"
                       className="collapsible-trigger"
-                      onClick={() => setShowOptionalDetails(!showOptionalDetails)}
+                      onClick={() => setShowOptionalContact(!showOptionalContact)}
                     >
-                      <span>{showOptionalDetails ? "Hide optional business details" : "+ Add optional business details (Brand name, existing website, city)"}</span>
+                      <span>
+                        {showOptionalContact
+                          ? "Hide optional details"
+                          : "+ Add location, existing website, or additional message (Optional)"}
+                      </span>
                       <ChevronDown
                         size={16}
                         style={{
-                          transform: showOptionalDetails ? "rotate(180deg)" : "none",
+                          transform: showOptionalContact ? "rotate(180deg)" : "none",
                           transition: "transform 0.2s",
                         }}
                       />
                     </button>
 
-                    {showOptionalDetails && (
+                    {showOptionalContact && (
                       <div style={{ background: "var(--panel)", padding: 16, borderRadius: 8, marginBottom: 14 }}>
                         <div className="form-grid">
                           <label>
-                            Business or Brand Name (Optional)
+                            City / Location (Optional)
                             <input
                               type="text"
-                              value={form.company}
-                              disabled={form.is_individual}
-                              onChange={(e) => update("company", e.target.value)}
-                              placeholder="e.g. Bloom Apparel"
+                              value={form.city}
+                              onChange={(e) => update("city", e.target.value)}
+                              placeholder="e.g. Hyderabad, India"
                             />
-                            <label className="check" style={{ marginTop: 6 }}>
-                              <input
-                                type="checkbox"
-                                checked={form.is_individual}
-                                onChange={(e) => update("is_individual", e.target.checked)}
-                              />
-                              <span style={{ fontSize: 11.5 }}>I am an individual / personal brand</span>
-                            </label>
                           </label>
 
                           <label>
-                            Existing Website Link (Optional)
+                            Existing Website (Optional)
                             <input
                               type="url"
-                              value={form.website_url}
-                              onChange={(e) => update("website_url", e.target.value)}
-                              placeholder="https://mycurrentsite.com"
+                              value={form.existingWebsiteUrl}
+                              onChange={(e) => update("existingWebsiteUrl", e.target.value)}
+                              placeholder="https://example.com"
                             />
                           </label>
                         </div>
 
-                        <label style={{ display: "block", marginTop: 8 }}>
-                          City / Location (Optional)
-                          <input
-                            type="text"
-                            value={form.city}
-                            onChange={(e) => update("city", e.target.value)}
-                            placeholder="e.g. Hyderabad, India"
+                        <label style={{ display: "block", marginTop: 10 }}>
+                          Additional Message (Optional)
+                          <textarea
+                            rows={2}
+                            maxLength={3000}
+                            value={form.additionalMessage}
+                            onChange={(e) => update("additionalMessage", e.target.value)}
+                            placeholder="Any other specific requests or notes for our team..."
                           />
                         </label>
                       </div>
                     )}
                   </div>
 
-                  {/* Short Summary Card */}
+                  {/* Concise Review Summary Card */}
                   <div className="enquiry-summary-card">
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Enquiry Summary:</div>
-                    <div style={{ color: "var(--muted)", fontSize: 12 }}>
-                      <b>Project:</b> {form.selectedCategories.join(", ")}
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: "var(--text)" }}>
+                      Review Your Enquiry:
                     </div>
-                    {form.selectedFeatures.length > 0 && (
-                      <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>
-                        <b>Features:</b> {form.selectedFeatures.join(", ")}
+                    <div style={{ color: "var(--muted)", fontSize: 12.5, lineHeight: 1.6 }}>
+                      <div><b>Website Type:</b> {form.selectedCategory}</div>
+                      <div>
+                        <b>Features:</b>{" "}
+                        {form.selectedFeatures.length > 0
+                          ? form.selectedFeatures.join(", ")
+                          : "General consultation / Not specified"}
+                        {form.includeOtherFeature ? " (+ Custom feature)" : ""}
                       </div>
-                    )}
-                    <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>
-                      <b>Brief:</b> {form.description.slice(0, 140)}{form.description.length > 140 ? "…" : ""}
+                      <div><b>Design Style:</b> {form.designStyle}</div>
+                      <div><b>Timeline / Budget:</b> {form.timeline} · {form.budget}</div>
+                      <div><b>Contact:</b> {form.name} ({form.email}, {form.countryCode} {form.phone})</div>
                     </div>
                   </div>
 
-                  {/* Explicit Consent */}
+                  {/* Single Clear Consent Checkbox */}
                   <label className="check" style={{ marginTop: 16, marginBottom: 16 }}>
                     <input
                       type="checkbox"
@@ -767,7 +1088,10 @@ export default function Contact() {
                       onChange={(e) => update("consent", e.target.checked)}
                     />
                     <span style={{ fontSize: 12.5, lineHeight: 1.5 }}>
-                      I agree to receive a project proposal and tracking updates from SANJU X DEV. Your details are strictly confidential and will never be shared. <Link to="/privacy">Privacy policy</Link>
+                      I agree to receive a project proposal and tracking updates from SANJU X DEV. Your details are strictly confidential and will never be shared.{" "}
+                      <Link to="/privacy" style={{ textDecoration: "underline", color: "var(--accent)" }}>
+                        Privacy Policy
+                      </Link>
                     </span>
                   </label>
 
@@ -791,10 +1115,10 @@ export default function Contact() {
                   <div className="form-actions">
                     <button
                       type="button"
-                      onClick={() => setStep(0)}
+                      onClick={() => setStep(1)}
                       className="button secondary"
                     >
-                      ← Back to Step 1
+                      <ArrowLeft size={16} /> Back to Step 2
                     </button>
 
                     <button type="submit" className="button" disabled={busy}>

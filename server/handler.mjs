@@ -521,17 +521,21 @@ export default async function handler(req, res) {
         answer = `${project.name}: ${project.summary} ${project.headline} Key features include: ${project.features.join(", ")}.`;
         links.push({ label: "View " + project.short + " Case Study", url: "/work/" + project.slug });
         links.push({ label: "Visit Live Site ↗", url: project.url });
+      } else if (/(website for my shop|for my shop|for my store)/i.test(q)) {
+        answer = "A Business Website could work if you want to show your products and receive enquiries. If you want customers to pay and place orders online, an E-Commerce Website may be better.";
+        links.push({ label: "Start With This Website Type", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "Start With Business Website", url: "/contact?category=" + encodeURIComponent("Business Website") });
       } else if (/what kind of website|which website|kind of website|what type of website|recommend|need a website|help me decide/.test(q)) {
-        answer = "Choosing the right website depends on your primary goal:\n• Business Website — Help customers find, understand and contact your business.\n• Online Store — Sell products directly with online payments.\n• Booking Website — Let clients schedule appointments or sessions.\n• Portfolio Website — Showcase your work, skills, and personal brand.\n• Business Application — A custom tool built for your operations.\nShare your idea on our Contact page and we'll guide you step by step!";
-        links.push({ label: "Start a Project Brief", url: "/contact" });
+        answer = "We specialize in five core website categories:\n• Personal Portfolio — Showcase work, skills, and resume.\n• Blog / Content Website — Share articles, stories, and updates.\n• Business Website — Help customers discover and contact your company.\n• Agency Website — Present your agency, team, and client case studies.\n• E-Commerce Website / Online Store — Showcase products, accept payments, and sell online.\nTell us about your idea and we'll help you take it forward!";
+        links.push({ label: "Start With This Website Type", url: "/contact" });
         links.push({ label: "Explore Our Work", url: "/work" });
       } else if (/how do i start|how to start|start a project|how do i get started|begin/.test(q)) {
-        answer = "Starting is simple and takes just 2 minutes! Go to our 2-step Contact page, choose the type of website you need, write a brief sentence about your idea, and leave your contact details. You'll immediately receive an SXD Tracking ID and Sanjay will follow up with a tailored proposal.";
-        links.push({ label: "Start a Project Now", url: "/contact" });
+        answer = "Starting is simple and takes just 3 short steps! On our Contact page, select your website type, choose the features you'd like, and tell us how to reach you. You'll immediately receive your sequential SXD Tracking ID and no payment is required to enquire.";
+        links.push({ label: "Start With This Website Type", url: "/contact" });
         links.push({ label: "Explore Our Work", url: "/work" });
       } else if (/online store|ecommerce|e-commerce|sell products|shopping|clothing|store/.test(q)) {
-        answer = "Yes! We design and build modern online stores with clear product catalogues, mobile shopping, WhatsApp ordering, and secure payment checkout (UPI, cards, net banking). You can easily manage products and see incoming orders.";
-        links.push({ label: "Start an Online Store", url: "/contact?service=Online+Store" });
+        answer = "Yes! We design and build modern online stores and e-commerce websites with clear product catalogues, mobile shopping, WhatsApp ordering, and secure payment checkout (UPI, cards, net banking). You can easily manage products and see incoming orders.";
+        links.push({ label: "Start With This Website Type", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
         links.push({ label: "View TicketX Platform", url: "/work/ticketx" });
       } else if (/track|tracking|status|check my project|project status|sxd-/.test(q)) {
         answer = "You can track your project anytime on our Track Project page (/track). Enter your unique Tracking ID (such as SXD-001) and your registered email address to view real-time milestone progress, status updates, and countdown days remaining.";

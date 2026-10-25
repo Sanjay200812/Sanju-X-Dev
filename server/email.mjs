@@ -65,6 +65,10 @@ export function formatNewEnquiryOwnerHtml(enquiry, trackingCode, siteUrl) {
       <tr><td class="label">Preferred Contact</td><td><strong>${escape(enquiry.preferred_contact || "Email")}</strong></td></tr>
       <tr><td class="label">Primary Service</td><td><strong>${escape(enquiry.service)}</strong></td></tr>
       ${enquiry.categories?.length ? `<tr><td class="label">Project Types</td><td>${escape(enquiry.categories.join(", "))}</td></tr>` : ""}
+      ${enquiry.design_preference ? `<tr><td class="label">Design Style</td><td>${escape(enquiry.design_preference)}</td></tr>` : ""}
+      ${enquiry.reference_url ? `<tr><td class="label">Reference Link</td><td><a href="${escape(enquiry.reference_url)}" target="_blank">${escape(enquiry.reference_url)}</a></td></tr>` : ""}
+      ${enquiry.has_domain ? `<tr><td class="label">Domain Status</td><td>${escape(enquiry.has_domain)}</td></tr>` : ""}
+      ${enquiry.has_existing_website ? `<tr><td class="label">Existing Site</td><td>${escape(enquiry.has_existing_website)}</td></tr>` : ""}
       ${enquiry.website_url ? `<tr><td class="label">Existing Website</td><td><a href="${escape(enquiry.website_url)}" target="_blank">${escape(enquiry.website_url)}</a></td></tr>` : ""}
       ${enquiry.city ? `<tr><td class="label">Location</td><td>${escape(enquiry.city)}, ${escape(enquiry.country || "")}</td></tr>` : ""}
       <tr><td class="label">Timeline</td><td>${escape(enquiry.timeline || "Flexible")}</td></tr>
@@ -74,6 +78,11 @@ export function formatNewEnquiryOwnerHtml(enquiry, trackingCode, siteUrl) {
 
     <div style="font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #555;">Project Requirements</div>
     <div class="box">${escape(enquiry.description)}</div>
+
+    ${enquiry.additional_message ? `
+      <div style="font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #555; margin-top: 14px;">Additional Message</div>
+      <div class="box" style="border-left-color: #315768;">${escape(enquiry.additional_message)}</div>
+    ` : ""}
 
     ${enquiry.features?.length ? `
       <div style="font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #555; margin-top: 14px;">Requested Features</div>
@@ -107,7 +116,8 @@ export function formatCustomerConfirmationHtml(enquiry, trackingCode, siteUrl) {
 
     <table class="meta-table">
       <tr><td class="label">Project / Business</td><td>${escape(enquiry.company || enquiry.name)}</td></tr>
-      <tr><td class="label">Service Requested</td><td>${escape(enquiry.service)}</td></tr>
+      <tr><td class="label">Website Type</td><td>${escape(enquiry.service)}</td></tr>
+      ${enquiry.design_preference ? `<tr><td class="label">Design Style</td><td>${escape(enquiry.design_preference)}</td></tr>` : ""}
       <tr><td class="label">Timeline</td><td>${escape(enquiry.timeline || "Flexible")}</td></tr>
       <tr><td class="label">Budget Choice</td><td>${escape(enquiry.budget || "Not specified")}</td></tr>
     </table>

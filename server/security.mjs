@@ -133,6 +133,7 @@ export function enquiry(x) {
     name: 100,
     email: 254,
     company: 150,
+    business_name: 150,
     description: 5000,
     service: 200,
     timeline: 100,
@@ -143,6 +144,12 @@ export function enquiry(x) {
     city: 100,
     country: 100,
     website_url: 300,
+    existing_website_url: 300,
+    reference_url: 300,
+    design_preference: 150,
+    has_existing_website: 150,
+    has_domain: 100,
+    additional_message: 3000,
   };
 
   for (const [k, maxLen] of Object.entries(limits)) {
@@ -183,6 +190,17 @@ export function enquiry(x) {
   }
 
   out.is_individual = Boolean(x.is_individual);
+  out.is_business = Boolean(x.is_business);
+
+  if (!out.company && out.business_name) {
+    out.company = out.business_name;
+  }
+
+  if ((!out.description || out.description.length < 10) && (out.service || out.categories.length)) {
+    const primary = out.service || out.categories[0];
+    const featCount = Array.isArray(out.features) ? out.features.length : 0;
+    out.description = `Enquiry for ${primary}${featCount > 0 ? ` with ${featCount} selected features` : ""}.${out.description ? ` Details: ${out.description}` : ""}`;
+  }
 
   if (
     !out.name ||
@@ -229,6 +247,16 @@ export function validateSite(s) {
     throw Error("Invalid assistantWelcome");
   if (s.homepageQuestions !== undefined && (!Array.isArray(s.homepageQuestions) || s.homepageQuestions.some((q) => typeof q !== "string" || q.length > 200)))
     throw Error("Invalid homepageQuestions");
+  if (s.websiteCategories !== undefined && !Array.isArray(s.websiteCategories))
+    throw Error("Invalid websiteCategories");
+  if (s.designStyles !== undefined && !Array.isArray(s.designStyles))
+    throw Error("Invalid designStyles");
+  if (s.timelineChoices !== undefined && !Array.isArray(s.timelineChoices))
+    throw Error("Invalid timelineChoices");
+  if (s.budgetChoices !== undefined && !Array.isArray(s.budgetChoices))
+    throw Error("Invalid budgetChoices");
+  if (s.formConfig !== undefined && typeof s.formConfig !== "object")
+    throw Error("Invalid formConfig");
   if (s.enquiryCategories !== undefined && !Array.isArray(s.enquiryCategories))
     throw Error("Invalid enquiryCategories");
   if (s.enquiryFeatures !== undefined && !Array.isArray(s.enquiryFeatures))
