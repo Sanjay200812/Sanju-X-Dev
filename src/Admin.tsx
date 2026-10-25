@@ -40,6 +40,7 @@ export default function Admin() {
   const [tab, setTab] = useState("Overview");
   const [site, setSite] = useState(defaults);
   const [data, setData] = useState<any>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Lockout states (in seconds)
   const [codeLockout, setCodeLockout] = useState(0);
@@ -235,6 +236,7 @@ export default function Admin() {
     "Overview",
     "Active Projects",
     "Enquiries",
+    "Enquiry Form",
     "Email Outbox",
     "Projects",
     "Page content",
@@ -1901,10 +1903,140 @@ export default function Admin() {
             </div>
           )}
 
+          {/* ENQUIRY FORM TAB */}
+          {tab === "Enquiry Form" && (
+            <div className="admin-card">
+              <h3>Client Enquiry Form & Options</h3>
+              <p style={{ color: "var(--muted)", fontSize: 13 }}>
+                Customize the service categories, descriptions, feature tags, and choices presented to customers on the Contact page.
+              </p>
+
+              <div style={{ marginTop: 20 }}>
+                <h4>Service Categories & Descriptions (Step 1 Selection)</h4>
+                {((site as any).enquiryCategories || []).map((cat: any, i: number) => (
+                  <div key={i} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 12, marginBottom: 14 }}>
+                    <div className="form-grid">
+                      <label>
+                        Category Label
+                        <input
+                          value={cat.label}
+                          onChange={(e) =>
+                            setSite({
+                              ...site,
+                              enquiryCategories: ((site as any).enquiryCategories || []).map((x: any, j: number) =>
+                                j === i ? { ...x, label: e.target.value } : x,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Customer-Facing Description
+                        <input
+                          value={cat.desc}
+                          onChange={(e) =>
+                            setSite({
+                              ...site,
+                              enquiryCategories: ((site as any).enquiryCategories || []).map((x: any, j: number) =>
+                                j === i ? { ...x, desc: e.target.value } : x,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      style={{ fontSize: 11, color: "var(--accent)", padding: "4px 8px" }}
+                      onClick={() =>
+                        setSite({
+                          ...site,
+                          enquiryCategories: ((site as any).enquiryCategories || []).filter((_: any, j: number) => j !== i),
+                        })
+                      }
+                    >
+                      Remove Category
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ fontSize: 12, padding: "8px 14px", marginTop: 6 }}
+                  onClick={() =>
+                    setSite({
+                      ...site,
+                      enquiryCategories: [
+                        ...((site as any).enquiryCategories || []),
+                        { id: "custom-" + Date.now(), label: "New Service", desc: "Description of what this service offers." },
+                      ],
+                    })
+                  }
+                >
+                  + Add Service Category
+                </button>
+              </div>
+
+              <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                <h4>Helpful Feature Choices (Optional Chips)</h4>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  {((site as any).enquiryFeatures || []).map((feat: string, i: number) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: "var(--panel)",
+                        border: "1px solid var(--line)",
+                        padding: "4px 10px",
+                        borderRadius: 20,
+                        fontSize: 12,
+                      }}
+                    >
+                      <span>{feat}</span>
+                      <button
+                        type="button"
+                        style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--accent)", fontSize: 13 }}
+                        onClick={() =>
+                          setSite({
+                            ...site,
+                            enquiryFeatures: ((site as any).enquiryFeatures || []).filter((_: any, j: number) => j !== i),
+                          })
+                        }
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const input = e.currentTarget.elements.namedItem("newFeature") as HTMLInputElement;
+                    const val = input.value.trim();
+                    if (!val) return;
+                    setSite({
+                      ...site,
+                      enquiryFeatures: [...((site as any).enquiryFeatures || []), val],
+                    });
+                    input.value = "";
+                  }}
+                  style={{ display: "flex", gap: 8, maxWidth: 400 }}
+                >
+                  <input name="newFeature" placeholder="Add feature option (e.g. Multi-Language)" style={{ flex: 1, fontSize: 12 }} />
+                  <button type="submit" className="button secondary" style={{ fontSize: 12, padding: "6px 12px" }}>
+                    Add
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* SPIDEYY TAB */}
           {tab === "spideyy" && (
             <div className="admin-card">
-              <h3>Assistant knowledge</h3>
+              <h3>spideyy AI Assistant Configuration</h3>
               <label className="check">
                 <input
                   type="checkbox"
@@ -1913,61 +2045,131 @@ export default function Admin() {
                     setSite({ ...site, assistantEnabled: e.target.checked })
                   }
                 />
-                Enable spideyy assistant
+                Enable spideyy assistant across the website
               </label>
-              {field("knowledge", "Verified public business knowledge", true)}
-              {site.faqs.map((f, i) => (
-                <div key={i} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 12, marginBottom: 12 }}>
-                  <label>
-                    Question
-                    <input
-                      value={f.q}
-                      onChange={(e) =>
-                        setSite({
-                          ...site,
-                          faqs: site.faqs.map((x, j) =>
-                            j === i ? { ...x, q: e.target.value } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Answer
-                    <textarea
-                      value={f.a}
-                      onChange={(e) =>
-                        setSite({
-                          ...site,
-                          faqs: site.faqs.map((x, j) =>
-                            j === i ? { ...x, a: e.target.value } : x,
-                          ),
-                        })
-                      }
-                    />
-                  </label>
-                  <button
-                    onClick={() =>
-                      setSite({
-                        ...site,
-                        faqs: site.faqs.filter((_, j) => j !== i),
-                      })
+
+              <div style={{ marginTop: 16 }}>
+                <label>
+                  AI Welcome Greeting Message
+                  <textarea
+                    rows={2}
+                    value={(site as any).assistantWelcome || ""}
+                    onChange={(e) =>
+                      setSite({ ...site, assistantWelcome: e.target.value })
                     }
-                  >
-                    Remove FAQ
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() =>
-                  setSite({
-                    ...site,
-                    faqs: [...site.faqs, { q: "New question?", a: "New answer." }],
-                  })
-                }
-              >
-                Add FAQ
-              </button>
+                    placeholder="Hi, I’m spideyy! I can help you understand our services..."
+                  />
+                </label>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <h4>Homepage Example Question Chips</h4>
+                <p style={{ color: "var(--muted)", fontSize: 12, margin: "0 0 10px 0" }}>
+                  These 4 prompt chips appear prominently below the homepage AI input field.
+                </p>
+                {((site as any).homepageQuestions || []).map((qText: string, i: number) => (
+                  <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: "var(--muted)", width: 20 }}>{i + 1}.</span>
+                    <input
+                      style={{ flex: 1 }}
+                      value={qText}
+                      onChange={(e) =>
+                        setSite({
+                          ...site,
+                          homepageQuestions: ((site as any).homepageQuestions || []).map((x: string, j: number) =>
+                            j === i ? e.target.value : x,
+                          ),
+                        })
+                      }
+                    />
+                    <button
+                      type="button"
+                      style={{ fontSize: 11, color: "var(--accent)", padding: "4px 8px" }}
+                      onClick={() =>
+                        setSite({
+                          ...site,
+                          homepageQuestions: ((site as any).homepageQuestions || []).filter((_: any, j: number) => j !== i),
+                        })
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ fontSize: 11, padding: "6px 12px", marginTop: 4 }}
+                  onClick={() =>
+                    setSite({
+                      ...site,
+                      homepageQuestions: [...((site as any).homepageQuestions || []), "New example question?"],
+                    })
+                  }
+                >
+                  + Add Question Chip
+                </button>
+              </div>
+
+              <div style={{ marginTop: 20 }}>
+                {field("knowledge", "Verified public business knowledge & instructions for AI", true)}
+              </div>
+
+              <div style={{ marginTop: 24 }}>
+                <h4>Frequently Asked Questions (Rule-based Fallback & Knowledge)</h4>
+                {site.faqs.map((f, i) => (
+                  <div key={i} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 12, marginBottom: 12 }}>
+                    <label>
+                      Question
+                      <input
+                        value={f.q}
+                        onChange={(e) =>
+                          setSite({
+                            ...site,
+                            faqs: site.faqs.map((x, j) =>
+                              j === i ? { ...x, q: e.target.value } : x,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Answer
+                      <textarea
+                        value={f.a}
+                        onChange={(e) =>
+                          setSite({
+                            ...site,
+                            faqs: site.faqs.map((x, j) =>
+                              j === i ? { ...x, a: e.target.value } : x,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <button
+                      onClick={() =>
+                        setSite({
+                          ...site,
+                          faqs: site.faqs.filter((_, j) => j !== i),
+                        })
+                      }
+                    >
+                      Remove FAQ
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() =>
+                    setSite({
+                      ...site,
+                      faqs: [...site.faqs, { q: "New question?", a: "New answer." }],
+                    })
+                  }
+                >
+                  Add FAQ
+                </button>
+              </div>
             </div>
           )}
 
@@ -2113,13 +2315,109 @@ export default function Admin() {
           )}
 
           {!["Overview", "Active Projects", "Email Outbox", "Enquiries", "Analytics", "Media", "Security"].includes(tab) && (
-            <button
-              className="button"
-              disabled={busy}
-              onClick={() => void publish()}
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 24, flexWrap: "wrap" }}>
+              <button
+                className="button"
+                disabled={busy}
+                onClick={() => void publish()}
+              >
+                {busy ? "Publishing…" : "Publish changes"}
+              </button>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setPreviewOpen(true)}
+              >
+                Preview Changes ↗
+              </button>
+            </div>
+          )}
+
+          {/* PREVIEW CUSTOMER EXPERIENCE MODAL */}
+          {previewOpen && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.7)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 100,
+                padding: 20,
+              }}
             >
-              {busy ? "Publishing…" : "Publish changes"}
-            </button>
+              <div
+                style={{
+                  background: "var(--bg)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 10,
+                  maxWidth: 820,
+                  width: "100%",
+                  maxHeight: "88vh",
+                  overflowY: "auto",
+                  padding: 24,
+                  boxShadow: "0 12px 50px rgba(0,0,0,0.4)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 10 }}>
+                  <div>
+                    <b style={{ fontSize: 16 }}>Preview Customer Experience</b>
+                    <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: 8 }}>Draft changes in active workspace</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(false)}
+                    style={{ background: "transparent", border: 0, fontSize: 18, cursor: "pointer", color: "var(--muted)" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div style={{ background: "var(--paper)", padding: 20, borderRadius: 8, border: "1px solid var(--line)", marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 6 }}>
+                    Homepage Headline & Intro:
+                  </div>
+                  <h2 style={{ margin: "0 0 10px 0", fontSize: 24, fontFamily: "Georgia, serif" }}>
+                    {site.headline}
+                  </h2>
+                  <p style={{ margin: "0 0 14px 0", fontSize: 14, color: "var(--muted)" }}>
+                    {site.intro}
+                  </p>
+
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8 }}>
+                    Homepage Example Question Chips:
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {((site as any).homepageQuestions || []).map((q: string, i: number) => (
+                      <span key={i} className="home-ai-chip" style={{ cursor: "default" }}>
+                        {q}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ background: "var(--paper)", padding: 20, borderRadius: 8, border: "1px solid var(--line)" }}>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8 }}>
+                    Client Enquiry Categories ({((site as any).enquiryCategories || []).length} available):
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+                    {((site as any).enquiryCategories || []).slice(0, 6).map((c: any, i: number) => (
+                      <div key={i} style={{ padding: 10, background: "var(--panel)", borderRadius: 6, border: "1px solid var(--line)" }}>
+                        <strong style={{ fontSize: 12 }}>{c.label}</strong>
+                        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{c.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
+                  <button type="button" className="button secondary" onClick={() => setPreviewOpen(false)}>
+                    Close Preview
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* PROJECT EDIT / CREATE MODAL */}

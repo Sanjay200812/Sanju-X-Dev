@@ -19,6 +19,7 @@ import {
 import {
   ArrowUpRight,
   ArrowRight,
+  ArrowUp,
   Menu,
   X,
   Monitor,
@@ -30,6 +31,7 @@ import {
 import { defaults, projects as seed } from "./content";
 import Contact from "./Contact";
 import Assistant from "./Assistant";
+import { ChatProvider, useChat } from "./chat-context";
 const Admin = lazy(() => import("./Admin"));
 const Track = lazy(() => import("./Track"));
 export type Site = typeof defaults;
@@ -185,6 +187,153 @@ export function Device({
     </div>
   );
 }
+function HomepageAiConsole({ questions }: { questions?: string[] }) {
+  const { messages, busy, mode, ask, setFloatingOpen } = useChat();
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const defaultQuestions = [
+    "What kind of website does my business need?",
+    "Can you build an online store?",
+    "How do I start a project?",
+    "How can I check my project status?",
+  ];
+  const exampleList =
+    questions && questions.length > 0 ? questions : defaultQuestions;
+
+  const handleSubmit = (q: string) => {
+    const target = q.trim();
+    if (!target || busy) return;
+    setQuery("");
+    void ask(target);
+  };
+
+  // Filter to questions asked during this active session
+  const conversationTurns = messages.filter(
+    (m) => m.role === "user" || (m.role === "assistant" && m.timestamp),
+  );
+  const latestTurns =
+    conversationTurns.length > 0 ? conversationTurns.slice(-4) : [];
+
+  return (
+    <div className="home-ai-card" aria-label="spideyy AI Assistant">
+      <div className="home-ai-header">
+        <div className="home-ai-badge">
+          <img className="spider" src="/media/spideyy.svg" alt="" />
+          <div>
+            <b>spideyy AI</b>
+            <span>Instant website guidance & project estimates</span>
+          </div>
+        </div>
+        <span className="home-ai-status-pill">
+          <span className="live-dot" />{" "}
+          {mode === "AI assistant" ? "AI Online" : "spideyy Active"}
+        </span>
+      </div>
+
+      <form
+        className="home-ai-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit(query);
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          className="home-ai-input"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ask spideyy about websites, services or your project idea..."
+          aria-label="Ask spideyy a question"
+          disabled={busy}
+        />
+        <button
+          type="submit"
+          className="home-ai-submit"
+          disabled={busy || !query.trim()}
+          aria-label="Send question to spideyy"
+        >
+          <ArrowUp size={20} />
+        </button>
+      </form>
+
+      <div className="home-ai-chips-wrap">
+        <span className="home-ai-chips-label">Try asking:</span>
+        <div className="home-ai-chips">
+          {exampleList.map((qText, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className="home-ai-chip"
+              disabled={busy}
+              onClick={() => handleSubmit(qText)}
+            >
+              {qText}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Live Conversation Stream right inside homepage */}
+      {(busy || latestTurns.length > 0) && (
+        <div className="home-ai-stream" aria-live="polite">
+          {latestTurns.map((turn, tIdx) => (
+            <div key={tIdx} className={`home-ai-message ${turn.role}`}>
+              <div className="home-ai-msg-role">
+                {turn.role === "user" ? "You" : "spideyy"}
+              </div>
+              <div className="home-ai-msg-text">
+                {turn.text.split("\n").map((line, li) => (
+                  <span key={li}>
+                    {line}
+                    <br />
+                  </span>
+                ))}
+              </div>
+              {turn.links && turn.links.length > 0 && (
+                <div className="home-ai-msg-links">
+                  {turn.links.map((lnk, lIdx) =>
+                    lnk.url.startsWith("http") ? (
+                      <a
+                        key={lIdx}
+                        href={lnk.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="home-ai-link"
+                      >
+                        {lnk.label}
+                      </a>
+                    ) : (
+                      <Link key={lIdx} to={lnk.url} className="home-ai-link">
+                        {lnk.label} <Arrow />
+                      </Link>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+          {busy && (
+            <div className="home-ai-message assistant thinking">
+              <span className="live-dot" /> spideyy is thinking…
+            </div>
+          )}
+          <div className="home-ai-footer-actions">
+            <button
+              type="button"
+              className="home-ai-popout-btn"
+              onClick={() => setFloatingOpen(true)}
+            >
+              Continue in floating assistant ↗
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Home() {
   const s = useSite();
   const p = s.projects
@@ -192,63 +341,60 @@ function Home() {
     .sort((a, b) => a.order - b.order);
   return (
     <>
-      <section className="hero wrap">
-        <div className="hero-meta">
+      <section className="hero wrap hero-centered-layout">
+        <div className="hero-meta hero-centered-meta">
           <span className="eyebrow">
-            Independent thinking. Business-minded design.
+            SANJU X DEV · DESIGN & DIGITAL DEVELOPMENT
           </span>
           <span className="availability">
             <i /> Let’s build your next chapter
           </span>
         </div>
-        <div className="hero-copy">
-          <div className="editorial-copy">
-            <h1>
-              {s.headline.split("\n").map((line, i) => (
-                <span key={i}>{line}</span>
-              ))}
-            </h1>
-            <div className="hero-description">
-              <p>{s.intro}</p>
-              <div className="hero-actions">
-                <CTA text="Explore Our Work" to="/work" />
-                <Link to="/contact" className="text-link">
-                  Start a Project <ArrowRight size={18} />
-                </Link>
-              </div>
-            </div>
+        <div className="hero-centered-content">
+          <h1 className="hero-centered-title">
+            {s.headline.split("\n").map((line, i) => (
+              <span key={i}>{line}</span>
+            ))}
+          </h1>
+          <p className="hero-centered-intro">{s.intro}</p>
+          <div className="hero-centered-actions">
+            <CTA text="Explore Our Work" to="/work" />
+            <Link to="/contact" className="button secondary">
+              Start a Project <ArrowRight size={18} />
+            </Link>
           </div>
-          {p[0] && (
-            <div className="editorial-board">
-              <div className="paper-label">Selected work · No. 01</div>
-              <div className="pinned-project">
-                <Device p={p[0]} hero />
-                <Link to={"/work/" + p[0].slug} className="paper-caption">
-                  <span>
-                    {p[0].short}
-                    <small>View case study ↗</small>
-                  </span>
-                  <Arrow />
-                </Link>
-              </div>
-              <div className="studio-note">
-                <span className="eyebrow">The studio approach</span>
-                <p>
-                  Good ideas.
-                  <br />
-                  <em>Carefully made.</em>
-                </p>
-                <span>Strategy / Design / Development</span>
-              </div>
-              <span className="editorial-stamp" aria-hidden="true">
-                DESIGN WITH
-                <br />
-                PURPOSE
-                <br />✦
-              </span>
-            </div>
-          )}
+          <HomepageAiConsole questions={(s as any).homepageQuestions} />
         </div>
+        {p[0] && (
+          <div className="hero-featured-showcase">
+            <div className="paper-label">Selected work · No. 01</div>
+            <div className="pinned-project">
+              <Device p={p[0]} hero />
+              <Link to={"/work/" + p[0].slug} className="paper-caption">
+                <span>
+                  {p[0].short}
+                  <small>View case study ↗</small>
+                </span>
+                <Arrow />
+              </Link>
+            </div>
+            <div className="studio-note">
+              <span className="eyebrow">The studio approach</span>
+              <p>
+                Good ideas.
+                <br />
+                <em>Carefully made.</em>
+              </p>
+              <span>Strategy / Design / Development</span>
+            </div>
+            <span className="editorial-stamp" aria-hidden="true">
+              DESIGN WITH
+              <br />
+              PURPOSE
+              <br />✦
+            </span>
+          </div>
+        )}
         <div className="hero-bottom">
           <span>STRATEGY / DESIGN / DEVELOPMENT</span>
           <span>SCROLL TO EXPLORE ↓</span>
@@ -697,9 +843,10 @@ export default function App() {
   }, [loc.pathname, site]);
   return (
     <Context.Provider value={site}>
-      <a className="skip" href="#main">
-        Skip to content
-      </a>
+      <ChatProvider>
+        <a className="skip" href="#main">
+          Skip to content
+        </a>
       {intro && (
         <div
           className="intro"
@@ -802,6 +949,7 @@ export default function App() {
           !loc.pathname.startsWith("/spideyy") &&
           !loc.pathname.startsWith("/admin") && <Assistant />}
       </div>
+      </ChatProvider>
     </Context.Provider>
   );
 }

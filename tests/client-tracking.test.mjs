@@ -148,3 +148,98 @@ test("/api/track rejects invalid tracking code and unverified access", async () 
   assert.ok(status === 503 || status === 400);
   assert.ok(body.error);
 });
+
+test("/api/chat handles Telugu-English enquiries with polite guidance", async () => {
+  let status = 0;
+  let body = {};
+  const req = {
+    method: "POST",
+    url: "/api/chat",
+    headers: { origin: "http://127.0.0.1:3100" },
+    body: { question: "naku business website kavali, entha avtundi?" },
+  };
+  const res = {
+    setHeader: () => {},
+    set statusCode(code) { status = code; },
+    end: (str) => { body = JSON.parse(str); },
+  };
+  await handler(req, res);
+  assert.equal(status, 200);
+  assert.equal(body.mode, "FAQ guide");
+  assert.match(body.answer, /SANJU X DEV/);
+  assert.ok(body.links.some((l) => l.url === "/contact"));
+});
+
+test("/api/chat handles website recommendation and store queries non-technically", async () => {
+  let status = 0;
+  let body = {};
+  const req = {
+    method: "POST",
+    url: "/api/chat",
+    headers: { origin: "http://127.0.0.1:3100" },
+    body: { question: "What kind of website does my business need?" },
+  };
+  const res = {
+    setHeader: () => {},
+    set statusCode(code) { status = code; },
+    end: (str) => { body = JSON.parse(str); },
+  };
+  await handler(req, res);
+  assert.equal(status, 200);
+  assert.match(body.answer, /Business Website/);
+  assert.match(body.answer, /Online Store/);
+
+  // Online store query
+  const reqStore = {
+    method: "POST",
+    url: "/api/chat",
+    headers: { origin: "http://127.0.0.1:3100" },
+    body: { question: "Can you build an online store?" },
+  };
+  let storeBody = {};
+  await handler(reqStore, {
+    setHeader: () => {},
+    set statusCode(_) {},
+    end: (str) => { storeBody = JSON.parse(str); },
+  });
+  assert.match(storeBody.answer, /online store/i);
+});
+
+test("/api/chat explains project starting and tracking clearly", async () => {
+  // Start a project
+  let startBody = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: { question: "How do I start a project?" },
+    },
+    {
+      setHeader: () => {},
+      set statusCode(_) {},
+      end: (str) => { startBody = JSON.parse(str); },
+    },
+  );
+  assert.match(startBody.answer, /Contact/);
+  assert.match(startBody.answer, /SXD/);
+
+  // Track status
+  let trackBody = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: { question: "How can I check my project status?" },
+    },
+    {
+      setHeader: () => {},
+      set statusCode(_) {},
+      end: (str) => { trackBody = JSON.parse(str); },
+    },
+  );
+  assert.match(trackBody.answer, /track/i);
+  assert.match(trackBody.answer, /SXD-001/);
+});
+

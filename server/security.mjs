@@ -225,6 +225,14 @@ export function validateSite(s) {
   ])
     if (typeof s[k] !== "string" || s[k].length > 10000)
       throw Error("Invalid " + k);
+  if (s.assistantWelcome !== undefined && (typeof s.assistantWelcome !== "string" || s.assistantWelcome.length > 5000))
+    throw Error("Invalid assistantWelcome");
+  if (s.homepageQuestions !== undefined && (!Array.isArray(s.homepageQuestions) || s.homepageQuestions.some((q) => typeof q !== "string" || q.length > 200)))
+    throw Error("Invalid homepageQuestions");
+  if (s.enquiryCategories !== undefined && !Array.isArray(s.enquiryCategories))
+    throw Error("Invalid enquiryCategories");
+  if (s.enquiryFeatures !== undefined && !Array.isArray(s.enquiryFeatures))
+    throw Error("Invalid enquiryFeatures");
   if (!/^\S+@\S+\.\S+$/.test(s.email) || !/^https:\/\//.test(s.instagram))
     throw Error("Invalid contact information.");
   const slugs = new Set();

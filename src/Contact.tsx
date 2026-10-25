@@ -1,48 +1,70 @@
 import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Copy, Check, MessageCircle } from "lucide-react";
+import { Copy, Check, ChevronDown, Search, ArrowRight } from "lucide-react";
 import { useSite, Arrow } from "./App";
 
-const PROJECT_CATEGORIES = [
-  { id: "ecommerce", label: "Online Store (E-Commerce)", desc: "Sell physical/digital products, accept payments & manage inventory" },
-  { id: "corporate", label: "Business / Corporate Site", desc: "Build authority, showcase core services & capture qualified leads" },
-  { id: "portfolio", label: "Portfolio / Creative Showcase", desc: "Showcase photography, design, agency work or personal brand" },
-  { id: "landing", label: "Landing Page / Launch", desc: "High-converting single page designed for a product, campaign or app" },
-  { id: "webapp", label: "Custom Web App / SaaS", desc: "Interactive web application with databases, user portals or dashboards" },
-  { id: "booking", label: "Booking & Reservations", desc: "Appointment scheduling, event tickets or service booking calendars" },
-  { id: "restaurant", label: "Restaurant & Food Ordering", desc: "Interactive menus, table reservations & pickup/delivery requests" },
-  { id: "realestate", label: "Real Estate & Properties", desc: "Searchable property listings, high-res photos & enquiry forms" },
-  { id: "education", label: "Course / Learning Portal", desc: "Video modules, student registration & resource downloads" },
-  { id: "healthcare", label: "Healthcare & Clinic", desc: "Specialist profiles, treatment explanations & appointment booking" },
-  { id: "nonprofit", label: "NGO / Community Platform", desc: "Showcase mission, impact reports, volunteer signups & support info" },
-  { id: "editorial", label: "Blog & Publication", desc: "Articles, editorial categories, author profiles & newsletter capture" },
-  { id: "fitness", label: "Fitness / Gym Studio", desc: "Class timetables, membership tiers & personal trainer booking" },
-  { id: "events", label: "Event & Conference Hub", desc: "Speaker rosters, schedule agendas, venue maps & registration" },
-  { id: "clientportal", label: "Client Portal (B2B)", desc: "Private dashboard for customer files, milestones & project status" },
-  { id: "directory", label: "Directory & Marketplace", desc: "Searchable vendor directory, user reviews & category filters" },
-  { id: "finance", label: "Finance & Advisory", desc: "Consulting services, calculators & private consultation bookings" },
-  { id: "logistics", label: "Logistics & Fleet", desc: "Service routes, quote calculators & shipment tracking forms" },
-  { id: "mobileapp", label: "Mobile-First Web App", desc: "Optimized Progressive Web App (PWA) with native mobile feel" },
-  { id: "redesign", label: "UI/UX Redesign", desc: "Complete visual modernization and performance overhaul of an existing site" },
+interface ServiceCategory {
+  id: string;
+  label: string;
+  desc: string;
+}
+
+const DEFAULT_CATEGORIES: ServiceCategory[] = [
+  { id: "business", label: "Business Website", desc: "Help customers find and contact my business." },
+  { id: "store", label: "Online Store", desc: "Sell products online." },
+  { id: "portfolio", label: "Portfolio Website", desc: "Showcase my work or skills." },
+  { id: "booking", label: "Booking Website", desc: "Let customers book appointments." },
+  { id: "education", label: "Educational Website", desc: "Courses, school, tuition or learning platform." },
+  { id: "webapp", label: "Business Application", desc: "A custom system for my business." },
+  { id: "redesign", label: "Existing Website Changes", desc: "Fix, redesign or improve my website." },
+  { id: "other", label: "Other Project", desc: "Something different." },
+  { id: "notsure", label: "Not Sure", desc: "Help me decide." },
 ];
 
-const POPULAR_FEATURES = [
-  "Online Payments & Invoicing",
-  "User Accounts & Secure Login",
-  "Search Engine Optimization (SEO)",
-  "Ultra-Fast Mobile Speed",
-  "WhatsApp & Instant Inquiry Integration",
-  "Content Management (Easy Updates)",
-  "Analytics & Visitor Tracking",
-  "Custom Motion & Visual Effects",
-  "Multi-Language Support",
-  "Automated Email Notifications",
+const SEARCHABLE_CATEGORIES: ServiceCategory[] = [
+  { id: "realestate", label: "Real Estate & Properties", desc: "Property listings, virtual tours & enquiry forms." },
+  { id: "healthcare", label: "Healthcare & Clinic", desc: "Doctor profiles, patient booking & treatment info." },
+  { id: "hospitality", label: "Travel & Hospitality", desc: "Hotel, tour itineraries, booking & inquiries." },
+  { id: "events", label: "Events & Entertainment", desc: "Show agendas, ticket bookings & attendee portals." },
+  { id: "restaurants", label: "Restaurants & Cafes", desc: "Digital menus, table reservations & pickup orders." },
+  { id: "membership", label: "Membership & Community", desc: "Member directory, subscription access & private forums." },
+  { id: "saas", label: "Custom SaaS Platform", desc: "High-scalability cloud software & user dashboards." },
+  { id: "nonprofit", label: "Non-Profit & NGO", desc: "Donor contributions, cause awareness & impact showcase." },
+  { id: "editorial", label: "Blog & Media Publication", desc: "Editorial articles, newsletters & author profiles." },
+  { id: "fitness", label: "Fitness & Wellness Studio", desc: "Class timetable schedules & membership booking." },
+];
+
+const DEFAULT_FEATURES = [
+  "WhatsApp button",
+  "Online payments",
+  "Product listing",
+  "Booking",
+  "Customer login",
+  "Admin dashboard",
+  "AI chatbot",
+  "Something else",
+  "Not sure",
+];
+
+const TIMELINE_CHOICES = [
+  "Flexible / No rush",
+  "Within 2 to 4 weeks",
+  "1 to 2 months",
+  "Not sure yet",
+];
+
+const BUDGET_CHOICES = [
+  "Need guidance / Let's discuss scope",
+  "Standard business tier (focused website)",
+  "Growth / custom application",
+  "Flexible",
 ];
 
 export default function Contact() {
   const s = useSite();
   const [params] = useSearchParams();
 
+  // 2 steps: 0 = "Tell us what you need", 1 = "How can we contact you?"
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
@@ -50,32 +72,44 @@ export default function Contact() {
   const [trackingCode, setTrackingCode] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Searchable categories toggle
+  const [showAllServices, setShowAllServices] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
+
+  // Collapsible optional contact details
+  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
+
+  // Available categories & features from owner dashboard or fallback
+  const categories: ServiceCategory[] =
+    Array.isArray((s as any).enquiryCategories) && (s as any).enquiryCategories.length > 0
+      ? (s as any).enquiryCategories
+      : DEFAULT_CATEGORIES;
+
+  const featuresList: string[] =
+    Array.isArray((s as any).enquiryFeatures) && (s as any).enquiryFeatures.length > 0
+      ? (s as any).enquiryFeatures
+      : DEFAULT_FEATURES;
+
   const [form, setForm] = useState({
-    // Step 1: Contact & Brand
+    // Step 1: Project Needs
+    selectedCategories: (params.get("service")
+      ? [params.get("service") as string]
+      : ["Business Website"]) as string[],
+    description: "",
+    selectedFeatures: [] as string[],
+    timeline: "Flexible / No rush",
+    budget: "Need guidance / Let's discuss scope",
+
+    // Step 2: Contact Details
     name: "",
     email: "",
     phone: "",
-    whatsapp: "",
+    countryCode: "+91",
     preferred_contact: "email",
     company: "",
     is_individual: false,
     website_url: "",
     city: "",
-    country: "India",
-
-    // Step 2: Project Requirements
-    service:
-      s.services.find((item) => item.name === params.get("service"))?.name ||
-      s.services[0].name,
-    categories: [] as string[],
-    features: [] as string[],
-    description:
-      params.get("service") &&
-      !s.services.some((item) => item.name === params.get("service"))
-        ? "I am interested in a project similar to: " + params.get("service")
-        : "",
-    timeline: "Standard (2–4 weeks)",
-    budget: "Let’s discuss based on scope",
     consent: false,
     website: "", // Honeypot
   });
@@ -85,43 +119,94 @@ export default function Contact() {
 
   const toggleCategory = (catLabel: string) => {
     setForm((f) => {
-      const exists = f.categories.includes(catLabel);
-      const updated = exists
-        ? f.categories.filter((c) => c !== catLabel)
-        : [...f.categories, catLabel];
-      return { ...f, categories: updated };
+      const exists = f.selectedCategories.includes(catLabel);
+      if (exists) {
+        const remaining = f.selectedCategories.filter((c) => c !== catLabel);
+        return { ...f, selectedCategories: remaining.length ? remaining : [catLabel] };
+      } else {
+        return { ...f, selectedCategories: [...f.selectedCategories, catLabel] };
+      }
     });
   };
 
   const toggleFeature = (feat: string) => {
     setForm((f) => {
-      const exists = f.features.includes(feat);
-      const updated = exists
-        ? f.features.filter((item) => item !== feat)
-        : [...f.features, feat];
-      return { ...f, features: updated };
+      const exists = f.selectedFeatures.includes(feat);
+      return {
+        ...f,
+        selectedFeatures: exists
+          ? f.selectedFeatures.filter((item) => item !== feat)
+          : [...f.selectedFeatures, feat],
+      };
     });
   };
 
-  function handleContinue(e: React.FormEvent) {
+  const skipFeatures = () => {
+    setForm((f) => ({ ...f, selectedFeatures: [] }));
+  };
+
+  // Filter searchable services
+  const filteredSearchServices = SEARCHABLE_CATEGORIES.filter((cat) => {
+    const q = serviceSearch.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      cat.label.toLowerCase().includes(q) ||
+      cat.desc.toLowerCase().includes(q)
+    );
+  });
+
+  function handleContinueToContact(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim()) {
-      setStatus("Please enter your name and a valid email address.");
+    if (form.description.trim().length < 10) {
+      setStatus("Please share a short sentence (at least 10 characters) about your idea.");
       return;
     }
     setStatus("");
     setStep(1);
+    window.scrollTo({ top: 200, behavior: "smooth" });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.name.trim() || !form.email.trim()) {
+      setStatus("Please enter your name and email address.");
+      return;
+    }
+    if (!form.consent) {
+      setStatus("Please check the consent box to proceed.");
+      return;
+    }
+
     setBusy(true);
     setStatus("");
 
     try {
+      const fullPhone = form.phone.trim()
+        ? `${form.countryCode} ${form.phone.trim()}`
+        : "";
+
+      const primaryService = form.selectedCategories[0] || "Business Website";
+
       const payload = {
-        ...form,
-        company: form.is_individual ? "Individual / Personal Project" : form.company,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: fullPhone,
+        whatsapp: form.preferred_contact === "whatsapp" ? fullPhone : "",
+        preferred_contact: form.preferred_contact,
+        company: form.is_individual
+          ? "Individual / Personal Project"
+          : form.company.trim(),
+        is_individual: form.is_individual,
+        website_url: form.website_url.trim(),
+        city: form.city.trim(),
+        service: primaryService,
+        categories: form.selectedCategories,
+        features: form.selectedFeatures,
+        description: form.description.trim(),
+        timeline: form.timeline,
+        budget: form.budget,
+        consent: form.consent,
+        website: form.website, // honeypot
       };
 
       const res = await fetch("/api/enquiry", {
@@ -131,10 +216,11 @@ export default function Contact() {
       });
 
       const d = await res.json();
-      if (!res.ok) throw Error(d.error || "Unable to send. Please try again.");
+      if (!res.ok) throw new Error(d.error || "Unable to send your enquiry. Please try again.");
 
       setTrackingCode(d.trackingCode || "SXD-001");
       setSent(true);
+      window.scrollTo({ top: 150, behavior: "smooth" });
     } catch (err) {
       setStatus((err as Error).message);
     } finally {
@@ -144,7 +230,7 @@ export default function Contact() {
 
   function copyTrackingId() {
     if (trackingCode) {
-      navigator.clipboard.writeText(trackingCode);
+      void navigator.clipboard.writeText(trackingCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -165,140 +251,380 @@ export default function Contact() {
             you have in mind.
           </h2>
           <p>
-            A few useful details are all we need to begin. No fixed packages or
-            assumptions — just an honest conversation about the right architecture.
+            A few simple details in normal words are all we need to begin. No
+            technical jargon or forced fields — just an honest conversation about
+            your project.
           </p>
 
           <a href={"mailto:" + s.email}>{s.email}</a>
 
           <div style={{ marginTop: 28 }}>
-            <p style={{ margin: "6px 0 10px 0" }}>Already submitted an enquiry?</p>
+            <p style={{ margin: "6px 0 10px 0" }}>Already have a project with us?</p>
             <Link className="text-link" to="/track">
-              Track your project status <Arrow />
+              Track project status <Arrow />
             </Link>
           </div>
 
           <p style={{ marginTop: 20 }}>Prefer to explore our work first?</p>
           <Link className="text-link" to="/work">
-            See the work <Arrow />
+            See our portfolio <Arrow />
           </Link>
         </aside>
 
         <div className="form-panel">
-          <div className="steps">
-            {["01 / Contact & Brand", "02 / Project & Scope"].map((x, i) => (
-              <span key={x} className={i === step ? "active" : ""}>
-                {x}
-              </span>
-            ))}
+          {/* 2-Step Progress Indicator */}
+          <div className="simple-steps">
+            <div className={`simple-step-pill ${step === 0 ? "active" : ""}`}>
+              <span className="simple-step-num">1</span>
+              <span>Tell us what you need</span>
+            </div>
+            <div className={`simple-step-pill ${step === 1 ? "active" : ""}`}>
+              <span className="simple-step-num">2</span>
+              <span>How can we contact you?</span>
+            </div>
           </div>
 
+          {/* SUBMISSION CONFIRMATION SCREEN */}
           {sent ? (
-            <div>
-              <div style={{ textAlign: "center", padding: "10px 0 24px" }}>
-                <span className="eyebrow" style={{ color: "var(--accent)" }}>Enquiry Received Successfully</span>
-                <h2 style={{ margin: "10px 0 16px", fontSize: 28 }}>We’ve Received Your Brief</h2>
-                <p style={{ color: "var(--muted)", maxWidth: 480, margin: "0 auto 20px" }}>
-                  Thank you, <strong>{form.name}</strong>. Your project enquiry has been registered and a
-                  confirmation copy has been dispatched to <strong>{form.email}</strong>.
-                </p>
+            <div style={{ textAlign: "center", padding: "12px 0 24px" }}>
+              <span className="eyebrow" style={{ color: "var(--accent)" }}>
+                Enquiry Received Successfully
+              </span>
+              <h2 style={{ margin: "10px 0 16px", fontSize: 28 }}>
+                Thank you! We’ve received your enquiry.
+              </h2>
+              <p
+                style={{
+                  color: "var(--muted)",
+                  maxWidth: 480,
+                  margin: "0 auto 20px",
+                  lineHeight: 1.7,
+                }}
+              >
+                Thank you, <strong>{form.name}</strong>. An acknowledgement email with your project details has been sent to <strong>{form.email}</strong>.
+              </p>
 
-                {/* Permanent Tracking ID Badge */}
+              {/* Unique Tracking ID Badge */}
+              <div
+                style={{
+                  background: "var(--soft)",
+                  border: "1px dashed var(--accent)",
+                  borderRadius: 8,
+                  padding: "24px 20px",
+                  maxWidth: 380,
+                  margin: "0 auto 24px",
+                }}
+              >
                 <div
                   style={{
-                    background: "var(--soft)",
-                    border: "1px dashed var(--accent)",
-                    borderRadius: 8,
-                    padding: "20px",
-                    maxWidth: 380,
-                    margin: "0 auto 24px",
-                  }}
-                >
-                  <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)", marginBottom: 6 }}>
-                    Your Permanent Tracking ID
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "ui-monospace, Menlo, Consolas, monospace",
-                      fontSize: 26,
-                      fontWeight: 700,
-                      color: "var(--accent)",
-                      letterSpacing: "0.08em",
-                      marginBottom: 12,
-                    }}
-                  >
-                    {trackingCode}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={copyTrackingId}
-                    style={{
-                      background: "var(--paper)",
-                      border: "1px solid var(--line)",
-                      padding: "8px 16px",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "var(--text)",
-                    }}
-                  >
-                    {copied ? <Check size={16} style={{ color: "#25d366" }} /> : <Copy size={16} />}
-                    {copied ? "Copied to Clipboard!" : "Copy Tracking ID"}
-                  </button>
-                </div>
-
-                {/* Action Buttons */}
-                <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 14 }}>
-                  <Link to={`/track?code=${trackingCode}`} className="button">
-                    Track Project Status Now <Arrow />
-                  </Link>
-
-                  <a
-                    href={`https://wa.me/919392257217?text=${encodeURIComponent(`Hi Sanjay, I have submitted project enquiry ${trackingCode} (${form.company || form.name}).`)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="button secondary"
-                    style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
-                  >
-                    <MessageCircle size={16} />
-                    Follow up on WhatsApp
-                  </a>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 28,
-                    paddingTop: 18,
-                    borderTop: "1px solid var(--line)",
-                    fontSize: 12,
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.15em",
                     color: "var(--muted)",
+                    marginBottom: 6,
                   }}
                 >
-                  Submitting an enquiry allows us to review your requirements. We will contact you via {form.preferred_contact === "whatsapp" ? "WhatsApp" : form.preferred_contact === "phone" ? "Phone Call" : "Email"} within 24 hours to confirm scope, milestones, and tailored pricing.
+                  Your Tracking ID
                 </div>
+                <div
+                  style={{
+                    fontFamily: "ui-monospace, Menlo, Consolas, monospace",
+                    fontSize: 28,
+                    fontWeight: 700,
+                    color: "var(--accent)",
+                    letterSpacing: "0.08em",
+                    marginBottom: 14,
+                  }}
+                >
+                  {trackingCode}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={copyTrackingId}
+                  style={{
+                    background: "var(--paper)",
+                    border: "1px solid var(--line)",
+                    padding: "8px 16px",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "var(--text)",
+                  }}
+                >
+                  {copied ? <Check size={16} style={{ color: "#25d366" }} /> : <Copy size={16} />}
+                  {copied ? "Copied to Clipboard!" : "Copy Tracking ID"}
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  flexWrap: "wrap",
+                  gap: 14,
+                }}
+              >
+                <Link to={`/track?code=${trackingCode}`} className="button">
+                  Track My Project <Arrow />
+                </Link>
+                <Link to="/" className="button secondary">
+                  Back to Home
+                </Link>
               </div>
             </div>
           ) : (
             <>
-              {step === 0 ? (
-                /* STEP 1: Contact Information */
-                <form onSubmit={handleContinue}>
+              {/* STEP 1: TELL US WHAT YOU NEED */}
+              {step === 0 && (
+                <form onSubmit={handleContinueToContact}>
+                  <div style={{ marginBottom: 18 }}>
+                    <h3 style={{ margin: "0 0 6px 0", fontSize: 20 }}>
+                      What kind of website or project do you need?
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
+                      Choose one or more options that fit your idea. You can also pick &apos;Not Sure&apos; and we will help you decide.
+                    </p>
+                  </div>
+
+                  {/* 9 Simple Selection Cards */}
+                  <div className="simple-service-grid">
+                    {categories.map((cat) => {
+                      const isSelected = form.selectedCategories.includes(cat.label);
+                      return (
+                        <div
+                          key={cat.id || cat.label}
+                          className={`simple-service-card ${isSelected ? "selected" : ""}`}
+                          onClick={() => toggleCategory(cat.label)}
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === " " || e.key === "Enter") {
+                              e.preventDefault();
+                              toggleCategory(cat.label);
+                            }
+                          }}
+                        >
+                          <div>
+                            <div className="simple-service-title">
+                              <span>{cat.label}</span>
+                              <span
+                                style={{
+                                  fontSize: 14,
+                                  color: isSelected ? "var(--accent)" : "var(--line)",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {isSelected ? "✓" : "+"}
+                              </span>
+                            </div>
+                            <div className="simple-service-desc">{cat.desc}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Searchable View All Services Toggle */}
+                  <div style={{ margin: "14px 0 24px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllServices(!showAllServices)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--accent)",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: 0,
+                      }}
+                    >
+                      <Search size={14} />
+                      <span>{showAllServices ? "Hide specialized categories" : "View all specialized industries & services"}</span>
+                      <ChevronDown
+                        size={14}
+                        style={{
+                          transform: showAllServices ? "rotate(180deg)" : "none",
+                          transition: "transform 0.2s",
+                        }}
+                      />
+                    </button>
+
+                    {showAllServices && (
+                      <div className="all-services-box">
+                        <input
+                          type="text"
+                          className="all-services-search"
+                          placeholder="Search real estate, healthcare, travel, restaurant, SaaS..."
+                          value={serviceSearch}
+                          onChange={(e) => setServiceSearch(e.target.value)}
+                        />
+                        <div className="all-services-tags">
+                          {filteredSearchServices.map((cat) => {
+                            const isSelected = form.selectedCategories.includes(cat.label);
+                            return (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                className={`feature-chip ${isSelected ? "selected" : ""}`}
+                                onClick={() => toggleCategory(cat.label)}
+                              >
+                                {isSelected ? "✓ " : "+ "}
+                                {cat.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Simple Requirements Description */}
+                  <label style={{ display: "block", marginBottom: 20 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>
+                      Tell us a little about your idea *
+                    </div>
+                    <textarea
+                      required
+                      minLength={10}
+                      maxLength={5000}
+                      rows={4}
+                      value={form.description}
+                      onChange={(e) => update("description", e.target.value)}
+                      placeholder="Example: I have a small clothing business. I want a website where customers can see my products and contact me on WhatsApp."
+                      style={{ width: "100%", fontSize: 13, lineHeight: 1.6 }}
+                    />
+                    <small style={{ color: "var(--muted)", fontSize: 11, display: "block", marginTop: 4 }}>
+                      Normal words are best. You don&apos;t need to know any technical terms like API, CMS, or backend.
+                    </small>
+                  </label>
+
+                  {/* Optional Helpful Feature Selections */}
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>
+                        Helpful features (Optional)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={skipFeatures}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          fontSize: 11.5,
+                          color: "var(--muted)",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Skip feature selection
+                      </button>
+                    </div>
+
+                    <div className="feature-chips-wrap">
+                      {featuresList.map((feat) => {
+                        const isSelected = form.selectedFeatures.includes(feat);
+                        return (
+                          <button
+                            type="button"
+                            key={feat}
+                            className={`feature-chip ${isSelected ? "selected" : ""}`}
+                            onClick={() => toggleFeature(feat)}
+                          >
+                            {isSelected ? "✓ " : "+ "}
+                            {feat}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Optional Budget & Timeline (Non-binding) */}
+                  <div className="form-grid" style={{ marginBottom: 20 }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
+                        Timeline (Optional, non-binding)
+                      </div>
+                      <div className="option-chips-wrap">
+                        {TIMELINE_CHOICES.map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            className={`option-chip ${form.timeline === t ? "selected" : ""}`}
+                            onClick={() => update("timeline", t)}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
+                        Budget estimate (Optional, non-binding)
+                      </div>
+                      <div className="option-chips-wrap">
+                        {BUDGET_CHOICES.map((b) => (
+                          <button
+                            key={b}
+                            type="button"
+                            className={`option-chip ${form.budget === b ? "selected" : ""}`}
+                            onClick={() => update("budget", b)}
+                          >
+                            {b}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {status && (
+                    <p role="alert" className="status" style={{ color: "var(--accent)", marginBottom: 16 }}>
+                      {status}
+                    </p>
+                  )}
+
+                  <div className="form-actions" style={{ justifyContent: "flex-end" }}>
+                    <button type="submit" className="button">
+                      Continue to Step 2: Contact Details <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* STEP 2: HOW CAN WE CONTACT YOU? */}
+              {step === 1 && (
+                <form onSubmit={handleSubmit}>
+                  <div style={{ marginBottom: 18 }}>
+                    <h3 style={{ margin: "0 0 6px 0", fontSize: 20 }}>
+                      How can we contact you?
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
+                      Where should we send your project proposal and tracking details?
+                    </p>
+                  </div>
+
+                  {/* Prominent Core Fields */}
                   <div className="form-grid">
                     <label>
-                      Full Name *
+                      Your Full Name *
                       <input
                         required
                         type="text"
-                        maxLength={100}
                         autoComplete="name"
-                        placeholder="e.g. Sanjay Boddukuri"
                         value={form.name}
                         onChange={(e) => update("name", e.target.value)}
+                        placeholder="e.g. Rahul Sharma"
                       />
                     </label>
 
@@ -307,305 +633,145 @@ export default function Contact() {
                       <input
                         required
                         type="email"
-                        maxLength={254}
                         autoComplete="email"
-                        placeholder="you@company.com"
                         value={form.email}
                         onChange={(e) => update("email", e.target.value)}
+                        placeholder="e.g. rahul@example.com"
                       />
                     </label>
                   </div>
 
                   <div className="form-grid">
                     <label>
-                      Mobile Number (with country code)
-                      <input
-                        type="tel"
-                        maxLength={40}
-                        placeholder="+91 98765 43210"
-                        value={form.phone}
-                        onChange={(e) => update("phone", e.target.value)}
-                      />
-                    </label>
-
-                    <label>
-                      WhatsApp Number
-                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      Mobile / WhatsApp Number
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          type="text"
+                          style={{ width: 85, textAlign: "center" }}
+                          value={form.countryCode}
+                          onChange={(e) => update("countryCode", e.target.value)}
+                          placeholder="+91"
+                        />
                         <input
                           type="tel"
-                          maxLength={40}
-                          style={{ margin: 0, flex: 1 }}
-                          placeholder="+91 98765 43210"
-                          value={form.whatsapp}
-                          onChange={(e) => update("whatsapp", e.target.value)}
+                          autoComplete="tel"
+                          style={{ flex: 1 }}
+                          value={form.phone}
+                          onChange={(e) => update("phone", e.target.value)}
+                          placeholder="e.g. 9876543210"
                         />
-                        <button
-                          type="button"
-                          onClick={() => update("whatsapp", form.phone)}
-                          style={{
-                            background: "var(--soft)",
-                            border: "1px solid var(--line)",
-                            padding: "0 10px",
-                            borderRadius: 4,
-                            fontSize: 11,
-                            cursor: "pointer",
-                            whiteSpace: "nowrap",
-                            color: "var(--text)",
-                          }}
-                        >
-                          Same as Mobile
-                        </button>
                       </div>
+                      <small style={{ color: "var(--muted)", fontSize: 11, marginTop: 4, display: "block" }}>
+                        Include country code for WhatsApp updates.
+                      </small>
+                    </label>
+
+                    <label>
+                      Preferred Contact Method
+                      <select
+                        value={form.preferred_contact}
+                        onChange={(e) => update("preferred_contact", e.target.value)}
+                      >
+                        <option value="email">Email</option>
+                        <option value="whatsapp">WhatsApp Message</option>
+                        <option value="phone">Phone Call</option>
+                      </select>
                     </label>
                   </div>
 
-                  <label>
-                    Preferred Contact Method
-                    <select
-                      value={form.preferred_contact}
-                      onChange={(e) => update("preferred_contact", e.target.value)}
+                  {/* Collapsible Section for Optional Business Details */}
+                  <div style={{ margin: "14px 0" }}>
+                    <button
+                      type="button"
+                      className="collapsible-trigger"
+                      onClick={() => setShowOptionalDetails(!showOptionalDetails)}
                     >
-                      <option value="email">Email (Detailed scope & proposals)</option>
-                      <option value="whatsapp">WhatsApp (Quick updates & discussions)</option>
-                      <option value="phone">Phone Call (Direct conversation)</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Business / Brand Name
-                    <input
-                      type="text"
-                      maxLength={150}
-                      disabled={form.is_individual}
-                      placeholder={form.is_individual ? "Individual / Personal Project" : "e.g. StarX Media, Acme Studio"}
-                      value={form.is_individual ? "" : form.company}
-                      onChange={(e) => update("company", e.target.value)}
-                    />
-                  </label>
-
-                  <label className="check" style={{ marginBottom: 20 }}>
-                    <input
-                      type="checkbox"
-                      checked={form.is_individual}
-                      onChange={(e) => update("is_individual", e.target.checked)}
-                    />
-                    <span>I don’t have a registered business (This is an individual or personal project)</span>
-                  </label>
-
-                  <div className="form-grid">
-                    <label>
-                      Existing Website / Reference URL (optional)
-                      <input
-                        type="url"
-                        maxLength={300}
-                        placeholder="https://example.com"
-                        value={form.website_url}
-                        onChange={(e) => update("website_url", e.target.value)}
+                      <span>{showOptionalDetails ? "Hide optional business details" : "+ Add optional business details (Brand name, existing website, city)"}</span>
+                      <ChevronDown
+                        size={16}
+                        style={{
+                          transform: showOptionalDetails ? "rotate(180deg)" : "none",
+                          transition: "transform 0.2s",
+                        }}
                       />
-                    </label>
-
-                    <label>
-                      City & Country (optional)
-                      <input
-                        type="text"
-                        maxLength={100}
-                        placeholder="e.g. Hyderabad, India"
-                        value={form.city}
-                        onChange={(e) => update("city", e.target.value)}
-                      />
-                    </label>
-                  </div>
-
-                  {status && (
-                    <p role="alert" className="status">
-                      {status}
-                    </p>
-                  )}
-
-                  <div className="form-actions">
-                    <span />
-                    <button type="submit" className="button">
-                      Continue to Project Details <Arrow />
                     </button>
-                  </div>
-                </form>
-              ) : (
-                /* STEP 2: Project Details & Requirements */
-                <form onSubmit={handleSubmit}>
-                  <label>
-                    Primary Service Category
-                    <select
-                      value={form.service}
-                      onChange={(e) => update("service", e.target.value)}
-                    >
-                      {[
-                        ...new Set([
-                          ...s.services.map((x) => x.name),
-                          form.service,
-                        ]),
-                      ].map((x) => (
-                        <option key={x} value={x}>{x}</option>
-                      ))}
-                    </select>
-                  </label>
 
-                  {/* Plain-English Project Types / Categories */}
-                  <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>
-                      What kind of website or platform are you building? (Select all that apply)
+                    {showOptionalDetails && (
+                      <div style={{ background: "var(--panel)", padding: 16, borderRadius: 8, marginBottom: 14 }}>
+                        <div className="form-grid">
+                          <label>
+                            Business or Brand Name (Optional)
+                            <input
+                              type="text"
+                              value={form.company}
+                              disabled={form.is_individual}
+                              onChange={(e) => update("company", e.target.value)}
+                              placeholder="e.g. Bloom Apparel"
+                            />
+                            <label className="check" style={{ marginTop: 6 }}>
+                              <input
+                                type="checkbox"
+                                checked={form.is_individual}
+                                onChange={(e) => update("is_individual", e.target.checked)}
+                              />
+                              <span style={{ fontSize: 11.5 }}>I am an individual / personal brand</span>
+                            </label>
+                          </label>
+
+                          <label>
+                            Existing Website Link (Optional)
+                            <input
+                              type="url"
+                              value={form.website_url}
+                              onChange={(e) => update("website_url", e.target.value)}
+                              placeholder="https://mycurrentsite.com"
+                            />
+                          </label>
+                        </div>
+
+                        <label style={{ display: "block", marginTop: 8 }}>
+                          City / Location (Optional)
+                          <input
+                            type="text"
+                            value={form.city}
+                            onChange={(e) => update("city", e.target.value)}
+                            placeholder="e.g. Hyderabad, India"
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Short Summary Card */}
+                  <div className="enquiry-summary-card">
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Enquiry Summary:</div>
+                    <div style={{ color: "var(--muted)", fontSize: 12 }}>
+                      <b>Project:</b> {form.selectedCategories.join(", ")}
                     </div>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                        gap: 8,
-                        maxHeight: 280,
-                        overflowY: "auto",
-                        padding: 10,
-                        background: "var(--soft)",
-                        borderRadius: 6,
-                        border: "1px solid var(--line)",
-                      }}
-                    >
-                      {PROJECT_CATEGORIES.map((cat) => {
-                        const selected = form.categories.includes(cat.label);
-                        return (
-                          <button
-                            type="button"
-                            key={cat.id}
-                            onClick={() => toggleCategory(cat.label)}
-                            style={{
-                              textAlign: "left",
-                              padding: "8px 10px",
-                              borderRadius: 4,
-                              border: selected ? "1px solid var(--accent)" : "1px solid var(--line)",
-                              background: selected ? "var(--paper)" : "transparent",
-                              cursor: "pointer",
-                              transition: "all 0.15s ease",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span
-                                style={{
-                                  width: 14,
-                                  height: 14,
-                                  borderRadius: 2,
-                                  border: "1px solid " + (selected ? "var(--accent)" : "var(--line)"),
-                                  background: selected ? "var(--accent)" : "transparent",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: "#fff",
-                                  fontSize: 10,
-                                }}
-                              >
-                                {selected ? "✓" : ""}
-                              </span>
-                              <strong style={{ fontSize: 12, color: "var(--text)" }}>{cat.label}</strong>
-                            </div>
-                            <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4, paddingLeft: 20 }}>
-                              {cat.desc}
-                            </div>
-                          </button>
-                        );
-                      })}
+                    {form.selectedFeatures.length > 0 && (
+                      <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>
+                        <b>Features:</b> {form.selectedFeatures.join(", ")}
+                      </div>
+                    )}
+                    <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>
+                      <b>Brief:</b> {form.description.slice(0, 140)}{form.description.length > 140 ? "…" : ""}
                     </div>
                   </div>
 
-                  {/* Feature Tags / Pills */}
-                  <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>
-                      Key Features & Integrations Needed
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {POPULAR_FEATURES.map((feat) => {
-                        const selected = form.features.includes(feat);
-                        return (
-                          <button
-                            type="button"
-                            key={feat}
-                            onClick={() => toggleFeature(feat)}
-                            style={{
-                              padding: "6px 12px",
-                              borderRadius: 20,
-                              fontSize: 11,
-                              fontWeight: 500,
-                              border: selected ? "1px solid var(--accent)" : "1px solid var(--line)",
-                              background: selected ? "var(--accent)" : "var(--paper)",
-                              color: selected ? "#ffffff" : "var(--text)",
-                              cursor: "pointer",
-                              transition: "all 0.15s ease",
-                            }}
-                          >
-                            {selected ? "✓ " : "+ "}
-                            {feat}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <label>
-                    Project Description & Requirements *
-                    <textarea
-                      required
-                      minLength={10}
-                      maxLength={5000}
-                      rows={4}
-                      value={form.description}
-                      onChange={(e) => update("description", e.target.value)}
-                      placeholder="Briefly describe what your project or business does, your target audience, and any specific ideas or references you have in mind."
-                    />
-                  </label>
-
-                  <div className="form-grid">
-                    <label>
-                      Target Timeline
-                      <select
-                        value={form.timeline}
-                        onChange={(e) => update("timeline", e.target.value)}
-                      >
-                        <option value="Urgent (Within 1–2 weeks)">Urgent (Within 1–2 weeks)</option>
-                        <option value="Standard (2–4 weeks)">Standard (2–4 weeks)</option>
-                        <option value="Flexible (1–2 months)">Flexible (1–2 months)</option>
-                        <option value="No rush / Planning phase">No rush / Planning phase</option>
-                      </select>
-                    </label>
-
-                    <label>
-                      Estimated Budget Range
-                      <select
-                        value={form.budget}
-                        onChange={(e) => update("budget", e.target.value)}
-                      >
-                        <option value="Under ₹25,000 / $300 (Starter project)">Under ₹25,000 / $300 (Starter project)</option>
-                        <option value="₹25,000 – ₹50,000 / $300 – $600 (Growth project)">₹25,000 – ₹50,000 / $300 – $600 (Growth project)</option>
-                        <option value="₹50,000 – ₹1,00,000 / $600 – $1,200 (Professional bespoke)">₹50,000 – ₹1,00,000 / $600 – $1,200 (Professional bespoke)</option>
-                        <option value="₹1,00,000+ / $1,200+ (Comprehensive enterprise / custom app)">₹1,00,000+ / $1,200+ (Comprehensive enterprise / custom app)</option>
-                        <option value="Let’s discuss based on scope">Let’s discuss based on scope</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  {/* Review Summary */}
-                  <div className="status" style={{ fontSize: 12 }}>
-                    <strong>Brief Summary:</strong> {form.name} ({form.is_individual ? "Individual Project" : form.company || "Personal Project"})
-                    <br />
-                    <span>Contact: {form.email} · {form.phone || "No phone"} ({form.preferred_contact})</span>
-                  </div>
-
-                  <label className="check" style={{ marginTop: 16 }}>
+                  {/* Explicit Consent */}
+                  <label className="check" style={{ marginTop: 16, marginBottom: 16 }}>
                     <input
                       type="checkbox"
                       required
                       checked={form.consent}
                       onChange={(e) => update("consent", e.target.checked)}
                     />
-                    <span>
-                      I agree that SANJU X DEV may store these details to respond to my project enquiry. <Link to="/privacy">Privacy policy</Link>
+                    <span style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                      I agree to receive a project proposal and tracking updates from SANJU X DEV. Your details are strictly confidential and will never be shared. <Link to="/privacy">Privacy policy</Link>
                     </span>
                   </label>
 
+                  {/* Honeypot */}
                   <label className="honeypot" aria-hidden="true">
                     Website
                     <input
@@ -617,7 +783,7 @@ export default function Contact() {
                   </label>
 
                   {status && (
-                    <p role="alert" className="status">
+                    <p role="alert" className="status" style={{ color: "var(--accent)", marginBottom: 16 }}>
                       {status}
                     </p>
                   )}
@@ -628,11 +794,11 @@ export default function Contact() {
                       onClick={() => setStep(0)}
                       className="button secondary"
                     >
-                      ← Back to Contact Info
+                      ← Back to Step 1
                     </button>
 
                     <button type="submit" className="button" disabled={busy}>
-                      {busy ? "Submitting Brief…" : "Submit Project Brief"}
+                      {busy ? "Sending Enquiry…" : "Send My Enquiry"}
                       <Arrow />
                     </button>
                   </div>

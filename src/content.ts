@@ -190,4 +190,34 @@ export const defaults = {
   seoTitle: "SANJU X DEV — Websites with distinction",
   seoDescription:
     "Business websites, thoughtful digital experiences and custom applications. Explore five real projects and start a conversation.",
+  assistantWelcome:
+    "Hi, I’m spideyy! I can help you understand our services, suggest the right website for your business, explain features, or check your project status.",
+  homepageQuestions: [
+    "What kind of website does my business need?",
+    "Can you build an online store?",
+    "How do I start a project?",
+    "How can I check my project status?",
+  ],
+  enquiryCategories: [
+    { id: "business", label: "Business Website", desc: "Help customers find and contact my business." },
+    { id: "store", label: "Online Store", desc: "Sell products online." },
+    { id: "portfolio", label: "Portfolio Website", desc: "Showcase my work or skills." },
+    { id: "booking", label: "Booking Website", desc: "Let customers book appointments." },
+    { id: "education", label: "Educational Website", desc: "Courses, school, tuition or learning platform." },
+    { id: "webapp", label: "Business Application", desc: "A custom system for my business." },
+    { id: "redesign", label: "Existing Website Changes", desc: "Fix, redesign or improve my website." },
+    { id: "other", label: "Other Project", desc: "Something different." },
+    { id: "notsure", label: "Not Sure", desc: "Help me decide." },
+  ],
+  enquiryFeatures: [
+    "WhatsApp button",
+    "Online payments",
+    "Product listing",
+    "Booking",
+    "Customer login",
+    "Admin dashboard",
+    "AI chatbot",
+    "Something else",
+    "Not sure",
+  ],
 };
