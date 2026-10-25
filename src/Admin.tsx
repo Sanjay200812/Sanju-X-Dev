@@ -14,6 +14,7 @@ export default function Admin() {
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [pin, setPin] = useState(""),
+    [confirmPin, setConfirmPin] = useState(""),
     [status, setStatus] = useState(""),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState("Overview"),
@@ -113,7 +114,11 @@ export default function Admin() {
       {stage !== "workspace" ? (
         <div className="admin-card admin-login">
           <h3>
-            {stage === "login" ? "Secure sign in" : "Secondary verification"}
+            {stage === "login"
+              ? "Secure sign in"
+              : stage === "setup"
+                ? "Create your private code"
+                : "Secondary verification"}
           </h3>
           {!auth && (
             <p className="status">
@@ -133,10 +138,14 @@ export default function Admin() {
                   });
                   if (r.error) throw Error(r.error.message);
                   setPassword("");
-                  setStage("pin");
+                  const access = await api({ action: "status" });
+                  setStage(access.pinConfigured ? "pin" : "setup");
                 } else {
+                  if (stage === "setup")
+                    await api({ action: "setup-pin", pin, confirmPin });
                   await api({ action: "unlock", pin });
                   setPin("");
+                  setConfirmPin("");
                   await load();
                 }
               });
@@ -166,28 +175,52 @@ export default function Admin() {
                 </label>
               </>
             ) : (
-              <label>
-                Private verification code
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  required
-                  pattern="[0-9]{4,12}"
-                  autoComplete="off"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                />
-              </label>
+              <>
+                <label>
+                  Private verification code
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    required
+                    pattern="[0-9]{4,12}"
+                    autoComplete="off"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                  />
+                </label>
+                {stage === "setup" && (
+                  <>
+                    <p>
+                      Create a private 4–12 digit code. You’ll enter it after
+                      signing in. This can be configured only once here.
+                    </p>
+                    <label>
+                      Confirm verification code
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        pattern="[0-9]{4,12}"
+                        required
+                        autoComplete="off"
+                        value={confirmPin}
+                        onChange={(e) => setConfirmPin(e.target.value)}
+                      />
+                    </label>
+                  </>
+                )}
+              </>
             )}
             <button className="button" disabled={busy || !auth}>
               {busy
                 ? "Checking…"
                 : stage === "login"
                   ? "Sign in"
-                  : "Unlock workspace"}
+                  : stage === "setup"
+                    ? "Save code & unlock"
+                    : "Unlock workspace"}
             </button>
           </form>
-          {stage === "pin" && (
+          {stage !== "login" && (
             <button onClick={() => void logout()}>Sign out</button>
           )}
         </div>

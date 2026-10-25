@@ -159,9 +159,9 @@ export const services = [
   },
 ];
 export const defaults = {
-  headline: "Built for business.\nDesigned for distinction.",
+  headline: "Thoughtful Design.\nPowerful Digital Experiences.",
   intro:
-    "We turn business ideas into thoughtful websites and useful digital experiences. Clear strategy. Distinctive design. Development with purpose.",
+    "We create modern websites and digital solutions that bring ideas to life and help businesses grow.",
   about:
     "SANJU X DEV is a web development and digital solutions business. We bring design and engineering together to create clear, engaging experiences for businesses and their customers.",
   email: "sanjuxdev27@gmail.com",

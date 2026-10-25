@@ -200,44 +200,58 @@ function Home() {
           </span>
         </div>
         <div className="hero-copy">
-          <h1>
-            {s.headline.split("\n").map((line, i) => (
-              <span key={i}>{line}</span>
-            ))}
-          </h1>
-          <div>
-            <p>{s.intro}</p>
-            <CTA />
-            <Link to="/work" className="text-link">
-              Explore the work <ArrowRight size={18} />
-            </Link>
+          <div className="editorial-copy">
+            <h1>
+              {s.headline.split("\n").map((line, i) => (
+                <span key={i}>{line}</span>
+              ))}
+            </h1>
+            <div className="hero-description">
+              <p>{s.intro}</p>
+              <div className="hero-actions">
+                <CTA text="Explore Our Work" to="/work" />
+                <Link to="/contact" className="text-link">
+                  Start a Project <ArrowRight size={18} />
+                </Link>
+              </div>
+            </div>
           </div>
+          {p[0] && (
+            <div className="editorial-board">
+              <div className="paper-label">Selected work · No. 01</div>
+              <div className="pinned-project">
+                <Device p={p[0]} hero />
+                <Link to={"/work/" + p[0].slug} className="paper-caption">
+                  <span>
+                    {p[0].short}
+                    <small>A digital stage, thoughtfully built.</small>
+                  </span>
+                  <Arrow />
+                </Link>
+              </div>
+              <div className="studio-note">
+                <span className="eyebrow">The studio approach</span>
+                <p>
+                  Good ideas.
+                  <br />
+                  <em>Carefully made.</em>
+                </p>
+                <span>Strategy / Design / Development</span>
+              </div>
+              <span className="editorial-stamp" aria-hidden="true">
+                DESIGN WITH
+                <br />
+                PURPOSE
+                <br />✦
+              </span>
+            </div>
+          )}
         </div>
         <div className="hero-bottom">
           <span>STRATEGY / DESIGN / DEVELOPMENT</span>
           <span>SCROLL TO EXPLORE ↓</span>
         </div>
       </section>
-      {p[0] && (
-        <section className="flagship wrap">
-          <div className="flagship-info">
-            <span className="eyebrow">01 / Featured experience</span>
-            <h2>{p[0].short}</h2>
-            <p>{p[0].summary}</p>
-            <Link
-              to={"/work/" + p[0].slug}
-              className="round-link"
-              aria-label={"Explore " + p[0].short}
-            >
-              <Arrow />
-            </Link>
-            <span className="vertical-note">
-              INTERFACE. INTERACTION. IDENTITY.
-            </span>
-          </div>
-          <Device p={p[0]} hero />
-        </section>
-      )}
       <section className="intro-line wrap">
         <span className="eyebrow">Designed with intention</span>
         <h2>
@@ -737,7 +751,7 @@ export default function App() {
                 localStorage.setItem("sxd-theme", e.target.value);
               }}
             >
-              <option value="silver">Silver / Crimson</option>
+              <option value="silver">Paper / Crimson</option>
               <option value="gold">White / Gold</option>
               <option value="dark">Red / Black</option>
             </select>

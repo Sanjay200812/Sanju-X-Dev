@@ -2,7 +2,13 @@ import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 import process from "node:process";
 import { Buffer } from "node:buffer";
-import { digest, verifyPin, enquiry, validateSite } from "./security.mjs";
+import {
+  digest,
+  verifyPin,
+  createPinVerifier,
+  enquiry,
+  validateSite,
+} from "./security.mjs";
 import seed from "./seed.json" with { type: "json" };
 let runtimeEnvironment;
 export const configureEnvironment = (values) => {
@@ -59,7 +65,7 @@ async function owner(client, req) {
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user)
     throw fail(401, "Your session has expired. Sign in again.");
-  if (!env().OWNER_USER_ID || data.user.id !== env().OWNER_USER_ID)
+  if (data.user.id !== "3984ceee-869a-432f-a5dd-23eb615d234d")
     throw fail(403, "Owner access only.");
   return {
     id: data.user.id,
@@ -151,7 +157,11 @@ export default async function handler(req, res) {
         !body.question.trim()
       )
         throw fail(400, "Please enter a question under 1,000 characters.");
-      const s = await site(client);
+      const content = await site(client);
+      const s = {
+        ...content,
+        projects: content.projects.filter((p) => p.published),
+      };
       const q = body.question.toLowerCase();
       const project = s.projects.find(
         (p) => q.includes(p.short.toLowerCase()) || q.includes(p.slug),
@@ -220,9 +230,34 @@ export default async function handler(req, res) {
       if (!client)
         throw fail(503, "Dedicated Supabase backend is not configured.");
       const user = await owner(client, req);
+      const config = await checked(
+        client
+          .from("studio_owner_config")
+          .select("pin_verifier")
+          .eq("owner_id", user.id)
+          .maybeSingle(),
+      );
+      const verifier = env().ADMIN_PIN_VERIFIER || config?.pin_verifier;
+      if (req.method === "POST" && body.action === "status")
+        return send(200, { pinConfigured: !!verifier });
+      if (req.method === "POST" && body.action === "setup-pin") {
+        await rate(client, req, "pin:" + user.id, 5);
+        if (verifier)
+          throw fail(409, "A verification code is already configured.");
+        if (body.pin !== body.confirmPin)
+          throw fail(400, "The codes do not match.");
+        const pin_verifier = createPinVerifier(body.pin);
+        const result = await client
+          .from("studio_owner_config")
+          .insert({ owner_id: user.id, pin_verifier });
+        if (result.error)
+          throw fail(409, "Code setup was not accepted. Sign in again.");
+        await audit(client, "Owner secondary code initialized");
+        return send(200, { ok: true });
+      }
       if (req.method === "POST" && body.action === "unlock") {
         await rate(client, req, "pin:" + user.id, 5);
-        if (!verifyPin(body.pin, env().ADMIN_PIN_VERIFIER))
+        if (!verifyPin(body.pin, verifier))
           throw fail(403, "Verification code was not accepted.");
         const token = randomBytes(32).toString("hex");
         await checked(
@@ -254,24 +289,34 @@ export default async function handler(req, res) {
         return send(200, { ok: true });
       }
       await unlocked(client, req, user);
+      // Use the owner's JWT for private operations so database and Storage RLS
+      // independently enforce the exact UID and unlocked-session requirement.
+      const admin = createClient(
+        env().SUPABASE_URL,
+        env().SUPABASE_ANON_KEY || env().SUPABASE_SERVICE_ROLE_KEY,
+        {
+          global: { headers: { Authorization: "Bearer " + user.token } },
+          auth: { persistSession: false, autoRefreshToken: false },
+        },
+      );
       if (req.method === "GET") {
         const [content, enquiries, activity, media] = await Promise.all([
-          site(client),
+          site(admin),
           checked(
-            client
+            admin
               .from("studio_enquiries")
               .select("*")
               .order("created_at", { ascending: false })
               .limit(500),
           ),
           checked(
-            client
+            admin
               .from("studio_audit")
               .select("*")
               .order("created_at", { ascending: false })
               .limit(50),
           ),
-          client.storage.from("studio-media").list("", { limit: 100 }),
+          admin.storage.from("studio-media").list("", { limit: 100 }),
         ]);
         return send(200, {
           site: content,
@@ -287,7 +332,7 @@ export default async function handler(req, res) {
         case "save": {
           const content = validateSite(body.site);
           await checked(
-            client.from("studio_content").upsert({
+            admin.from("studio_content").upsert({
               id: "site",
               data: content,
               updated_at: new Date().toISOString(),
@@ -304,7 +349,7 @@ export default async function handler(req, res) {
           )
             throw fail(400, "Invalid enquiry update.");
           await checked(
-            client
+            admin
               .from("studio_enquiries")
               .update({ status: body.status, notes: body.notes })
               .eq("id", body.id),
@@ -314,7 +359,7 @@ export default async function handler(req, res) {
         }
         case "delete-enquiry":
           await checked(
-            client.from("studio_enquiries").delete().eq("id", body.id),
+            admin.from("studio_enquiries").delete().eq("id", body.id),
           );
           await audit(client, "Enquiry deleted");
           break;
@@ -336,7 +381,7 @@ export default async function handler(req, res) {
             randomBytes(12).toString("hex") +
             "." +
             (png ? "png" : jpg ? "jpg" : "webp");
-          const r = await client.storage
+          const r = await admin.storage
             .from("studio-media")
             .upload(name, buffer, {
               contentType: png
@@ -358,7 +403,7 @@ export default async function handler(req, res) {
         case "delete-media": {
           if (!/^[a-f0-9]{24}\.(png|jpg|webp)$/.test(body.name))
             throw fail(400, "Invalid media name.");
-          const r = await client.storage
+          const r = await admin.storage
             .from("studio-media")
             .remove([body.name]);
           if (r.error) throw fail(503, "Unable to delete media.");

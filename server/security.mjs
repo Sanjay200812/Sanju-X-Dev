@@ -1,4 +1,14 @@
-import { scryptSync, timingSafeEqual, createHash } from "node:crypto";
+import {
+  scryptSync,
+  timingSafeEqual,
+  createHash,
+  randomBytes,
+} from "node:crypto";
+export function createPinVerifier(pin) {
+  if (!/^\d{4,12}$/.test(pin || "")) throw Error("Use a code of 4–12 digits.");
+  const salt = randomBytes(24).toString("hex");
+  return salt + ":" + scryptSync(pin, salt, 64).toString("hex");
+}
 import { Buffer } from "node:buffer";
 export const digest = (x) => createHash("sha256").update(x).digest("hex");
 export function verifyPin(pin, verifier) {
