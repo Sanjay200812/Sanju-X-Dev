@@ -2,27 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { X, ArrowUp } from "lucide-react";
 import { useSite } from "./App";
+import { useChat } from "./chat-context";
+
 export default function Assistant() {
   const s = useSite();
-  const [open, setOpen] = useState(false),
-    [busy, setBusy] = useState(false),
-    [input, setInput] = useState(""),
-    [mode, setMode] = useState("FAQ guide"),
-    [messages, setMessages] = useState([
-      {
-        role: "assistant",
-        text: "Hi, I’m spideyy. I can help you explore our work, understand our services or shape a project brief.",
-      },
-    ]);
+  const { messages, busy, mode, floatingOpen, setFloatingOpen, ask } = useChat();
+  const [input, setInput] = useState("");
   const panel = useRef<HTMLDivElement>(null),
     launcher = useRef<HTMLButtonElement>(null),
     field = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    if (!open) return;
+    if (!floatingOpen) return;
     field.current?.focus();
     const handle = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setOpen(false);
+        setFloatingOpen(false);
         launcher.current?.focus();
       }
       if (e.key === "Tab") {
@@ -42,47 +37,25 @@ export default function Assistant() {
     };
     document.addEventListener("keydown", handle);
     return () => document.removeEventListener("keydown", handle);
-  }, [open]);
-  async function ask(q: string) {
-    if (!q.trim() || busy) return;
+  }, [floatingOpen, setFloatingOpen]);
+
+  const handleAsk = (q: string) => {
     setInput("");
-    setMessages((m) => [...m, { role: "user", text: q }]);
-    setBusy(true);
-    try {
-      const r = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw Error(d.error);
-      setMode(d.mode);
-      setMessages((m) => [...m, { role: "assistant", text: d.answer }]);
-    } catch {
-      setMode("FAQ guide");
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          text: "I couldn’t reach the assistant service. You can explore all five case studies in Our Work or send a project brief through Contact.",
-        },
-      ]);
-    } finally {
-      setBusy(false);
-    }
-  }
+    void ask(q);
+  };
+
   return (
     <>
       <button
         ref={launcher}
         className="chat-launch"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        aria-expanded={floatingOpen}
+        onClick={() => setFloatingOpen(!floatingOpen)}
       >
         <img className="spider" src="/media/spideyy.svg" alt="" />
         <span>Ask spideyy</span>
       </button>
-      {open && (
+      {floatingOpen && (
         <div
           ref={panel}
           className="chat"
@@ -99,7 +72,7 @@ export default function Assistant() {
             <button
               aria-label="Close assistant"
               onClick={() => {
-                setOpen(false);
+                setFloatingOpen(false);
                 launcher.current?.focus();
               }}
             >
@@ -108,16 +81,48 @@ export default function Assistant() {
           </div>
           <div className="chat-body">
             <div aria-live="polite">
-              {messages.map((m, i) => (
-                <p key={i} className={m.role === "user" ? "user" : ""}>
-                  {m.text}
-                </p>
+              {messages.map((m: any, i: number) => (
+                <div key={i}>
+                  <p className={m.role === "user" ? "user" : ""}>{m.text}</p>
+                  {m.links && m.links.length > 0 && (
+                    <div className="chat-suggestions" style={{ marginBottom: 12 }}>
+                      {m.links.map((lnk: any, li: number) =>
+                        lnk.url.startsWith("ask:") ? (
+                          <button
+                            key={li}
+                            type="button"
+                            onClick={() => handleAsk(lnk.url.slice(4))}
+                          >
+                            {lnk.label}
+                          </button>
+                        ) : lnk.url.startsWith("http") ? (
+                          <a
+                            key={li}
+                            href={lnk.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {lnk.label}
+                          </a>
+                        ) : (
+                          <Link
+                            key={li}
+                            to={lnk.url}
+                            onClick={() => setFloatingOpen(false)}
+                          >
+                            {lnk.label}
+                          </Link>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
               ))}
               {busy && <p>Thinking…</p>}
             </div>
             <div className="chat-suggestions">
               {s.faqs.map((f) => (
-                <button disabled={busy} key={f.q} onClick={() => ask(f.q)}>
+                <button disabled={busy} key={f.q} onClick={() => handleAsk(f.q)}>
                   {f.q}
                 </button>
               ))}
@@ -127,11 +132,14 @@ export default function Assistant() {
               sends your question to the model provider.
             </p>
             <div className="chat-suggestions">
-              <Link to="/work" onClick={() => setOpen(false)}>
+              <Link to="/work" onClick={() => setFloatingOpen(false)}>
                 Explore all five projects
               </Link>
-              <Link to="/contact" onClick={() => setOpen(false)}>
+              <Link to="/contact" onClick={() => setFloatingOpen(false)}>
                 Start a project brief
+              </Link>
+              <Link to="/track" onClick={() => setFloatingOpen(false)}>
+                Track project status
               </Link>
               <a href={"mailto:" + s.email}>Email the business</a>
             </div>
@@ -139,7 +147,7 @@ export default function Assistant() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void ask(input);
+              handleAsk(input);
             }}
           >
             <input
