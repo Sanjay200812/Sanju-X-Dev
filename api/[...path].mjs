@@ -1,6 +1,30 @@
 import localHandler from "../server/handler.mjs";
+
 export default async function handler(req, res) {
-  if (!process.env.STUDIO_EDGE_URL) return localHandler(req, res);
+  const urlPath = new URL(req.url, "http://local").pathname;
+
+  // Requirement 4: Ensure email sending and transactional operations run in a compatible
+  // Node.js server environment with outbound TCP/TLS socket support on port 465 (Gmail SMTP).
+  // Deno Deploy / Edge sandboxes restrict raw outbound SMTP sockets; Vercel Serverless (Node.js)
+  // has full native support for Nodemailer SSL/TLS connections to smtp.gmail.com:465.
+  const isServerlessSensitiveEndpoint =
+    urlPath.startsWith("/api/enquiries") ||
+    urlPath.startsWith("/api/spideyy") ||
+    urlPath.startsWith("/api/chat");
+
+  const hasSmtpConfigured = Boolean(
+    process.env.SMTP_USER || process.env.SMTP_PASS || process.env.SMTP_HOST
+  );
+
+  if (
+    !process.env.STUDIO_EDGE_URL ||
+    isServerlessSensitiveEndpoint ||
+    hasSmtpConfigured ||
+    process.env.USE_LOCAL_HANDLER === "true"
+  ) {
+    return localHandler(req, res);
+  }
+
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   const allowed = [
@@ -12,8 +36,7 @@ export default async function handler(req, res) {
     return res.end(JSON.stringify({ error: "Request origin is not allowed." }));
   }
   try {
-    const path = new URL(req.url, "http://local").pathname;
-    const response = await fetch(process.env.STUDIO_EDGE_URL + path, {
+    const response = await fetch(process.env.STUDIO_EDGE_URL + urlPath, {
       method: req.method,
       headers: {
         Authorization: "Bearer " + process.env.STUDIO_EDGE_ANON_KEY,

@@ -305,7 +305,7 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
                         {lnk.label}
                       </a>
                     ) : (
-                      <Link key={lIdx} to={lnk.url} className="home-ai-link">
+                      <Link key={lIdx} to={lnk.url} className={`home-ai-link ${lnk.label.includes("Start") ? "action-primary" : ""}`}>
                         {lnk.label} <Arrow />
                       </Link>
                     ),

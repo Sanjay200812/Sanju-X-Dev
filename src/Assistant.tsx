@@ -108,6 +108,7 @@ export default function Assistant() {
                           <Link
                             key={li}
                             to={lnk.url}
+                            className={lnk.label.includes("Start") ? "action-primary" : ""}
                             onClick={() => setFloatingOpen(false)}
                           >
                             {lnk.label}

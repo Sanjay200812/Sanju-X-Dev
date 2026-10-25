@@ -1553,3 +1553,11 @@ html[data-theme="dark"] .button.secondary {
   background: transparent;
   border-color: var(--line);
 }
+
+.chat-body a.action-primary,
+.home-ai-link.action-primary {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-color: var(--accent) !important;
+}

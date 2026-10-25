@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import handler, { configureEnvironment } from "../server/handler.mjs";
 import { createSecretVerifier, verifySecret, getLockoutStatus, recordFailedAttempt, clearLockout } from "../server/security.mjs";
-import { formatEnquiryHtml, sendEnquiryNotification } from "../server/email.mjs";
+import { formatEnquiryHtml, sendEnquiryNotification, verifySmtpConnection, sendEmail } from "../server/email.mjs";
 
 test("secret code verifiers require at least 8 characters and validate salted scrypt hash", () => {
   const secret = "SuperSecretPassphrase2026!";
@@ -95,19 +95,108 @@ test("formatEnquiryHtml includes client details, requested service, and dashboar
   assert.ok(html.includes("https://sanju-x-dev.vercel.app/spideyy"));
 });
 
-test("sendEnquiryNotification skips when RESEND_API_KEY is not configured and reports accurately", async () => {
+test("sendEnquiryNotification skips when SMTP credentials are not configured and reports accurately", async () => {
   const result = await sendEnquiryNotification({
     name: "Test User",
     email: "test@example.com",
     service: "Business websites",
-    description: "Testing notification behavior without API keys.",
-  }, { resendApiKey: "" });
+    description: "Testing notification behavior without SMTP credentials.",
+  }, { smtpUser: "", smtpPass: "", resendApiKey: "" });
 
   assert.equal(result.success, false);
   assert.equal(result.skipped, true);
+  assert.ok(result.reason.includes("Gmail SMTP"));
 });
 
-test("sendEnquiryNotification calls Resend endpoint when API key is provided", async () => {
+test("sendEnquiryNotification dispatches via Gmail SMTP transporter, sending owner notification and customer tracking code", async () => {
+  const sentMessages = [];
+  const mockTransporter = {
+    sendMail: async (mailOptions) => {
+      sentMessages.push(mailOptions);
+      return { messageId: "mock_smtp_id_" + sentMessages.length };
+    },
+    verify: async () => true,
+  };
+
+  const result = await sendEnquiryNotification(
+    {
+      name: "Sanjay Dev",
+      email: "client@example.com",
+      service: "UI/UX design",
+      company: "StarX Corp",
+      phone: "+91 9876543210",
+      description: "Redesigning our portfolio platform with modern typography and fast load speeds.",
+      tracking_code: "SXD-108",
+    },
+    {
+      transporter: mockTransporter,
+      smtpHost: "smtp.gmail.com",
+      smtpPort: 465,
+      smtpSecure: true,
+      smtpUser: "sanjuxdev27@gmail.com",
+      fromEmail: '"SANJU X DEV" <sanjuxdev27@gmail.com>',
+      toEmail: "sanjuxdev27@gmail.com",
+      siteUrl: "https://sanju-x-dev.vercel.app",
+    }
+  );
+
+  assert.equal(result.success, true);
+  assert.equal(result.provider, "Gmail SMTP");
+  assert.equal(sentMessages.length, 2);
+
+  // Email 1: Owner inbox notification
+  assert.equal(sentMessages[0].to, "sanjuxdev27@gmail.com");
+  assert.ok(sentMessages[0].subject.includes("New SANJU X DEV Enquiry — SXD-108"));
+  assert.ok(sentMessages[0].html.includes("StarX Corp"));
+  assert.ok(sentMessages[0].html.includes("https://sanju-x-dev.vercel.app/spideyy"));
+
+  // Email 2: Customer SXD tracking code confirmation
+  assert.equal(sentMessages[1].to, "client@example.com");
+  assert.ok(sentMessages[1].subject.includes("SXD-108"));
+  assert.ok(sentMessages[1].html.includes("SXD-108"));
+  assert.ok(sentMessages[1].html.includes("https://sanju-x-dev.vercel.app/track?code=SXD-108"));
+});
+
+test("verifySmtpConnection reports status and handles mock transporter verification", async () => {
+  const mockOk = { verify: async () => true };
+  const okResult = await verifySmtpConnection({
+    smtpUser: "sanjuxdev27@gmail.com",
+    smtpPass: "abcd efgh ijkl mnop",
+    transporter: mockOk,
+  });
+  assert.equal(okResult.configured, true);
+  assert.equal(okResult.verified, true);
+  assert.equal(okResult.host, "smtp.gmail.com");
+
+  const unconfigured = await verifySmtpConnection({ smtpUser: "", smtpPass: "" });
+  assert.equal(unconfigured.configured, false);
+  assert.equal(unconfigured.verified, false);
+});
+
+test("sendEmail redacts sensitive password from error logs upon failure", async () => {
+  const secretPass = "supersecretapppass16";
+  const failingTransporter = {
+    sendMail: async () => {
+      throw new Error("Authentication failed for user user@gmail.com with pass " + secretPass);
+    },
+  };
+
+  const result = await sendEmail({
+    to: "owner@gmail.com",
+    subject: "Test Fail",
+    html: "<p>Test</p>",
+    options: {
+      transporter: failingTransporter,
+      smtpPass: secretPass,
+    },
+  });
+
+  assert.equal(result.success, false);
+  assert.ok(!result.error.includes(secretPass), "Password must be redacted");
+  assert.ok(result.error.includes("[REDACTED]"), "Redacted placeholder should be present");
+});
+
+test("sendEnquiryNotification falls back to Resend endpoint when legacy API key is provided", async () => {
   const calls = [];
   const mockFetch = async (url, opts) => {
     calls.push({
@@ -126,6 +215,8 @@ test("sendEnquiryNotification calls Resend endpoint when API key is provided", a
     service: "UI/UX design",
     description: "Redesigning our portfolio platform with modern typography.",
   }, {
+    smtpUser: "",
+    smtpPass: "",
     resendApiKey: "re_test_key_123",
     fetchFn: mockFetch,
     siteUrl: "https://sanju-x-dev.vercel.app",
@@ -133,14 +224,7 @@ test("sendEnquiryNotification calls Resend endpoint when API key is provided", a
 
   assert.equal(result.success, true);
   assert.equal(calls.length, 2);
-  // Email A (Owner)
   assert.equal(calls[0].url, "https://api.resend.com/emails");
-  assert.equal(calls[0].payload.to[0], "sanjuxdev27@gmail.com");
-  assert.ok(calls[0].payload.html.includes("https://sanju-x-dev.vercel.app/spideyy"));
-  // Email B (Customer Confirmation)
-  assert.equal(calls[1].url, "https://api.resend.com/emails");
-  assert.equal(calls[1].payload.to[0], "client@example.com");
-  assert.ok(calls[1].payload.html.includes("https://sanju-x-dev.vercel.app/track"));
 });
 
 test("/api/spideyy endpoint returns 503 when backend is unconfigured", async () => {

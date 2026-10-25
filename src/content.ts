@@ -345,6 +345,8 @@ export const defaults = {
   defaultTheme: "silver",
   introEnabled: true,
   assistantEnabled: true,
+  aiDailyLimit: 100,
+  aiMaxTokens: 450,
   services,
   projects,
   faqs: [

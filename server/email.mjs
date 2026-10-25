@@ -1,9 +1,19 @@
+import nodemailer from "nodemailer";
+
 const escape = (s) =>
   String(s || "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+
+function sanitizeError(err, pass) {
+  let msg = String(err?.message || err || "Email delivery failed");
+  if (pass && typeof pass === "string" && pass.length > 3) {
+    msg = msg.split(pass).join("[REDACTED]");
+  }
+  return msg;
+}
 
 function emailShell(title, preheader, content) {
   return `<!DOCTYPE html>
@@ -98,7 +108,7 @@ export function formatNewEnquiryOwnerHtml(enquiry, trackingCode, siteUrl) {
   return emailShell("New Enquiry — " + trackingCode, "New project enquiry from " + enquiry.name, content);
 }
 
-// EMAIL B: Confirmation to Customer
+// EMAIL B: Confirmation to Customer with SXD Tracking Code
 export function formatCustomerConfirmationHtml(enquiry, trackingCode, siteUrl) {
   const origin = (siteUrl || "https://sanju-x-dev.vercel.app").replace(/\/$/, "");
   const trackUrl = `${origin}/track?code=${encodeURIComponent(trackingCode)}`;
@@ -266,7 +276,96 @@ export function formatProjectStatusChangeHtml(project, reason, siteUrl) {
   return emailShell("Project Status: " + project.tracking_code, "Update regarding your project status", content);
 }
 
-// Core Email Dispatcher via Resend
+// Factory helper to construct or extract a Nodemailer transporter
+export function createSmtpTransport(options = {}) {
+  if (options.transporter) return options.transporter;
+
+  const host = options.smtpHost || process.env.SMTP_HOST || "smtp.gmail.com";
+  const port = Number(options.smtpPort || process.env.SMTP_PORT || 465);
+  const secure =
+    options.smtpSecure !== undefined
+      ? Boolean(options.smtpSecure)
+      : process.env.SMTP_SECURE === "false"
+        ? false
+        : true;
+  const user = (options.smtpUser || process.env.SMTP_USER || "").trim();
+  const pass = (options.smtpPass || process.env.SMTP_PASS || "").replace(/\s+/g, "");
+
+  if (!user || !pass) return null;
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+  });
+}
+
+// Verification helper for diagnostic scripts and dashboard test
+export async function verifySmtpConnection(options = {}) {
+  const host = options.smtpHost || process.env.SMTP_HOST || "smtp.gmail.com";
+  const port = Number(options.smtpPort || process.env.SMTP_PORT || 465);
+  const secure =
+    options.smtpSecure !== undefined
+      ? Boolean(options.smtpSecure)
+      : process.env.SMTP_SECURE === "false"
+        ? false
+        : true;
+  const user = (options.smtpUser || process.env.SMTP_USER || "").trim();
+  const pass = (options.smtpPass || process.env.SMTP_PASS || "").replace(/\s+/g, "");
+
+  if (!user || !pass) {
+    return {
+      configured: false,
+      verified: false,
+      host,
+      port,
+      secure,
+      user: user || null,
+      error: "Gmail SMTP credentials (SMTP_USER / SMTP_PASS) are not configured in environment variables.",
+    };
+  }
+
+  try {
+    const transporter =
+      options.transporter ||
+      nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+        connectionTimeout: 15000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
+      });
+
+    await transporter.verify();
+    return {
+      configured: true,
+      verified: true,
+      host,
+      port,
+      secure,
+      user,
+    };
+  } catch (err) {
+    const cleanErr = sanitizeError(err, pass);
+    return {
+      configured: true,
+      verified: false,
+      host,
+      port,
+      secure,
+      user,
+      error: cleanErr,
+    };
+  }
+}
+
+// Core Email Dispatcher via Gmail SMTP (with fallback for Resend if legacy configured)
 export async function sendEmail({
   to,
   subject,
@@ -276,48 +375,111 @@ export async function sendEmail({
   options = {},
   client = null,
 }) {
-  const apiKey = options.resendApiKey || process.env.RESEND_API_KEY;
-  const fromEmail = options.fromEmail || process.env.RESEND_FROM_EMAIL || "SANJU X DEV <onboarding@resend.dev>";
-  const fetchImpl = options.fetchFn || globalThis.fetch;
+  const user = (options.smtpUser || process.env.SMTP_USER || "").trim();
+  const pass = (options.smtpPass || process.env.SMTP_PASS || "").replace(/\s+/g, "");
+  const fromEmail =
+    options.fromEmail ||
+    process.env.SMTP_FROM_EMAIL ||
+    (user ? `"SANJU X DEV" <${user}>` : '"SANJU X DEV" <sanjuxdev27@gmail.com>');
 
-  if (!apiKey) {
-    if (client) {
-      await logOutbox(client, {
-        tracking_code: trackingCode,
-        template,
-        recipient: to,
-        subject,
-        status: "failed",
-        error: "RESEND_API_KEY is not configured",
-      });
-    }
-    return {
-      success: false,
-      skipped: true,
-      reason: "RESEND_API_KEY is not configured in environment variables",
-    };
-  }
+  // Priority 1: Gmail SMTP Transporter
+  const transporter = options.transporter || createSmtpTransport(options);
 
-  try {
-    const response = await fetchImpl("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+  if (transporter) {
+    try {
+      const recipientString = Array.isArray(to) ? to.join(", ") : to;
+      const textFallback = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+      const info = await transporter.sendMail({
         from: fromEmail,
-        to: Array.isArray(to) ? to : [to],
+        to: recipientString,
         subject,
         html,
-      }),
-      signal: AbortSignal.timeout(12000),
-    });
+        text: textFallback,
+      });
 
-    const data = await response.json();
+      const messageId = info.messageId || info.response || "gmail-smtp";
 
-    if (!response.ok) {
-      const errorMsg = data.message || "Failed to send email via Resend";
+      if (client) {
+        await logOutbox(client, {
+          tracking_code: trackingCode,
+          template,
+          recipient: recipientString,
+          subject,
+          status: "sent",
+          provider_id: messageId,
+        });
+      }
+
+      return { success: true, id: messageId, provider: "Gmail SMTP" };
+    } catch (err) {
+      const cleanErr = sanitizeError(err, pass);
+      const recipientString = Array.isArray(to) ? to.join(", ") : to;
+
+      if (client) {
+        await logOutbox(client, {
+          tracking_code: trackingCode,
+          template,
+          recipient: recipientString,
+          subject,
+          status: "failed",
+          error: cleanErr,
+        });
+      }
+      return { success: false, error: cleanErr, provider: "Gmail SMTP" };
+    }
+  }
+
+  // Priority 2: Fallback to Resend (if legacy RESEND_API_KEY is explicitly supplied in options/env)
+  const resendApiKey = options.resendApiKey || process.env.RESEND_API_KEY;
+  if (resendApiKey) {
+    const fetchImpl = options.fetchFn || globalThis.fetch;
+    const resendFrom = options.fromEmail || process.env.RESEND_FROM_EMAIL || fromEmail;
+    try {
+      const response = await fetchImpl("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + resendApiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: Array.isArray(to) ? to : [to],
+          subject,
+          html,
+        }),
+        signal: AbortSignal.timeout(12000),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        const errorMsg = data.message || "Failed to send email via Resend";
+        if (client) {
+          await logOutbox(client, {
+            tracking_code: trackingCode,
+            template,
+            recipient: Array.isArray(to) ? to.join(", ") : to,
+            subject,
+            status: "failed",
+            error: errorMsg,
+          });
+        }
+        return { success: false, error: errorMsg, provider: "Resend" };
+      }
+
+      if (client) {
+        await logOutbox(client, {
+          tracking_code: trackingCode,
+          template,
+          recipient: Array.isArray(to) ? to.join(", ") : to,
+          subject,
+          status: "sent",
+          provider_id: data.id,
+        });
+      }
+      return { success: true, id: data.id, provider: "Resend" };
+    } catch (err) {
+      const errText = err.message || "Network error while connecting to Resend";
       if (client) {
         await logOutbox(client, {
           tracking_code: trackingCode,
@@ -325,41 +487,36 @@ export async function sendEmail({
           recipient: Array.isArray(to) ? to.join(", ") : to,
           subject,
           status: "failed",
-          error: errorMsg,
+          error: errText,
         });
       }
-      return { success: false, error: errorMsg };
+      return { success: false, error: errText, provider: "Resend" };
     }
-
-    if (client) {
-      await logOutbox(client, {
-        tracking_code: trackingCode,
-        template,
-        recipient: Array.isArray(to) ? to.join(", ") : to,
-        subject,
-        status: "sent",
-        provider_id: data.id,
-      });
-    }
-
-    return { success: true, id: data.id };
-  } catch (err) {
-    const errText = err.message || "Network error while connecting to Resend";
-    if (client) {
-      await logOutbox(client, {
-        tracking_code: trackingCode,
-        template,
-        recipient: Array.isArray(to) ? to.join(", ") : to,
-        subject,
-        status: "failed",
-        error: errText,
-      });
-    }
-    return { success: false, error: errText };
   }
+
+  // Priority 3: Neither SMTP nor Resend configured -> graceful skip without breaking enquiry
+  const unconfiguredReason =
+    "Gmail SMTP credentials (SMTP_USER / SMTP_PASS) are not configured in environment variables.";
+
+  if (client) {
+    await logOutbox(client, {
+      tracking_code: trackingCode,
+      template,
+      recipient: Array.isArray(to) ? to.join(", ") : to,
+      subject,
+      status: "failed",
+      error: unconfiguredReason,
+    });
+  }
+
+  return {
+    success: false,
+    skipped: true,
+    reason: unconfiguredReason,
+  };
 }
 
-// Outbox Logger Helper
+// Outbox Logger Helper (persists to studio_emails table)
 async function logOutbox(client, record) {
   try {
     if (client?.from) {
@@ -378,12 +535,18 @@ export function formatEnquiryHtml(enquiry, siteUrl) {
   return formatNewEnquiryOwnerHtml(enquiry, enquiry.tracking_code || "SXD-001", siteUrl);
 }
 
+// Automatic Notification Pipeline: Owner Alert + Customer Tracking Confirmation
 export async function sendEnquiryNotification(enquiry, options = {}, client = null) {
   const siteUrl = options.siteUrl || process.env.SITE_URL || "https://sanju-x-dev.vercel.app";
   const trackingCode = enquiry.tracking_code || "SXD-001";
-  const toEmail = options.toEmail || process.env.OWNER_NOTIFICATION_EMAIL || "sanjuxdev27@gmail.com";
+  const toEmail =
+    options.toEmail ||
+    process.env.OWNER_NOTIFICATION_EMAIL ||
+    options.smtpUser ||
+    process.env.SMTP_USER ||
+    "sanjuxdev27@gmail.com";
 
-  // 1. Send Email to Owner
+  // 1. Send Immediate Notification to Owner's Gmail Inbox
   const ownerHtml = formatNewEnquiryOwnerHtml(enquiry, trackingCode, siteUrl);
   const ownerSubject = `New SANJU X DEV Enquiry — ${trackingCode} (${enquiry.name})`;
   const ownerResult = await sendEmail({
@@ -396,7 +559,7 @@ export async function sendEnquiryNotification(enquiry, options = {}, client = nu
     client,
   });
 
-  // 2. Send Confirmation Email to Customer
+  // 2. Send SXD Tracking Code Confirmation to Customer
   if (enquiry.email && /^\S+@\S+\.\S+$/.test(enquiry.email)) {
     const customerHtml = formatCustomerConfirmationHtml(enquiry, trackingCode, siteUrl);
     const customerSubject = `Your Enquiry Has Been Received — ${trackingCode} | SANJU X DEV`;

@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useRef,
   ReactNode,
 } from "react";
 
@@ -31,10 +32,10 @@ interface ChatContextType {
 
 const initialMessage: ChatMessage = {
   role: "assistant",
-  text: "Hi, I’m spideyy! I can help you understand our services, suggest the right website for your business, explain features, or check your project status.",
+  text: "Hi, I’m spideyy! I can help you understand our services, recommend the right website type, explain features, or check your project tracking status.",
   links: [
     { label: "What kind of website do I need?", url: "ask:What kind of website does my business need?" },
-    { label: "Start a Project Brief", url: "/contact" },
+    { label: "Start Your Project", url: "/contact" },
     { label: "Track a Project", url: "/track" },
   ],
   mode: "spideyy assistant",
@@ -44,65 +45,82 @@ const ChatContext = createContext<ChatContextType | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
+  const messagesRef = useRef<ChatMessage[]>([initialMessage]);
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState("spideyy assistant");
   const [floatingOpen, setFloatingOpen] = useState(false);
+
+  // Sync ref whenever state changes
+  messagesRef.current = messages;
 
   const ask = useCallback(async (q: string) => {
     const trimmed = q.trim();
     if (!trimmed || busy) return;
 
-    // Append user message
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", text: trimmed, timestamp: new Date().toISOString() },
-    ]);
+    const userMessage: ChatMessage = {
+      role: "user",
+      text: trimmed,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Keep conversation history up to date immediately without stale closures
+    const previousHistory = messagesRef.current.slice(-10).map((m) => ({
+      role: m.role,
+      text: m.text,
+    }));
+
+    const nextMessages = [...messagesRef.current, userMessage];
+    messagesRef.current = nextMessages;
+    setMessages(nextMessages);
     setBusy(true);
 
     try {
-      const recentHistory = messages.slice(-6).map((m) => ({ role: m.role, text: m.text }));
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: trimmed, history: recentHistory }),
+        body: JSON.stringify({ question: trimmed, history: previousHistory }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to get an answer.");
 
-      setMode(data.mode || "spideyy assistant");
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: data.answer,
-          links: data.links || [],
-          mode: data.mode,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      const newMode = data.mode || "spideyy assistant";
+      setMode(newMode);
+
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        text: data.answer,
+        links: data.links || [],
+        mode: newMode,
+        timestamp: new Date().toISOString(),
+      };
+
+      const finalMessages = [...messagesRef.current, assistantMessage];
+      messagesRef.current = finalMessages;
+      setMessages(finalMessages);
     } catch {
       setMode("FAQ guide");
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: "I couldn’t reach the assistant service right now. You can explore our five case studies in Our Work or share your requirements directly through our Contact form.",
-          links: [
-            { label: "Explore Our Work", url: "/work" },
-            { label: "Start a Project", url: "/contact" },
-            { label: "Track Status", url: "/track" },
-          ],
-          mode: "FAQ guide",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      const fallbackMessage: ChatMessage = {
+        role: "assistant",
+        text: "I couldn’t reach the live AI assistant right now. You can explore our five case studies in Our Work or share your requirements directly through our Contact form.",
+        links: [
+          { label: "Explore Our Work", url: "/work" },
+          { label: "Start a Project", url: "/contact" },
+          { label: "Track Status", url: "/track" },
+        ],
+        mode: "FAQ guide",
+        timestamp: new Date().toISOString(),
+      };
+      const finalMessages = [...messagesRef.current, fallbackMessage];
+      messagesRef.current = finalMessages;
+      setMessages(finalMessages);
     } finally {
       setBusy(false);
     }
   }, [busy]);
 
   const clearMessages = useCallback(() => {
+    messagesRef.current = [initialMessage];
     setMessages([initialMessage]);
   }, []);
 
