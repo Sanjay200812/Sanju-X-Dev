@@ -31,6 +31,7 @@ import { defaults, projects as seed } from "./content";
 import Contact from "./Contact";
 import Assistant from "./Assistant";
 const Admin = lazy(() => import("./Admin"));
+const Track = lazy(() => import("./Track"));
 export type Site = typeof defaults;
 export const Context = createContext(defaults);
 export const useSite = () => useContext(Context);
@@ -100,6 +101,7 @@ function Footer() {
           <a href={s.instagram} target="_blank" rel="noreferrer">
             Instagram ↗
           </a>
+          <Link to="/track">Track Project</Link>
           <Link to="/privacy">Privacy</Link>
         </div>
         <small>© {new Date().getFullYear()} SANJU X DEV</small>
@@ -766,6 +768,18 @@ export default function App() {
             <Route path="/services" element={<Services />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
+            <Route
+              path="/track"
+              element={
+                <Suspense
+                  fallback={
+                    <p className="wrap page">Loading project tracking…</p>
+                  }
+                >
+                  <Track />
+                </Suspense>
+              }
+            />
             <Route path="/privacy" element={<Privacy />} />
             <Route
               path="/spideyy"

@@ -129,30 +129,73 @@ export async function clearLockout(client, scope) {
 export function enquiry(x) {
   if (!x || typeof x !== "object") throw Error("Invalid enquiry.");
   const out = {};
-  for (const [k, n] of Object.entries({
+  const limits = {
     name: 100,
     email: 254,
     company: 150,
     description: 5000,
-    features: 2000,
     service: 200,
     timeline: 100,
     budget: 100,
-  })) {
-    if (typeof x[k] !== "string" || x[k].length > n)
-      throw Error("Please check your " + k + ".");
-    out[k] = x[k].trim();
+    phone: 40,
+    whatsapp: 40,
+    preferred_contact: 40,
+    city: 100,
+    country: 100,
+    website_url: 300,
+  };
+
+  for (const [k, maxLen] of Object.entries(limits)) {
+    if (x[k] !== undefined && x[k] !== null) {
+      if (typeof x[k] !== "string" || x[k].length > maxLen) {
+        throw Error("Please check your " + k + ".");
+      }
+      out[k] = x[k].trim();
+    } else {
+      out[k] = "";
+    }
   }
+
+  if (Array.isArray(x.features)) {
+    if (x.features.length > 50) throw Error("Too many features specified.");
+    for (const f of x.features) {
+      if (typeof f !== "string" || f.length > 100) throw Error("Please check your features.");
+    }
+    out.features = x.features.map((f) => f.trim());
+  } else if (typeof x.features === "string") {
+    if (x.features.length > 2000) throw Error("Please check your features.");
+    out.features = x.features.trim();
+  } else {
+    out.features = "";
+  }
+
+  if (Array.isArray(x.categories)) {
+    if (x.categories.length > 50) throw Error("Too many categories specified.");
+    for (const c of x.categories) {
+      if (typeof c !== "string" || c.length > 100) throw Error("Please check your categories.");
+    }
+    out.categories = x.categories.map((c) => c.trim());
+  } else if (typeof x.categories === "string") {
+    if (x.categories.length > 1000) throw Error("Please check your categories.");
+    out.categories = x.categories.trim() ? [x.categories.trim()] : [];
+  } else {
+    out.categories = [];
+  }
+
+  out.is_individual = Boolean(x.is_individual);
+
   if (
     !out.name ||
-    out.description.length < 20 ||
+    out.description.length < 10 ||
     !out.service ||
     !/^\S+@\S+\.\S+$/.test(out.email) ||
     x.consent !== true
-  )
+  ) {
     throw Error(
       "Name, valid email, project description and consent are required.",
     );
+  }
+
   return { ...out, consent: true };
 }
 

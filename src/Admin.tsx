@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { createClient } from "@supabase/supabase-js";
 import {
   Eye,
@@ -9,6 +10,9 @@ import {
   Download,
   Trash2,
   ChevronDown,
+  Plus,
+  ExternalLink,
+  Send,
 } from "lucide-react";
 import { defaults } from "./content";
 
@@ -51,6 +55,15 @@ export default function Admin() {
   // Notifications
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Active Project & Outbox states
+  const [editingProject, setEditingProject] = useState<any | null>(null);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [projectNotifyClient, setProjectNotifyClient] = useState(true);
+  const [projectStatusReason, setProjectStatusReason] = useState("");
+  const [newMilestoneInput, setNewMilestoneInput] = useState("");
+  const [testEmailBusy, setTestEmailBusy] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState("");
 
   // Lockout countdown timer
   useEffect(() => {
@@ -220,10 +233,12 @@ export default function Admin() {
 
   const tabs = [
     "Overview",
+    "Active Projects",
+    "Enquiries",
+    "Email Outbox",
     "Projects",
     "Page content",
     "Services",
-    "Enquiries",
     "Analytics",
     "Media",
     "Themes",
@@ -674,7 +689,11 @@ export default function Admin() {
               <div className="admin-summary">
                 <div>
                   <b>{site.projects.filter((p) => p.published).length}</b>
-                  Published projects
+                  Published portfolio
+                </div>
+                <div>
+                  <b>{(data.projects || []).length}</b>
+                  Active client projects
                 </div>
                 <div>
                   <b>
@@ -683,15 +702,227 @@ export default function Admin() {
                   New enquiries ({unreadCount} unread)
                 </div>
                 <div>
-                  <b>{data.media.length}</b>
-                  Media files (up to 100)
+                  <b>{(data.emails || []).length}</b>
+                  Emails in outbox
                 </div>
               </div>
               <p className="status">
                 Changes to site content are drafts until you click Publish changes.
-                Enquiry updates, notes, and media uploads persist immediately to Supabase.
+                Client project tracking, enquiry updates, and transactional emails persist immediately to Supabase.
               </p>
             </>
+          )}
+
+          {/* ACTIVE PROJECTS TAB */}
+          {tab === "Active Projects" && (
+            <div className="admin-card">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginBottom: 20,
+                }}
+              >
+                <div>
+                  <h3 style={{ margin: "0 0 4px 0" }}>Active Client Projects</h3>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
+                    Manage client timelines, milestone checklists, delivery links, and live progress updates.
+                  </p>
+                </div>
+
+                <button
+                  className="button"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px" }}
+                  onClick={() => {
+                    const defaultTracking = "SXD-" + String((data?.projects?.length || 0) + 1).padStart(3, "0");
+                    setEditingProject({
+                      tracking_code: defaultTracking,
+                      title: "",
+                      client_name: "",
+                      client_email: "",
+                      client_phone: "",
+                      company: "",
+                      service: "Business website",
+                      status: "scope_confirmed",
+                      agreed_scope: "",
+                      estimated_price: "",
+                      agreed_price: "",
+                      start_date: new Date().toISOString().slice(0, 10),
+                      target_date: "",
+                      progress_pct: 10,
+                      milestones: [
+                        { name: "Enquiry Received & Scoping", completed: true },
+                        { name: "Requirements Confirmation & Proposal", completed: true },
+                        { name: "Core Architecture & Design Concept", completed: false },
+                        { name: "Active Development & Feature Build", completed: false },
+                        { name: "Quality Assurance & Responsive Testing", completed: false },
+                        { name: "Production Deployment & Handover", completed: false },
+                      ],
+                      public_update: "Project scope has been confirmed. Work is beginning.",
+                      internal_notes: "",
+                      live_url: "",
+                      delivery_notes: "",
+                    });
+                    setIsProjectModalOpen(true);
+                  }}
+                >
+                  <Plus size={16} /> New Client Project
+                </button>
+              </div>
+
+              {(!data?.projects || data.projects.length === 0) ? (
+                <div style={{ padding: "30px 20px", textAlign: "center", background: "var(--soft)", borderRadius: 6 }}>
+                  <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
+                    No active client projects yet. You can convert an enquiry from the Enquiries tab or click "New Client Project" above.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {data.projects.map((p: any) => (
+                    <div
+                      key={p.id}
+                      style={{
+                        border: "1px solid var(--line)",
+                        borderRadius: 6,
+                        padding: 18,
+                        background: "var(--paper)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          flexWrap: "wrap",
+                          gap: 12,
+                          marginBottom: 12,
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <span
+                              style={{
+                                fontFamily: "ui-monospace, monospace",
+                                fontWeight: 700,
+                                fontSize: 13,
+                                color: "var(--accent)",
+                                padding: "2px 8px",
+                                background: "var(--soft)",
+                                borderRadius: 4,
+                                border: "1px dashed var(--accent)",
+                              }}
+                            >
+                              {p.tracking_code}
+                            </span>
+                            <strong style={{ fontSize: 16 }}>{p.title}</strong>
+                          </div>
+                          <div style={{ fontSize: 13, color: "var(--muted)" }}>
+                            Client: <strong>{p.client_name}</strong> ({p.client_email}) · {p.service}
+                            {p.company ? ` · ${p.company}` : ""}
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: 4,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              background:
+                                p.status === "completed"
+                                  ? "#25d366"
+                                  : p.status === "in_progress" || p.status === "in-progress"
+                                    ? "#b78103"
+                                    : "var(--accent)",
+                              color: "#fff",
+                            }}
+                          >
+                            {p.status.replace("_", " ")}
+                          </span>
+
+                          <button
+                            type="button"
+                            className="button secondary"
+                            style={{ padding: "6px 12px", fontSize: 12 }}
+                            onClick={() => {
+                              setEditingProject({ ...p });
+                              setIsProjectModalOpen(true);
+                            }}
+                          >
+                            Manage Project
+                          </button>
+
+                          <Link
+                            to={`/track?code=${p.tracking_code}`}
+                            target="_blank"
+                            className="button secondary"
+                            style={{ padding: "6px 12px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}
+                          >
+                            View on /track <ExternalLink size={13} />
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div style={{ margin: "14px 0 10px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                          <span style={{ color: "var(--muted)" }}>Progress</span>
+                          <strong>{p.progress_pct || 0}%</strong>
+                        </div>
+                        <div
+                          style={{
+                            width: "100%",
+                            height: 6,
+                            background: "var(--panel)",
+                            borderRadius: 3,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${p.progress_pct || 0}%`,
+                              background: "var(--accent)",
+                              transition: "width 0.3s",
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Project Meta Chips */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 12, color: "var(--muted)", marginTop: 10 }}>
+                        {p.target_date && (
+                          <span>Target: <strong style={{ color: "var(--text)" }}>{new Date(p.target_date).toLocaleDateString()}</strong></span>
+                        )}
+                        {p.agreed_price && (
+                          <span>Pricing: <strong style={{ color: "var(--text)" }}>{p.agreed_price}</strong></span>
+                        )}
+                        {p.live_url && (
+                          <a href={p.live_url} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                            Live Site ↗
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Public update preview */}
+                      {p.public_update && (
+                        <div style={{ marginTop: 10, padding: 10, background: "var(--soft)", borderRadius: 4, fontSize: 12 }}>
+                          <span style={{ fontWeight: 600, color: "var(--muted)", display: "block", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            Current Public Broadcast (Visible on /track):
+                          </span>
+                          {p.public_update}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* ENQUIRIES TAB (UPGRADED) */}
@@ -1072,7 +1303,7 @@ export default function Admin() {
                           marginTop: 12,
                         }}
                       >
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                           <button className="button" style={{ padding: "8px 16px" }} disabled={busy}>
                             Save update
                           </button>
@@ -1092,6 +1323,46 @@ export default function Admin() {
                             }
                           >
                             {r.read ? "Mark as unread" : "Mark as read"}
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            style={{ padding: "8px 16px", borderColor: "var(--accent)", color: "var(--accent)" }}
+                            onClick={() => {
+                              setEditingProject({
+                                tracking_code: r.tracking_code || "SXD-001",
+                                title: (r.data.company || r.data.name) + " — " + r.data.service,
+                                client_name: r.data.name,
+                                client_email: r.data.email,
+                                client_phone: r.phone || r.data.phone || "",
+                                company: r.data.company || "",
+                                service: r.data.service,
+                                status: "scope_confirmed",
+                                agreed_scope: r.data.description,
+                                estimated_price: r.data.budget || "",
+                                agreed_price: r.data.budget || "",
+                                start_date: new Date().toISOString().slice(0, 10),
+                                target_date: "",
+                                progress_pct: 15,
+                                milestones: [
+                                  { name: "Enquiry Received & Scoping", completed: true },
+                                  { name: "Requirements Confirmation & Proposal", completed: true },
+                                  { name: "Core Architecture & Design Concept", completed: false },
+                                  { name: "Active Development & Feature Build", completed: false },
+                                  { name: "Quality Assurance & Responsive Testing", completed: false },
+                                  { name: "Production Deployment & Handover", completed: false },
+                                ],
+                                public_update: "Project scope has been confirmed. Architecture and design are underway.",
+                                internal_notes: r.notes || "",
+                                live_url: "",
+                                delivery_notes: "",
+                                enquiry_id: r.id,
+                              });
+                              setIsProjectModalOpen(true);
+                              setTab("Active Projects");
+                            }}
+                          >
+                            Convert to Active Project →
                           </button>
                         </div>
 
@@ -1133,6 +1404,159 @@ export default function Admin() {
                 <p style={{ textAlign: "center", padding: 24, color: "var(--muted)" }}>
                   No customer enquiries match your search or filter.
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* EMAIL OUTBOX TAB */}
+          {tab === "Email Outbox" && (
+            <div className="admin-card">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <div>
+                  <h3 style={{ margin: "0 0 4px 0" }}>Transactional Email Outbox</h3>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
+                    Audit history of customer confirmations, owner alerts, and milestone broadcasts via Resend.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", fontSize: 13 }}
+                  disabled={testEmailBusy}
+                  onClick={() => {
+                    void run(async () => {
+                      setTestEmailBusy(true);
+                      setTestEmailResult("");
+                      try {
+                        const res = await api({ action: "test-email" });
+                        setTestEmailResult(`Test email dispatched to ${res.recipient}! Check your inbox.`);
+                        await load();
+                      } catch (err) {
+                        setTestEmailResult(`Dispatch failed: ${(err as Error).message}`);
+                      } finally {
+                        setTestEmailBusy(false);
+                      }
+                    });
+                  }}
+                >
+                  <Send size={14} /> {testEmailBusy ? "Sending test…" : "Send Test Email to Owner"}
+                </button>
+              </div>
+
+              {testEmailResult && (
+                <div className="status" style={{ marginBottom: 16, fontSize: 13 }}>
+                  {testEmailResult}
+                </div>
+              )}
+
+              {(!data?.emails || data.emails.length === 0) ? (
+                <div style={{ padding: "30px 20px", textAlign: "center", background: "var(--soft)", borderRadius: 6 }}>
+                  <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
+                    No emails logged in outbox yet. Incoming enquiries and project updates will appear here automatically.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {data.emails.map((m: any) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 12,
+                        padding: "12px 16px",
+                        border: "1px solid var(--line)",
+                        borderRadius: 6,
+                        background: "var(--paper)",
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 260 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          {m.tracking_code && (
+                            <span
+                              style={{
+                                fontFamily: "ui-monospace, monospace",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: "var(--accent)",
+                                padding: "1px 6px",
+                                background: "var(--soft)",
+                                borderRadius: 3,
+                              }}
+                            >
+                              {m.tracking_code}
+                            </span>
+                          )}
+                          <strong style={{ fontSize: 13 }}>{m.subject}</strong>
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                          To: <span style={{ color: "var(--text)" }}>{m.recipient}</span> · Template: {m.template}
+                        </div>
+                        {m.error && (
+                          <div style={{ fontSize: 11, color: "var(--accent)", marginTop: 4 }}>
+                            Error: {m.error}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ textAlign: "right" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "2px 8px",
+                              borderRadius: 4,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              background:
+                                m.status === "sent"
+                                  ? "#25d366"
+                                  : m.status === "failed"
+                                    ? "var(--accent)"
+                                    : "#b78103",
+                              color: "#fff",
+                            }}
+                          >
+                            {m.status}
+                          </span>
+                          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+                            {new Date(m.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "short", timeStyle: "short" })}
+                          </div>
+                        </div>
+
+                        {m.status === "failed" && (
+                          <button
+                            type="button"
+                            className="button secondary"
+                            style={{ padding: "4px 10px", fontSize: 11 }}
+                            onClick={() => {
+                              void run(async () => {
+                                await api({ action: "retry-email", id: m.id });
+                                await load();
+                                setStatus("Email retried successfully.");
+                              });
+                            }}
+                          >
+                            Retry
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -1688,7 +2112,7 @@ export default function Admin() {
             </div>
           )}
 
-          {!["Overview", "Enquiries", "Analytics", "Media", "Security"].includes(tab) && (
+          {!["Overview", "Active Projects", "Email Outbox", "Enquiries", "Analytics", "Media", "Security"].includes(tab) && (
             <button
               className="button"
               disabled={busy}
@@ -1696,6 +2120,379 @@ export default function Admin() {
             >
               {busy ? "Publishing…" : "Publish changes"}
             </button>
+          )}
+
+          {/* PROJECT EDIT / CREATE MODAL */}
+          {isProjectModalOpen && editingProject && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.65)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 100,
+                padding: 20,
+              }}
+            >
+              <div
+                style={{
+                  background: "var(--paper)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 8,
+                  padding: 24,
+                  maxWidth: 720,
+                  width: "100%",
+                  maxHeight: "90vh",
+                  overflowY: "auto",
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
+                  <h3 style={{ margin: 0 }}>
+                    {editingProject.id ? `Manage Project (${editingProject.tracking_code})` : "Create New Client Project"}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProjectModalOpen(false);
+                      setEditingProject(null);
+                    }}
+                    style={{ background: "transparent", border: 0, fontSize: 18, cursor: "pointer", color: "var(--muted)" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void run(async () => {
+                      const isNew = !editingProject.id;
+                      await api({
+                        action: isNew ? "create-project" : "update-project",
+                        project: editingProject,
+                        notifyClient: projectNotifyClient,
+                        statusReason: projectStatusReason,
+                      });
+                      await load();
+                      setIsProjectModalOpen(false);
+                      setEditingProject(null);
+                      setStatus(isNew ? "Project created successfully." : "Project updated successfully.");
+                    });
+                  }}
+                >
+                  <div className="form-grid">
+                    <label>
+                      Tracking Code
+                      <input
+                        type="text"
+                        required
+                        disabled={!!editingProject.id}
+                        value={editingProject.tracking_code}
+                        onChange={(e) => setEditingProject({ ...editingProject, tracking_code: e.target.value.toUpperCase() })}
+                      />
+                    </label>
+
+                    <label>
+                      Project Title
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. StarX Connect Platform"
+                        value={editingProject.title}
+                        onChange={(e) => setEditingProject({ ...editingProject, title: e.target.value })}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="form-grid">
+                    <label>
+                      Client Name
+                      <input
+                        type="text"
+                        required
+                        value={editingProject.client_name}
+                        onChange={(e) => setEditingProject({ ...editingProject, client_name: e.target.value })}
+                      />
+                    </label>
+
+                    <label>
+                      Client Email
+                      <input
+                        type="email"
+                        required
+                        value={editingProject.client_email}
+                        onChange={(e) => setEditingProject({ ...editingProject, client_email: e.target.value })}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="form-grid">
+                    <label>
+                      Client Phone / WhatsApp
+                      <input
+                        type="text"
+                        value={editingProject.client_phone || ""}
+                        onChange={(e) => setEditingProject({ ...editingProject, client_phone: e.target.value })}
+                      />
+                    </label>
+
+                    <label>
+                      Company / Brand Name
+                      <input
+                        type="text"
+                        value={editingProject.company || ""}
+                        onChange={(e) => setEditingProject({ ...editingProject, company: e.target.value })}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="form-grid">
+                    <label>
+                      Project Status
+                      <select
+                        value={editingProject.status}
+                        onChange={(e) => setEditingProject({ ...editingProject, status: e.target.value })}
+                      >
+                        <option value="under_review">Under Review</option>
+                        <option value="scope_confirmed">Scope Confirmed</option>
+                        <option value="in_progress">In Active Development</option>
+                        <option value="testing">Quality & Responsive Testing</option>
+                        <option value="completed">Completed & Delivered</option>
+                        <option value="on_hold">On Hold</option>
+                        <option value="declined">Declined</option>
+                      </select>
+                    </label>
+
+                    <label>
+                      Progress Percentage: {editingProject.progress_pct || 0}%
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={editingProject.progress_pct || 0}
+                        onChange={(e) => setEditingProject({ ...editingProject, progress_pct: Number(e.target.value) })}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="form-grid">
+                    <label>
+                      Start Date
+                      <input
+                        type="date"
+                        value={editingProject.start_date || ""}
+                        onChange={(e) => setEditingProject({ ...editingProject, start_date: e.target.value })}
+                      />
+                    </label>
+
+                    <label>
+                      Target Completion Date
+                      <input
+                        type="date"
+                        value={editingProject.target_date || ""}
+                        onChange={(e) => setEditingProject({ ...editingProject, target_date: e.target.value })}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="form-grid">
+                    <label>
+                      Agreed Pricing
+                      <input
+                        type="text"
+                        placeholder="e.g. ₹65,000 / $800"
+                        value={editingProject.agreed_price || ""}
+                        onChange={(e) => setEditingProject({ ...editingProject, agreed_price: e.target.value })}
+                      />
+                    </label>
+
+                    <label>
+                      Live Application / Preview URL
+                      <input
+                        type="url"
+                        placeholder="https://client-project.com"
+                        value={editingProject.live_url || ""}
+                        onChange={(e) => setEditingProject({ ...editingProject, live_url: e.target.value })}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Milestones Manager */}
+                  <div style={{ marginBottom: 18 }}>
+                    <label style={{ marginBottom: 6 }}>Milestone Checklist (Visible on /track)</label>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+                      {(editingProject.milestones || []).map((m: any, idx: number) => (
+                        <div
+                          key={idx}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "6px 10px",
+                            background: "var(--soft)",
+                            borderRadius: 4,
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={m.completed}
+                            onChange={(e) => {
+                              const updated = [...(editingProject.milestones || [])];
+                              updated[idx] = { ...m, completed: e.target.checked };
+                              setEditingProject({ ...editingProject, milestones: updated });
+                            }}
+                          />
+                          <input
+                            type="text"
+                            style={{ margin: 0, flex: 1, padding: "4px 8px", fontSize: 13 }}
+                            value={m.name}
+                            onChange={(e) => {
+                              const updated = [...(editingProject.milestones || [])];
+                              updated[idx] = { ...m, name: e.target.value };
+                              setEditingProject({ ...editingProject, milestones: updated });
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = editingProject.milestones.filter((_: any, i: number) => i !== idx);
+                              setEditingProject({ ...editingProject, milestones: updated });
+                            }}
+                            style={{ color: "var(--accent)", border: 0, background: "transparent", cursor: "pointer" }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        type="text"
+                        placeholder="Add new milestone phase…"
+                        style={{ margin: 0, flex: 1 }}
+                        value={newMilestoneInput}
+                        onChange={(e) => setNewMilestoneInput(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="button secondary"
+                        style={{ padding: "6px 14px" }}
+                        onClick={() => {
+                          if (newMilestoneInput.trim()) {
+                            const updated = [...(editingProject.milestones || []), { name: newMilestoneInput.trim(), completed: false }];
+                            setEditingProject({ ...editingProject, milestones: updated });
+                            setNewMilestoneInput("");
+                          }
+                        }}
+                      >
+                        Add Phase
+                      </button>
+                    </div>
+                  </div>
+
+                  <label>
+                    Public Broadcast Update (Shown to client on /track)
+                    <textarea
+                      rows={3}
+                      placeholder="e.g. Core architecture and database models completed. Beginning frontend integration."
+                      value={editingProject.public_update || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, public_update: e.target.value })}
+                    />
+                  </label>
+
+                  <label>
+                    Confirmed Project Scope
+                    <textarea
+                      rows={3}
+                      placeholder="Agreed technical scope and deliverables…"
+                      value={editingProject.agreed_scope || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, agreed_scope: e.target.value })}
+                    />
+                  </label>
+
+                  <label>
+                    Private Owner Internal Notes
+                    <textarea
+                      rows={2}
+                      placeholder="Strictly internal notes (never visible to client)…"
+                      value={editingProject.internal_notes || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, internal_notes: e.target.value })}
+                    />
+                  </label>
+
+                  {/* Automated Email Notification Checkbox */}
+                  <div style={{ margin: "16px 0", padding: 12, background: "var(--soft)", borderRadius: 6 }}>
+                    <label className="check" style={{ margin: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={projectNotifyClient}
+                        onChange={(e) => setProjectNotifyClient(e.target.checked)}
+                      />
+                      <span>
+                        <strong>Dispatch automatic email notification to client</strong> ({editingProject.client_email || "no email"})
+                      </span>
+                    </label>
+
+                    {["on_hold", "declined"].includes(editingProject.status) && projectNotifyClient && (
+                      <div style={{ marginTop: 10 }}>
+                        <label>
+                          Reason for Status Change (included in email to client)
+                          <input
+                            type="text"
+                            placeholder="e.g. Paused per client request while awaiting branding assets"
+                            value={projectStatusReason}
+                            onChange={(e) => setProjectStatusReason(e.target.value)}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24 }}>
+                    {editingProject.id ? (
+                      <button
+                        type="button"
+                        style={{ color: "var(--accent)", border: 0, background: "transparent", cursor: "pointer", fontSize: 13 }}
+                        onClick={() => {
+                          if (confirm(`Permanently delete project ${editingProject.title}?`)) {
+                            void run(async () => {
+                              await api({ action: "delete-project", id: editingProject.id });
+                              await load();
+                              setIsProjectModalOpen(false);
+                              setEditingProject(null);
+                              setStatus("Project deleted.");
+                            });
+                          }
+                        }}
+                      >
+                        Delete Project
+                      </button>
+                    ) : <span />}
+
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => {
+                          setIsProjectModalOpen(false);
+                          setEditingProject(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="button" disabled={busy}>
+                        {busy ? "Saving…" : "Save Project"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
           )}
         </>
       )}

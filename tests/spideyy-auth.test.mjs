@@ -108,14 +108,15 @@ test("sendEnquiryNotification skips when RESEND_API_KEY is not configured and re
 });
 
 test("sendEnquiryNotification calls Resend endpoint when API key is provided", async () => {
-  let calledUrl = "";
-  let payload = null;
+  const calls = [];
   const mockFetch = async (url, opts) => {
-    calledUrl = url;
-    payload = JSON.parse(opts.body);
+    calls.push({
+      url,
+      payload: JSON.parse(opts.body),
+    });
     return {
       ok: true,
-      json: async () => ({ id: "resend_test_123" }),
+      json: async () => ({ id: "resend_test_" + calls.length }),
     };
   };
 
@@ -131,10 +132,15 @@ test("sendEnquiryNotification calls Resend endpoint when API key is provided", a
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.id, "resend_test_123");
-  assert.equal(calledUrl, "https://api.resend.com/emails");
-  assert.ok(payload.html.includes("https://sanju-x-dev.vercel.app/spideyy"));
-  assert.equal(payload.to[0], "sanjuxdev27@gmail.com");
+  assert.equal(calls.length, 2);
+  // Email A (Owner)
+  assert.equal(calls[0].url, "https://api.resend.com/emails");
+  assert.equal(calls[0].payload.to[0], "sanjuxdev27@gmail.com");
+  assert.ok(calls[0].payload.html.includes("https://sanju-x-dev.vercel.app/spideyy"));
+  // Email B (Customer Confirmation)
+  assert.equal(calls[1].url, "https://api.resend.com/emails");
+  assert.equal(calls[1].payload.to[0], "client@example.com");
+  assert.ok(calls[1].payload.html.includes("https://sanju-x-dev.vercel.app/track"));
 });
 
 test("/api/spideyy endpoint returns 503 when backend is unconfigured", async () => {

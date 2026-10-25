@@ -9,6 +9,7 @@
     { "source": "/about", "destination": "/about/index.html" },
     { "source": "/services", "destination": "/services/index.html" },
     { "source": "/contact", "destination": "/contact/index.html" },
+    { "source": "/track", "destination": "/track/index.html" },
     { "source": "/privacy", "destination": "/privacy/index.html" },
     {
       "source": "/((?!api/|assets/|media/|robots.txt|sitemap.xml).*)",

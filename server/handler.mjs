@@ -12,8 +12,44 @@ import {
   recordFailedAttempt,
   clearLockout,
 } from "./security.mjs";
-import { sendEnquiryNotification } from "./email.mjs";
+import {
+  sendEnquiryNotification,
+  sendEmail,
+  formatProjectAcceptedHtml,
+  formatProgressUpdatedHtml,
+  formatProjectCompletedHtml,
+  formatProjectStatusChangeHtml,
+} from "./email.mjs";
 import seed from "./seed.json" with { type: "json" };
+
+function calculateDaysRemainingIST(targetDateStr) {
+  if (!targetDateStr) return null;
+  const target = new Date(targetDateStr);
+  if (isNaN(target.getTime())) return null;
+
+  const now = new Date();
+  const istFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayISTStr = istFormatter.format(now);
+  const targetISTStr = istFormatter.format(target);
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const dToday = new Date(todayISTStr + "T00:00:00Z");
+  const dTarget = new Date(targetISTStr + "T00:00:00Z");
+  const diffDays = Math.round((dTarget.getTime() - dToday.getTime()) / msPerDay);
+
+  if (diffDays > 0) {
+    return `${diffDays} day${diffDays === 1 ? "" : "s"} remaining`;
+  } else if (diffDays === 0) {
+    return "Due today";
+  } else {
+    return "Scheduled delivery date has passed — finalizing review";
+  }
+}
 
 let runtimeEnvironment;
 export const configureEnvironment = (values) => {
@@ -187,44 +223,259 @@ export default async function handler(req, res) {
       await rate(client, req, "enquiry", 5);
       await rate(client, req, "enquiry-global", 100);
 
-      const inserted = await checked(
-        client
-          .from("studio_enquiries")
-          .insert({ data, status: "new", read: false, email_status: "pending" })
-          .select("id")
-          .single(),
-      );
+      // Generate sequential tracking code SXD-001, SXD-002, etc.
+      let trackingCode = "SXD-001";
+      try {
+        const { data: codeData, error: codeErr } = await client.rpc("studio_generate_tracking_code");
+        if (!codeErr && codeData) {
+          trackingCode = codeData;
+        } else {
+          const { count } = await client.from("studio_enquiries").select("id", { count: "exact", head: true });
+          const nextNum = (count || 0) + 1;
+          trackingCode = nextNum < 1000 ? `SXD-${String(nextNum).padStart(3, "0")}` : `SXD-${nextNum}`;
+        }
+      } catch {
+        const nextNum = 1;
+        trackingCode = `SXD-${String(nextNum).padStart(3, "0")}`;
+      }
 
-      // Automatic Transactional Email Notification via Resend
+      const insertRecord = {
+        data,
+        tracking_code: trackingCode,
+        phone: data.phone || null,
+        whatsapp: data.whatsapp || null,
+        preferred_contact: data.preferred_contact || "email",
+        city: data.city || null,
+        country: data.country || null,
+        website_url: data.website_url || null,
+        is_individual: Boolean(data.is_individual),
+        status: "new",
+        read: false,
+        email_status: "pending",
+      };
+
+      let insertedId = null;
+      try {
+        const r = await client.from("studio_enquiries").insert(insertRecord).select("id").single();
+        if (r.data?.id) insertedId = r.data.id;
+      } catch {
+        const r = await checked(
+          client.from("studio_enquiries").insert({ data, status: "new", read: false, email_status: "pending" }).select("id").single(),
+        );
+        insertedId = r.id;
+      }
+
+      // Automatic Transactional Email Notifications via Resend (Owner & Customer)
       let emailStatus = "unconfigured";
       try {
-        const emailResult = await sendEnquiryNotification(data, {
+        const emailResult = await sendEnquiryNotification({
+          ...data,
+          tracking_code: trackingCode,
+        }, {
           siteUrl: env().SITE_URL,
           resendApiKey: env().RESEND_API_KEY,
           fromEmail: env().RESEND_FROM_EMAIL,
           toEmail: env().OWNER_NOTIFICATION_EMAIL || "sanjuxdev27@gmail.com",
-        });
+        }, client);
 
         if (emailResult.success) {
           emailStatus = "sent";
-          await client
-            .from("studio_enquiries")
-            .update({ email_status: "sent" })
-            .eq("id", inserted.id);
-          await audit(client, "Enquiry notification email sent via Resend");
+          if (insertedId) {
+            await client
+              .from("studio_enquiries")
+              .update({ email_status: "sent" })
+              .eq("id", insertedId);
+          }
+          await audit(client, "Enquiry notification email sent via Resend (" + trackingCode + ")");
         } else if (!emailResult.skipped) {
           emailStatus = "failed";
-          await client
-            .from("studio_enquiries")
-            .update({ email_status: "failed" })
-            .eq("id", inserted.id);
+          if (insertedId) {
+            await client
+              .from("studio_enquiries")
+              .update({ email_status: "failed" })
+              .eq("id", insertedId);
+          }
           await audit(client, "Enquiry notification email failed: " + (emailResult.error || "unknown error"));
         }
       } catch {
         /* ensure customer enquiry submission is never failed by email errors */
       }
 
-      return send(201, { saved: true, emailStatus });
+      return send(201, { saved: true, trackingCode, emailStatus });
+    }
+
+    if (path === "/api/track" && req.method === "POST") {
+      if (!client)
+        throw fail(503, "Tracking service is temporarily unavailable. Please email sanjuxdev27@gmail.com.");
+
+      await rate(client, req, "track", 30);
+
+      const action = body.action || "status";
+
+      if (action === "verify") {
+        const rawCode = String(body.trackingCode || "").trim().toUpperCase();
+        const rawEmail = String(body.email || "").trim().toLowerCase();
+
+        if (!/^SXD-\d+$/i.test(rawCode) || !/^\S+@\S+\.\S+$/.test(rawEmail)) {
+          throw fail(400, "Please enter a valid Tracking ID (e.g. SXD-001) and your registered email address.");
+        }
+
+        let matched = false;
+
+        try {
+          const { data: projectRow } = await client
+            .from("studio_projects")
+            .select("id, tracking_code, client_email")
+            .eq("tracking_code", rawCode)
+            .maybeSingle();
+
+          if (projectRow && projectRow.client_email?.toLowerCase() === rawEmail) {
+            matched = true;
+          }
+        } catch {
+          /* ignore */
+        }
+
+        if (!matched) {
+          try {
+            const { data: enquiryRows } = await client
+              .from("studio_enquiries")
+              .select("id, tracking_code, data")
+              .eq("tracking_code", rawCode)
+              .limit(1);
+
+            const row = enquiryRows?.[0];
+            if (row && (row.data?.email?.toLowerCase() === rawEmail || row.email?.toLowerCase() === rawEmail)) {
+              matched = true;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
+        if (!matched) {
+          throw fail(404, "No project or enquiry was found matching this Tracking ID and Email combination. Please check your confirmation email.");
+        }
+
+        const token = randomBytes(24).toString("hex");
+        const expiresAt = new Date(Date.now() + 3600000).toISOString();
+
+        try {
+          await client.from("studio_tracking_verifications").insert({
+            tracking_code: rawCode,
+            email: rawEmail,
+            token,
+            expires_at: expiresAt,
+          });
+        } catch {
+          /* fallback */
+        }
+
+        return send(200, {
+          verified: true,
+          token,
+          trackingCode: rawCode,
+        });
+      }
+
+      if (action === "status") {
+        const rawCode = String(body.trackingCode || "").trim().toUpperCase();
+        const token = String(body.token || "").trim();
+
+        if (!rawCode || !token) {
+          throw fail(401, "Please verify your email address to view this project.");
+        }
+
+        let tokenValid = false;
+        try {
+          const { data: tokenRow } = await client
+            .from("studio_tracking_verifications")
+            .select("expires_at")
+            .eq("tracking_code", rawCode)
+            .eq("token", token)
+            .maybeSingle();
+
+          if (tokenRow && new Date(tokenRow.expires_at).getTime() > Date.now()) {
+            tokenValid = true;
+          }
+        } catch {
+          tokenValid = token.length >= 16;
+        }
+
+        if (!tokenValid && token.length < 16) {
+          throw fail(401, "Your verification session has expired. Please verify your email again.");
+        }
+
+        let project = null;
+        let enquiryRow = null;
+
+        try {
+          const pr = await client.from("studio_projects").select("*").eq("tracking_code", rawCode).maybeSingle();
+          if (pr.data) project = pr.data;
+        } catch {
+          /* ignore */
+        }
+
+        try {
+          const er = await client.from("studio_enquiries").select("*").eq("tracking_code", rawCode).maybeSingle();
+          if (er.data) enquiryRow = er.data;
+        } catch {
+          /* ignore */
+        }
+
+        if (!project && !enquiryRow) {
+          throw fail(404, "Project record not found.");
+        }
+
+        const defaultMilestones = [
+          { name: "Enquiry Received & Scoping", completed: true },
+          { name: "Requirements Confirmation & Proposal", completed: Boolean(project) },
+          { name: "Core Architecture & Design Concept", completed: (project?.progress_pct || 0) >= 40 },
+          { name: "Active Development & Feature Build", completed: (project?.progress_pct || 0) >= 75 },
+          { name: "Quality Assurance & Responsive Testing", completed: (project?.progress_pct || 0) >= 90 },
+          { name: "Production Deployment & Handover", completed: (project?.progress_pct || 0) === 100 },
+        ];
+
+        const daysRemaining = calculateDaysRemainingIST(project?.target_date);
+
+        const statusLabels = {
+          under_review: "Under Initial Review",
+          new: "Under Initial Review",
+          scope_confirmed: "Scope & Timeline Confirmed",
+          "in-progress": "In Active Development",
+          in_progress: "In Active Development",
+          testing: "Quality & Responsive Testing",
+          completed: "Completed & Delivered",
+          closed: "Delivered",
+          on_hold: "On Hold",
+          declined: "Declined",
+        };
+
+        const currentStatusKey = project?.status || enquiryRow?.status || "under_review";
+        const statusLabel = statusLabels[currentStatusKey] || "Under Review";
+
+        const sanitized = {
+          trackingCode: rawCode,
+          title: project?.title || enquiryRow?.data?.company || (enquiryRow?.data?.name ? `${enquiryRow.data.name}'s Project` : "Client Project"),
+          service: project?.service || enquiryRow?.data?.service || "Digital Development",
+          status: currentStatusKey,
+          statusLabel,
+          progressPct: project?.progress_pct ?? (enquiryRow?.status === "new" ? 15 : 30),
+          milestones: (Array.isArray(project?.milestones) && project.milestones.length > 0) ? project.milestones : defaultMilestones,
+          startDate: project?.start_date || null,
+          targetDate: project?.target_date || null,
+          completedDate: project?.completed_date || null,
+          daysRemaining: currentStatusKey === "completed" ? "Completed" : daysRemaining,
+          publicUpdate: project?.public_update || (enquiryRow?.status === "new" ? "We have received your enquiry and are reviewing the technical requirements. We will be in touch shortly." : "Project is moving forward according to schedule."),
+          publicUpdateTime: project?.public_update_time || enquiryRow?.created_at,
+          liveUrl: project?.live_url || null,
+          createdAt: enquiryRow?.created_at || project?.created_at,
+        };
+
+        return send(200, { project: sanitized });
+      }
+
+      throw fail(400, "Unknown tracking action.");
     }
 
     if (path === "/api/chat" && req.method === "POST") {
@@ -666,6 +917,21 @@ export default async function handler(req, res) {
       );
 
       if (req.method === "GET") {
+        let projects = [];
+        let emails = [];
+        try {
+          const pr = await admin.from("studio_projects").select("*").order("created_at", { ascending: false });
+          if (pr.data) projects = pr.data;
+        } catch {
+          projects = [];
+        }
+        try {
+          const er = await admin.from("studio_emails").select("*").order("created_at", { ascending: false }).limit(200);
+          if (er.data) emails = er.data;
+        } catch {
+          emails = [];
+        }
+
         const [content, enquiries, activity, media] = await Promise.all([
           site(admin),
           checked(
@@ -692,6 +958,8 @@ export default async function handler(req, res) {
           media: media.data || [],
           mediaBase:
             env().SUPABASE_URL + "/storage/v1/object/public/studio-media/",
+          projects,
+          emails,
         });
       }
 
@@ -756,6 +1024,231 @@ export default async function handler(req, res) {
           );
           await audit(client, "Enquiry deleted");
           break;
+
+        case "create-project": {
+          if (!body.project || typeof body.project !== "object") throw fail(400, "Invalid project data.");
+          const p = body.project;
+          const trackingCode = p.tracking_code || p.trackingCode;
+          if (!trackingCode || !p.title || !p.client_email) throw fail(400, "Tracking ID, title, and client email are required.");
+
+          const projectRecord = {
+            tracking_code: trackingCode,
+            title: String(p.title).trim(),
+            client_name: String(p.client_name || p.clientName || "").trim(),
+            client_email: String(p.client_email || p.clientEmail || "").trim(),
+            client_phone: p.client_phone || p.clientPhone || null,
+            company: p.company || null,
+            service: String(p.service || "Digital Development").trim(),
+            status: p.status || "scope_confirmed",
+            agreed_scope: p.agreed_scope || p.agreedScope || null,
+            estimated_price: p.estimated_price || p.estimatedPrice || null,
+            agreed_price: p.agreed_price || p.agreedPrice || null,
+            start_date: p.start_date || p.startDate || new Date().toISOString().slice(0, 10),
+            target_date: p.target_date || p.targetDate || null,
+            progress_pct: Number(p.progress_pct ?? p.progressPct ?? 0),
+            milestones: Array.isArray(p.milestones) ? p.milestones : [],
+            public_update: p.public_update || p.publicUpdate || "Project scope and milestones have been agreed. Commencing work.",
+            public_update_time: new Date().toISOString(),
+            internal_notes: p.internal_notes || p.internalNotes || null,
+            live_url: p.live_url || p.liveUrl || null,
+            delivery_notes: p.delivery_notes || p.deliveryNotes || null,
+            enquiry_id: p.enquiry_id || p.enquiryId || null,
+          };
+
+          const insertRes = await admin.from("studio_projects").insert(projectRecord).select().single();
+          if (insertRes.error) throw fail(400, "Unable to create project: " + insertRes.error.message);
+
+          if (projectRecord.enquiry_id) {
+            await admin.from("studio_enquiries").update({ status: "in-progress", project_id: insertRes.data.id }).eq("id", projectRecord.enquiry_id);
+          }
+
+          if (body.notifyClient) {
+            try {
+              const html = formatProjectAcceptedHtml(insertRes.data, env().SITE_URL);
+              await sendEmail({
+                to: insertRes.data.client_email,
+                subject: `Project Accepted: ${insertRes.data.title} — ${insertRes.data.tracking_code} | SANJU X DEV`,
+                html,
+                trackingCode: insertRes.data.tracking_code,
+                template: "project_accepted",
+                options: {
+                  siteUrl: env().SITE_URL,
+                  resendApiKey: env().RESEND_API_KEY,
+                  fromEmail: env().RESEND_FROM_EMAIL,
+                },
+                client: admin,
+              });
+            } catch {
+              /* non-blocking notification failure */
+            }
+          }
+
+          await audit(client, "Project created: " + projectRecord.title + " (" + trackingCode + ")");
+          return send(200, { ok: true, project: insertRes.data });
+        }
+
+        case "update-project": {
+          if (!body.project || !body.project.id) throw fail(400, "Project ID is required.");
+          const p = body.project;
+          const updateRecord = {
+            title: p.title,
+            client_name: p.client_name ?? p.clientName,
+            client_email: p.client_email ?? p.clientEmail,
+            client_phone: p.client_phone ?? p.clientPhone,
+            company: p.company,
+            service: p.service,
+            status: p.status,
+            agreed_scope: p.agreed_scope ?? p.agreedScope,
+            estimated_price: p.estimated_price ?? p.estimatedPrice,
+            agreed_price: p.agreed_price ?? p.agreedPrice,
+            start_date: p.start_date ?? p.startDate,
+            target_date: p.target_date ?? p.targetDate,
+            completed_date: p.status === "completed" ? (p.completed_date ?? p.completedDate ?? new Date().toISOString().slice(0, 10)) : null,
+            progress_pct: Number(p.progress_pct ?? p.progressPct ?? 0),
+            milestones: Array.isArray(p.milestones) ? p.milestones : [],
+            public_update: p.public_update ?? p.publicUpdate,
+            public_update_time: p.public_update ? new Date().toISOString() : undefined,
+            internal_notes: p.internal_notes ?? p.internalNotes,
+            live_url: p.live_url ?? p.liveUrl,
+            delivery_notes: p.delivery_notes ?? p.deliveryNotes,
+            updated_at: new Date().toISOString(),
+          };
+
+          Object.keys(updateRecord).forEach((k) => updateRecord[k] === undefined && delete updateRecord[k]);
+
+          const updateRes = await admin.from("studio_projects").update(updateRecord).eq("id", p.id).select().single();
+          if (updateRes.error) throw fail(400, "Unable to update project: " + updateRes.error.message);
+
+          if (body.notifyClient) {
+            try {
+              const updated = updateRes.data;
+              let html = "";
+              let subject = "";
+              let template = "";
+
+              if (updated.status === "completed") {
+                html = formatProjectCompletedHtml(updated, env().SITE_URL);
+                subject = `Project Completed: ${updated.title} — ${updated.tracking_code} | SANJU X DEV 🎉`;
+                template = "project_completed";
+              } else if (["on_hold", "declined"].includes(updated.status)) {
+                html = formatProjectStatusChangeHtml(updated, body.statusReason || "", env().SITE_URL);
+                subject = `Project Status Update: ${updated.title} — ${updated.tracking_code} | SANJU X DEV`;
+                template = "status_change";
+              } else {
+                html = formatProgressUpdatedHtml(updated, body.updateMessage || updated.public_update, env().SITE_URL);
+                subject = `Project Progress Update: ${updated.title} — ${updated.tracking_code} (${updated.progress_pct}%)`;
+                template = "progress_updated";
+              }
+
+              await sendEmail({
+                to: updated.client_email,
+                subject,
+                html,
+                trackingCode: updated.tracking_code,
+                template,
+                options: {
+                  siteUrl: env().SITE_URL,
+                  resendApiKey: env().RESEND_API_KEY,
+                  fromEmail: env().RESEND_FROM_EMAIL,
+                },
+                client: admin,
+              });
+            } catch {
+              /* non-blocking notification failure */
+            }
+          }
+
+          await audit(client, "Project updated: " + (updateRes.data.title || p.id));
+          return send(200, { ok: true, project: updateRes.data });
+        }
+
+        case "delete-project": {
+          if (!body.id) throw fail(400, "Project ID is required.");
+          await admin.from("studio_projects").delete().eq("id", body.id);
+          await audit(client, "Project deleted: " + body.id);
+          return send(200, { ok: true });
+        }
+
+        case "retry-email": {
+          if (!body.id) throw fail(400, "Email record ID is required.");
+          const { data: emailRecord } = await admin.from("studio_emails").select("*").eq("id", body.id).single();
+          if (!emailRecord) throw fail(404, "Email record not found.");
+
+          const result = await sendEmail({
+            to: emailRecord.recipient,
+            subject: emailRecord.subject,
+            html: emailRecord.html || `<p>${emailRecord.subject}</p>`,
+            trackingCode: emailRecord.tracking_code,
+            template: emailRecord.template,
+            options: {
+              siteUrl: env().SITE_URL,
+              resendApiKey: env().RESEND_API_KEY,
+              fromEmail: env().RESEND_FROM_EMAIL,
+            },
+            client: admin,
+          });
+
+          if (!result.success) {
+            throw fail(502, result.error || "Retry failed to send email.");
+          }
+
+          await audit(client, "Email retried successfully: " + emailRecord.recipient);
+          return send(200, { ok: true, id: result.id });
+        }
+
+        case "test-email": {
+          const testRecipient = body.recipient || env().OWNER_NOTIFICATION_EMAIL || "sanjuxdev27@gmail.com";
+          const timeIST = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "medium" }) + " IST";
+          const testHtml = `
+            <div style="font-family: -apple-system, sans-serif; padding: 24px; color: #222;">
+              <h2 style="color: #852c32; margin: 0 0 12px 0;">SANJU X DEV — Test Verification Email</h2>
+              <p>This is a verified test dispatch from your SANJU X DEV owner console.</p>
+              <div style="background: #fdfbf7; border: 1px solid #dcd3c4; padding: 14px; border-radius: 6px; margin: 16px 0;">
+                <div><strong>Timestamp:</strong> ${timeIST}</div>
+                <div><strong>Sender:</strong> ${env().RESEND_FROM_EMAIL || "SANJU X DEV <onboarding@resend.dev>"}</div>
+                <div><strong>Recipient:</strong> ${testRecipient}</div>
+                <div><strong>Status:</strong> System Operational</div>
+              </div>
+              <p style="font-size: 13px; color: #666;">If you received this message, transactional email dispatch via Resend is working correctly.</p>
+            </div>
+          `;
+
+          const result = await sendEmail({
+            to: testRecipient,
+            subject: "SANJU X DEV — Test Email Dispatch Verification",
+            html: testHtml,
+            template: "test_verification",
+            options: {
+              siteUrl: env().SITE_URL,
+              resendApiKey: env().RESEND_API_KEY,
+              fromEmail: env().RESEND_FROM_EMAIL,
+            },
+            client: admin,
+          });
+
+          if (!result.success) {
+            throw fail(502, result.error || "Test email dispatch failed. Verify RESEND_API_KEY.");
+          }
+
+          await audit(client, "Test email dispatched to " + testRecipient);
+          return send(200, { ok: true, id: result.id, recipient: testRecipient });
+        }
+
+        case "save-form-options": {
+          if (!body.formOptions || typeof body.formOptions !== "object") throw fail(400, "Invalid form options.");
+          const currentSite = await site(admin);
+          const updatedSite = {
+            ...currentSite,
+            formOptions: body.formOptions,
+          };
+          await admin.from("studio_content").upsert({
+            id: "site",
+            data: updatedSite,
+            updated_at: new Date().toISOString(),
+          });
+          await audit(client, "Form options and services updated");
+          return send(200, { ok: true });
+        }
 
         case "upload": {
           if (typeof body.data !== "string" || body.data.length > 4200000)

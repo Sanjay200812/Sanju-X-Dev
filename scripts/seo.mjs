@@ -38,6 +38,7 @@ const pages = [
   ["about", "About the Business — SANJU X DEV", seed.about],
   ["services", "Services — Design & Digital Development", "Web development, UI/UX design, custom web applications, e-commerce storefronts, and interactive digital experiences."],
   ["contact", "Start a Project — SANJU X DEV", "Submit a project brief to start a conversation about tailored web development and design for your business."],
+  ["track", "Track Project — SANJU X DEV", "Check live project status, milestones, and development updates for your SANJU X DEV project."],
   ["privacy", "Privacy, Clearly — SANJU X DEV", "Learn how customer enquiries and visitor privacy are respected and stored securely at SANJU X DEV."],
   ...seed.projects.map((p) => [
     "work/" + p.slug,
