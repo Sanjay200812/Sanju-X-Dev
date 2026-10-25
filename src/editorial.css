@@ -200,6 +200,7 @@ nav {
   font-size: 25px;
 }
 .paper-caption small {
+  max-width: 130px;
   display: block;
   font-size: 11px;
   margin-top: 4px;
@@ -207,6 +208,7 @@ nav {
   font-family: "Manrope Variable", sans-serif;
 }
 .studio-note {
+  pointer-events: none;
   position: absolute;
   bottom: 0;
   right: -10px;

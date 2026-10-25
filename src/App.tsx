@@ -224,7 +224,7 @@ function Home() {
                 <Link to={"/work/" + p[0].slug} className="paper-caption">
                   <span>
                     {p[0].short}
-                    <small>A digital stage, thoughtfully built.</small>
+                    <small>View case study ↗</small>
                   </span>
                   <Arrow />
                 </Link>
