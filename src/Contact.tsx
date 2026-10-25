@@ -9,14 +9,20 @@ export default function Contact() {
     [status, setStatus] = useState(""),
     [sent, setSent] = useState(false);
   const [form, setForm] = useState({
-    service: params.get("service") || s.services[0].name,
+    service:
+      s.services.find((item) => item.name === params.get("service"))?.name ||
+      s.services[0].name,
     features: "",
     timeline: "Flexible",
     budget: "",
     name: "",
     email: "",
     company: "",
-    description: "",
+    description:
+      params.get("service") &&
+      !s.services.some((item) => item.name === params.get("service"))
+        ? "I’m interested in a similar project: " + params.get("service")
+        : "",
     consent: false,
     website: "",
   });

@@ -64,6 +64,20 @@ export function validateSite(s) {
   if (!/^\S+@\S+\.\S+$/.test(s.email) || !/^https:\/\//.test(s.instagram))
     throw Error("Invalid contact information.");
   const slugs = new Set();
+  if (
+    !s.services.length ||
+    typeof s.introEnabled !== "boolean" ||
+    typeof s.assistantEnabled !== "boolean"
+  )
+    throw Error("Invalid site settings.");
+  for (const service of s.services) {
+    for (const key of ["name", "description", "items"])
+      if (typeof service[key] !== "string" || service[key].length > 10000)
+        throw Error("Invalid service.");
+  }
+  for (const faq of s.faqs)
+    if (typeof faq.q !== "string" || typeof faq.a !== "string")
+      throw Error("Invalid FAQ.");
   for (const p of s.projects) {
     if (
       !/^[a-z0-9-]+$/.test(p.slug) ||
