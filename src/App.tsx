@@ -33,12 +33,12 @@ import Contact from "./Contact";
 import Assistant from "./Assistant";
 import { ChatProvider, useChat } from "./chat-context";
 import {
-  CompassStar,
   PostmarkStamp,
   BotanicalSprig,
   WashiTape,
   TornMemoScrap,
-  StudioEngraving,
+  DeveloperStationIllustration,
+  WireframeBlueprintScrap,
   InstagramIcon,
   FacebookIcon,
   MailIcon,
@@ -73,7 +73,11 @@ export function CTA({
 function Brand() {
   return (
     <Link to="/" className="brand" aria-label="SANJU X DEV home">
-      <CompassStar size={26} className="brand-compass-star" />
+      <img
+        src="/assets/official-logo.webp"
+        alt="SANJU X DEV official logo"
+        className="brand-logo-img"
+      />
       <span className="brand-copy">
         <span className="brand-title">SANJU X DEV</span>
         <span className="brand-sub">IDEAS · CODE · DESIGN · PEOPLE</span>
@@ -190,27 +194,36 @@ export function Device({
       style={{ "--project": p.color } as React.CSSProperties}
     >
       <div className="device-controls">
-        <span>{new URL(p.url).hostname}</span>
-        <div>
+        <span className="device-hostname">{new URL(p.url).hostname}</span>
+        <div className="device-view-tabs">
           <button
+            type="button"
+            className={"device-tab-btn " + (!mobile ? "active" : "")}
             aria-label="Desktop preview"
             aria-pressed={!mobile}
             onClick={() => setMobile(false)}
           >
-            <Monitor size={16} />
+            <Monitor size={14} />
+            <span>Desktop</span>
           </button>
           <button
+            type="button"
+            className={"device-tab-btn " + (mobile ? "active" : "")}
             aria-label="Mobile preview"
             aria-pressed={mobile}
             onClick={() => setMobile(true)}
           >
-            <Smartphone size={16} />
+            <Smartphone size={14} />
+            <span>Mobile</span>
           </button>
           <button
+            type="button"
+            className="device-tab-btn"
             aria-label="Expand screenshot"
             onClick={() => dialog.current?.showModal()}
           >
-            <Expand size={16} />
+            <Expand size={14} />
+            <span>Fullscreen</span>
           </button>
         </div>
       </div>
@@ -252,19 +265,17 @@ export function Device({
   );
 }
 
-function HomepageAiConsole({ questions }: { questions?: string[] }) {
+function HomepageAiConsole() {
   const { messages, busy, mode, ask, setFloatingOpen } = useChat();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const defaultQuestions = [
-    "What kind of website does my business need?",
+    "What website is right for me?",
     "Can you build an online store?",
-    "How do I start a project?",
-    "How can I check my project status?",
+    "How do I start my project?",
   ];
-  const exampleList =
-    questions && questions.length > 0 ? questions : defaultQuestions;
+  const exampleList = defaultQuestions;
 
   const handleSubmit = (q: string) => {
     const target = q.trim();
@@ -283,7 +294,7 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
     <div className="home-ai-scrapbook-card" aria-label="Spideyy Assistant">
       <div className="home-ai-card-header">
         <div className="home-ai-badge">
-          <img className="spider" src="/media/spideyy.svg" alt="" />
+          <img className="spider-official" src="/assets/spideyy.jpg" alt="Spideyy" />
           <div>
             <b>Spideyy</b>
             <span>Instant website guidance & project estimates</span>
@@ -291,7 +302,7 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
         </div>
         <span className="home-ai-status-pill">
           <span className="live-dot" />{" "}
-          {mode === "AI assistant" ? "AI Online" : "Spideyy Active"}
+          {mode === "AI Online" ? "AI Online" : "Spideyy Active"}
         </span>
       </div>
 
@@ -309,14 +320,14 @@ function HomepageAiConsole({ questions }: { questions?: string[] }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ask Spideyy about websites, features, or your project idea..."
-          aria-label="Ask spideyy a question"
+          aria-label="Ask Spideyy a question"
           disabled={busy}
         />
         <button
           type="submit"
           className="home-ai-submit"
           disabled={busy || !query.trim()}
-          aria-label="Send question to spideyy"
+          aria-label="Send question to Spideyy"
         >
           <ArrowUp size={18} />
         </button>
@@ -410,7 +421,6 @@ function Home() {
     .filter((p) => p.published)
     .sort((a, b) => a.order - b.order);
 
-  const [heroMobile, setHeroMobile] = useState(false);
   const heroProject = p[0] || seed[0];
 
   const featuredCards = [
@@ -448,15 +458,20 @@ function Home() {
             </div>
           </div>
 
+          {/* Supporting quote as requested */}
+          <blockquote className="hero-supporting-quote">
+            “Thoughtful Design. Powerful Digital Experiences.”
+          </blockquote>
+
+          {/* Exact requested short description */}
           <p className="hero-intro-paragraph">
-            SANJU X DEV creates thoughtfully designed websites, intuitive
-            applications and digital experiences that help ideas and businesses
-            stand out.
+            Thoughtfully designed websites, applications and digital experiences
+            for businesses, brands and individuals.
           </p>
 
           <div className="hero-cta-group">
             <Link to="/work" className="btn-scrapbook-primary">
-              Explore Our Work <ArrowRight size={17} />
+              Our Work <ArrowRight size={17} />
             </Link>
             <div className="hero-sub-cta">
               <Link to="/contact" className="btn-scrapbook-secondary">
@@ -470,7 +485,7 @@ function Home() {
 
           {/* Naturally Integrated Compact Spideyy Input */}
           <div className="hero-spideyy-embed">
-            <HomepageAiConsole questions={(s as any).homepageQuestions} />
+            <HomepageAiConsole />
           </div>
         </div>
 
@@ -493,31 +508,14 @@ function Home() {
                   <span />
                 </div>
                 <span className="polaroid-browser-url">
-                  {heroProject.short} · {heroMobile ? "Mobile" : "Desktop"}
+                  starxlive.online · Live Project
                 </span>
-                <div className="polaroid-view-toggle">
-                  <button
-                    type="button"
-                    className={!heroMobile ? "active" : ""}
-                    onClick={() => setHeroMobile(false)}
-                    aria-label="View desktop screenshot"
-                  >
-                    <Monitor size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    className={heroMobile ? "active" : ""}
-                    onClick={() => setHeroMobile(true)}
-                    aria-label="View mobile screenshot"
-                  >
-                    <Smartphone size={13} />
-                  </button>
-                </div>
+                <span className="polaroid-status-tag">ACTIVE</span>
               </div>
 
               <div className="polaroid-photo-canvas">
                 <img
-                  src={heroMobile ? heroProject.mobile : heroProject.image}
+                  src={heroProject.image}
                   alt={heroProject.name + " real website showcase"}
                   className="polaroid-img"
                   loading="eager"
@@ -545,6 +543,11 @@ function Home() {
             <BotanicalSprig className="collage-botanical-sprig" />
           </div>
 
+          {/* Pinned UI/UX Wireframe & Blueprint Scrap */}
+          <div className="collage-blueprint-wrap">
+            <WireframeBlueprintScrap className="collage-blueprint" />
+          </div>
+
           {/* Pinned Torn Memo Scrap on far right */}
           <div className="collage-memo-wrap">
             <TornMemoScrap className="collage-memo" />
@@ -552,7 +555,7 @@ function Home() {
 
           {/* Web Development / Digital Craft Paper Elements */}
           <div className="collage-dev-tag" aria-hidden="true">
-            <code>&lt;design /&gt;</code>
+            <code>&lt;sanju-x-dev /&gt;</code>
             <span>// crafted with intention</span>
           </div>
         </div>
@@ -570,8 +573,9 @@ function Home() {
           </div>
 
           <div className="featured-cards-row">
-            {featuredCards.map((card, idx) => (
+            {featuredCards.map((card) => (
               <article key={card.slug} className="scrapbook-photo-card">
+                <div className="photo-card-tape" aria-hidden="true" />
                 <Link
                   to={"/work/" + card.slug}
                   className="photo-card-media"
@@ -587,23 +591,21 @@ function Home() {
                   </span>
                 </Link>
                 <div className="photo-card-details">
+                  <span className="photo-card-category">{card.category}</span>
                   <h3 className="photo-card-title">
                     <Link to={"/work/" + card.slug}>{card.short}</Link>
                   </h3>
-                  <p className="photo-card-desc">
-                    {idx === 0
-                      ? "A modern cinema & event ticketing platform."
-                      : idx === 1
-                      ? "Digital business card & smart links hub."
-                      : "Creative audio & music streaming experience."}
-                  </p>
+                  <p className="photo-card-desc">{card.summary}</p>
+                  <Link to={"/work/" + card.slug} className="photo-card-action">
+                    View Project <ArrowRight size={13} />
+                  </Link>
                 </div>
               </article>
             ))}
           </div>
         </div>
 
-        {/* RIGHT COLUMN: ABOUT ME (MATCHING IMAGE 2) */}
+        {/* RIGHT COLUMN: ABOUT ME (MATCHING IMAGE 2 WITH DEVELOPER WORKSTATION) */}
         <div className="bottom-about-column">
           <div className="bottom-section-header">
             <span className="bottom-header-title">ABOUT ME</span>
@@ -614,7 +616,7 @@ function Home() {
 
           <div className="about-scrapbook-card">
             <div className="about-engraving-container">
-              <StudioEngraving className="about-studio-engraving" />
+              <DeveloperStationIllustration className="about-studio-engraving" />
             </div>
 
             <div className="about-editorial-text">
@@ -680,11 +682,20 @@ function ProjectCard({
 }) {
   return (
     <article className={"project-card project-" + p.slug}>
+      <div className="card-washi-tape" aria-hidden="true" />
       <Link
         to={"/work/" + p.slug}
         className="project-image"
         style={{ "--project": p.color } as React.CSSProperties}
       >
+        <div className="project-card-browser-bar">
+          <div className="browser-dots">
+            <span />
+            <span />
+            <span />
+          </div>
+          <span className="project-card-url">{new URL(p.url).hostname}</span>
+        </div>
         <img
           src={p.slug === "starx-connect" ? p.mobile : p.image}
           alt={p.short + " live website interface"}
@@ -695,14 +706,29 @@ function ProjectCard({
         </span>
       </Link>
       <div className="project-meta">
-        <span className="eyebrow">
-          {String(index).padStart(2, "0")} / {p.category}
-        </span>
-        <h3>{p.name}</h3>
-        <p>{p.summary}</p>
-        <Link to={"/work/" + p.slug} className="text-link">
-          Explore case study <Arrow />
-        </Link>
+        <div className="project-meta-top">
+          <span className="eyebrow">
+            {String(index).padStart(2, "0")} / {p.category}
+          </span>
+          <span className="project-badge-tag">{p.kind}</span>
+        </div>
+        <h3 className="project-card-heading">
+          <Link to={"/work/" + p.slug}>{p.name}</Link>
+        </h3>
+        <p className="project-card-summary">{p.summary}</p>
+        <div className="project-card-actions">
+          <Link to={"/work/" + p.slug} className="button project-view-btn">
+            View Project <Arrow />
+          </Link>
+          <a
+            href={p.url}
+            target="_blank"
+            rel="noreferrer"
+            className="project-external-link"
+          >
+            Live Site ↗
+          </a>
+        </div>
       </div>
     </article>
   );
@@ -1014,8 +1040,8 @@ export default function App() {
                   "/services": "Services",
                   "/contact": "Start a Project",
                   "/privacy": "Privacy",
-                  "/spideyy": "spideyy — Private Access",
-                  "/admin": "spideyy — Private Access",
+                  "/spideyy": "Spideyy — Private Access",
+                  "/admin": "Spideyy — Private Access",
                 } as Record<string, string>
               )[loc.pathname] ?? "Page not found")) + " — ") + site.seoTitle;
   }, [loc.pathname, site]);

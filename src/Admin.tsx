@@ -294,7 +294,7 @@ export default function Admin() {
   return (
     <section className="page wrap admin-shell">
       <span className="eyebrow">Private / SANJU X DEV</span>
-      <h1>spideyy — Private Access</h1>
+      <h1>Spideyy — Private Access</h1>
 
       {stage !== "workspace" ? (
         <div className="admin-card admin-login">
@@ -434,39 +434,45 @@ export default function Admin() {
                 </button>
               </form>
 
-              {/* SECONDARY LOGIN TOGGLE */}
-              <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+              {/* SECONDARY LOGIN DISCLOSURE */}
+              <div className="credentials-disclosure-section">
                 <button
                   type="button"
+                  id="credentials-toggle"
+                  className="credentials-disclosure-btn"
+                  aria-expanded={showSecondaryLogin}
+                  aria-controls="credentials-form-panel"
                   onClick={() => setShowSecondaryLogin(!showSecondaryLogin)}
-                  style={{
-                    fontSize: 13,
-                    color: "var(--muted)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 0",
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setShowSecondaryLogin(!showSecondaryLogin);
+                    }
                   }}
                 >
-                  <span>Login with spideyy</span>
+                  <span className="credentials-disclosure-label">Login with Credentials</span>
                   <ChevronDown
-                    size={16}
-                    style={{
-                      transform: showSecondaryLogin ? "rotate(180deg)" : "none",
-                      transition: "transform 0.2s",
-                    }}
+                    size={20}
+                    className={"credentials-chevron " + (showSecondaryLogin ? "rotated" : "")}
+                    aria-hidden="true"
                   />
                 </button>
 
-                {showSecondaryLogin && (
+                <div
+                  id="credentials-form-panel"
+                  className={"credentials-collapse " + (showSecondaryLogin ? "expanded" : "")}
+                  role="region"
+                  aria-labelledby="credentials-toggle"
+                >
                   <form
-                    style={{ marginTop: 14 }}
+                    className="credentials-form"
                     onSubmit={(e) => {
                       e.preventDefault();
+                      if (!email.trim() || !password.trim()) return;
                       void run(async () => {
                         const res = await api({
                           action: "login-password",
-                          email,
+                          email: email.trim(),
                           password,
                         });
                         setPassword("");
@@ -494,6 +500,7 @@ export default function Admin() {
                         autoComplete="username"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        placeholder="owner@domain.com"
                       />
                     </label>
                     <label>
@@ -507,6 +514,7 @@ export default function Admin() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           style={{ paddingRight: 40 }}
+                          placeholder="••••••••"
                         />
                         <button
                           type="button"
@@ -532,14 +540,15 @@ export default function Admin() {
                     )}
 
                     <button
+                      type="submit"
                       className="button secondary"
-                      style={{ width: "100%", marginTop: 12 }}
-                      disabled={busy || !auth || passwordLockout > 0}
+                      style={{ width: "100%", marginTop: 14 }}
+                      disabled={busy || !auth || passwordLockout > 0 || !email.trim() || !password.trim()}
                     >
-                      {busy ? "Signing in…" : "Sign in"}
+                      {busy ? "Signing in…" : "Login"}
                     </button>
                   </form>
-                )}
+                </div>
               </div>
             </div>
           )}
@@ -2482,7 +2491,7 @@ export default function Admin() {
           {/* SPIDEYY TAB */}
           {tab === "spideyy" && (
             <div className="admin-card">
-              <h3>spideyy AI Assistant Configuration</h3>
+              <h3>Spideyy Configuration</h3>
 
               {/* AI ENGINE STATUS & LIVE DIAGNOSTICS */}
               <div
@@ -2657,7 +2666,7 @@ export default function Admin() {
                     setSite({ ...site, assistantEnabled: e.target.checked })
                   }
                 />
-                Enable spideyy assistant across the website
+                Enable Spideyy across the website
               </label>
 
               <div style={{ marginTop: 16 }}>
@@ -2669,7 +2678,7 @@ export default function Admin() {
                     onChange={(e) =>
                       setSite({ ...site, assistantWelcome: e.target.value })
                     }
-                    placeholder="Hi, I’m spideyy! I can help you understand our services..."
+                    placeholder="Hi, I'm Spideyy! I can help you understand our services..."
                   />
                 </label>
               </div>

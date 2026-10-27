@@ -753,7 +753,7 @@ export default async function handler(req, res) {
       } else if (/online payments?|pay online|upi|payment gateway|accept payments/i.test(q)) {
         answer = "Yes! We integrate secure online payment gateways supporting UPI (Google Pay, PhonePe, Paytm), credit/debit cards, and net banking with instant checkout notifications and receipt generation.";
         links.push({ label: "Start Your Project", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
-      } else if (/what kind of website|which website|kind of website|what type of website|recommend|need a website|help me decide/.test(q)) {
+      } else if (/right for me|what website is right|what kind of website|which website|kind of website|what type of website|recommend|need a website|help me decide/.test(q)) {
         answer = "We specialize in five core website categories:\n• Personal Portfolio — Showcase work, skills, and resume.\n• Blog / Content Website — Share articles, stories, and updates.\n• Business Website — Help customers discover and contact your company.\n• Agency Website — Present your agency, team, and client case studies.\n• E-Commerce Website / Online Store — Showcase products, accept online payments, and sell.\nTell us about your project and we'll guide you to the perfect fit!";
         links.push({ label: "Start Your Project", url: "/contact" });
         links.push({ label: "Explore Our Work", url: "/work" });
@@ -779,7 +779,7 @@ export default async function handler(req, res) {
         answer = "Sanjay is a Co-Founder at CodeXa Agency. It is a distinct, separate professional affiliation alongside SANJU X DEV.";
         links.push({ label: "About SANJU X DEV", url: "/about" });
       } else if (/feature|features|whatsapp button|login|admin dashboard|chatbot/.test(q)) {
-        answer = "We support all essential modern website features without confusing jargon: WhatsApp direct chat buttons, online payments (UPI, cards), product listings, appointment booking, user login, admin dashboards, and custom AI assistants like spideyy.";
+        answer = "We support all essential modern website features without confusing jargon: WhatsApp direct chat buttons, online payments (UPI, cards), product listings, appointment booking, user login, admin dashboards, and custom AI assistants like Spideyy.";
         links.push({ label: "Start a Project Brief", url: "/contact" });
       } else if (serviceMatch) {
         answer = `${serviceMatch.name}: ${serviceMatch.description} Scope includes: ${serviceMatch.items}.`;

@@ -32,13 +32,13 @@ interface ChatContextType {
 
 const initialMessage: ChatMessage = {
   role: "assistant",
-  text: "Hi, I’m spideyy! I can help you understand our services, recommend the right website type, explain features, or check your project tracking status.",
+  text: "Hi, I'm Spideyy! I can help you understand our services, recommend the right website type, explain features, or answer any questions about your project.",
   links: [
-    { label: "What kind of website do I need?", url: "ask:What kind of website does my business need?" },
+    { label: "What website is right for me?", url: "ask:What website is right for me?" },
     { label: "Start Your Project", url: "/contact" },
     { label: "Track a Project", url: "/track" },
   ],
-  mode: "spideyy assistant",
+  mode: "Spideyy",
 };
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -47,7 +47,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const messagesRef = useRef<ChatMessage[]>([initialMessage]);
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState("spideyy assistant");
+  const [mode, setMode] = useState("Spideyy");
   const [floatingOpen, setFloatingOpen] = useState(false);
 
   // Sync ref whenever state changes
@@ -84,7 +84,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to get an answer.");
 
-      const newMode = data.mode || "spideyy assistant";
+      const newMode = data.mode === "AI assistant" ? "AI Online" : "Spideyy";
       setMode(newMode);
 
       const assistantMessage: ChatMessage = {
@@ -102,7 +102,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setMode("FAQ guide");
       const fallbackMessage: ChatMessage = {
         role: "assistant",
-        text: "I couldn’t reach the live AI assistant right now. You can explore our five case studies in Our Work or share your requirements directly through our Contact form.",
+        text: "I couldn't reach the live AI assistant right now. You can explore our five case studies in Our Work or share your requirements directly through our Contact form.",
         links: [
           { label: "Explore Our Work", url: "/work" },
           { label: "Start a Project", url: "/contact" },

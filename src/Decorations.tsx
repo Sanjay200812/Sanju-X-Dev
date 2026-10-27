@@ -222,102 +222,177 @@ export function TornMemoScrap({ className = "" }: { className?: string }) {
 }
 
 /**
- * Detailed vintage architectural/studio line-art engraving
+ * Detailed vintage developer workstation line-art engraving
+ * Featuring modern web developer desk: laptop displaying website, coffee mug, and desk plant
  */
-export function StudioEngraving({ className = "" }: { className?: string }) {
+export function DeveloperStationIllustration({
+  className = "",
+}: {
+  className?: string;
+}) {
   return (
     <div className={`studio-engraving-wrap ${className}`} aria-hidden="true">
       <svg
-        viewBox="0 0 120 180"
+        viewBox="0 0 140 180"
         fill="none"
         stroke="currentColor"
         className="studio-engraving"
       >
-        <line x1="15" y1="172" x2="105" y2="172" strokeWidth="1.5" />
-        <line x1="22" y1="168" x2="98" y2="168" strokeWidth="1.2" />
-        <line x1="28" y1="164" x2="92" y2="164" strokeWidth="1" />
+        {/* Desk Horizon and Shading Lines */}
+        <line x1="8" y1="162" x2="132" y2="162" strokeWidth="1.8" />
+        <line x1="16" y1="167" x2="124" y2="167" strokeWidth="1.2" />
+        <line x1="26" y1="171" x2="114" y2="171" strokeWidth="0.8" />
+        <line x1="40" y1="175" x2="100" y2="175" strokeWidth="0.6" strokeDasharray="3 3" />
 
-        <rect x="32" y="148" width="56" height="16" strokeWidth="1.2" fill="none" />
-        <line x1="32" y1="153" x2="88" y2="153" strokeWidth="0.8" />
-
-        <rect x="36" y="90" width="48" height="58" strokeWidth="1.2" />
+        {/* Laptop Base & Keyboard Platform */}
         <path
-          d="M 52,148 L 52,126 Q 60,118 68,126 L 68,148 Z"
-          strokeWidth="1"
-          fill="currentColor"
-          fillOpacity="0.12"
-        />
-
-        <rect
-          x="30"
-          y="86"
-          width="60"
-          height="4"
-          strokeWidth="1"
-          fill="currentColor"
-          fillOpacity="0.2"
-        />
-        <line x1="30" y1="84" x2="90" y2="84" strokeWidth="0.8" />
-
-        <rect x="42" y="52" width="36" height="32" strokeWidth="1" />
-        <path d="M 54,76 L 54,64 Q 60,58 66,64 L 66,76 Z" strokeWidth="0.8" />
-        <line
-          x1="42"
-          y1="62"
-          x2="78"
-          y2="62"
-          strokeWidth="0.6"
-          strokeDasharray="1 2"
-        />
-
-        <rect x="38" y="48" width="44" height="4" strokeWidth="1" />
-
-        <rect x="46" y="28" width="28" height="20" strokeWidth="0.9" />
-        <circle cx="60" cy="38" r="5" strokeWidth="0.8" />
-        <line x1="60" y1="38" x2="60" y2="35" strokeWidth="0.7" />
-        <line x1="60" y1="38" x2="62" y2="38" strokeWidth="0.7" />
-
-        <path
-          d="M 44,28 Q 60,8 60,4 Q 60,8 76,28 Z"
-          strokeWidth="1"
+          d="M 28,162 L 112,162 L 105,148 L 35,148 Z"
+          strokeWidth="1.4"
           fill="currentColor"
           fillOpacity="0.08"
         />
-        <line x1="60" y1="4" x2="60" y2="0" strokeWidth="1.2" />
-        <circle cx="60" cy="0" r="1.5" fill="currentColor" />
+        {/* Trackpad */}
+        <rect x="62" y="153" width="16" height="7" rx="1" strokeWidth="0.9" fill="none" />
 
-        <line x1="38" y1="94" x2="38" y2="146" strokeWidth="0.6" />
-        <line
-          x1="42"
-          y1="94"
-          x2="42"
-          y2="146"
-          strokeWidth="0.6"
-          strokeDasharray="2 2"
+        {/* Laptop Screen Bezel */}
+        <rect
+          x="34"
+          y="72"
+          width="72"
+          height="76"
+          rx="2"
+          strokeWidth="1.6"
+          fill="currentColor"
+          fillOpacity="0.05"
         />
-        <line
-          x1="78"
-          y1="94"
-          x2="78"
-          y2="146"
-          strokeWidth="0.6"
-          strokeDasharray="2 2"
-        />
-        <line x1="82" y1="94" x2="82" y2="146" strokeWidth="0.6" />
+        {/* Inner Screen Display */}
+        <rect x="38" y="76" width="64" height="64" rx="1" strokeWidth="1" fill="none" />
+        {/* Browser Top Bar & Dots */}
+        <line x1="38" y1="84" x2="102" y2="84" strokeWidth="0.8" />
+        <circle cx="42" cy="80" r="1.2" fill="currentColor" />
+        <circle cx="46" cy="80" r="1.2" fill="currentColor" />
+        <circle cx="50" cy="80" r="1.2" fill="currentColor" />
+        {/* Wireframe Hero Header inside Screen */}
+        <rect x="42" y="88" width="56" height="18" rx="1" strokeWidth="0.8" fill="currentColor" fillOpacity="0.1" />
+        <line x1="46" y1="94" x2="78" y2="94" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="46" y1="99" x2="68" y2="99" strokeWidth="0.8" strokeLinecap="round" />
+        {/* 3 Grid Cards on screen */}
+        <rect x="42" y="110" width="16" height="24" rx="0.5" strokeWidth="0.8" fill="none" />
+        <line x1="44" y1="126" x2="56" y2="126" strokeWidth="0.6" />
+        <rect x="62" y="110" width="16" height="24" rx="0.5" strokeWidth="0.8" fill="none" />
+        <line x1="64" y1="126" x2="76" y2="126" strokeWidth="0.6" />
+        <rect x="82" y="110" width="16" height="24" rx="0.5" strokeWidth="0.8" fill="none" />
+        <line x1="84" y1="126" x2="96" y2="126" strokeWidth="0.6" />
 
+        {/* Coffee Mug on Left Desk */}
         <path
-          d="M 18,40 Q 24,36 30,40"
-          strokeWidth="0.6"
+          d="M 16,144 L 18,162 L 27,162 L 29,144 Z"
+          strokeWidth="1.2"
+          fill="currentColor"
+          fillOpacity="0.1"
+        />
+        {/* Mug Handle */}
+        <path
+          d="M 16,148 C 11,148 11,158 17,158"
+          strokeWidth="1"
+          fill="none"
+        />
+        {/* Steam Wisps */}
+        <path
+          d="M 21,140 Q 24,134 20,128"
+          strokeWidth="0.8"
           strokeLinecap="round"
-          opacity="0.5"
+          strokeDasharray="2 1.5"
         />
         <path
-          d="M 90,34 Q 96,30 102,34"
-          strokeWidth="0.6"
+          d="M 25,138 Q 22,132 26,126"
+          strokeWidth="0.8"
           strokeLinecap="round"
-          opacity="0.5"
+          strokeDasharray="2 1.5"
         />
+
+        {/* Desk Plant on Right */}
+        <path
+          d="M 116,150 L 118,162 L 129,162 L 131,150 Z"
+          strokeWidth="1.2"
+          fill="currentColor"
+          fillOpacity="0.12"
+        />
+        {/* Succulent Leaves */}
+        <path
+          d="M 123,150 Q 120,136 123,124 Q 127,136 124,150"
+          strokeWidth="1.1"
+          fill="currentColor"
+          fillOpacity="0.15"
+        />
+        <path
+          d="M 123,145 Q 112,138 113,130 Q 120,138 123,146"
+          strokeWidth="0.9"
+          fill="none"
+        />
+        <path
+          d="M 124,145 Q 134,138 133,130 Q 126,138 124,146"
+          strokeWidth="0.9"
+          fill="none"
+        />
+
+        {/* Subtle Angle Brackets & Code Annotation */}
+        <text
+          x="70"
+          y="62"
+          textAnchor="middle"
+          fontSize="8.5"
+          fontFamily="'Plus Jakarta Sans', monospace"
+          letterSpacing="1.2"
+          fill="currentColor"
+          fontWeight="600"
+          opacity="0.75"
+        >
+          &lt; WORKSTATION /&gt;
+        </text>
       </svg>
+    </div>
+  );
+}
+
+/**
+ * Backward compatible alias for DeveloperStationIllustration
+ */
+export const StudioEngraving = DeveloperStationIllustration;
+
+/**
+ * Pinned UI/UX Wireframe & Blueprint Scrap for the Hero Collage
+ */
+export function WireframeBlueprintScrap({ className = "" }: { className?: string }) {
+  return (
+    <div className={`wireframe-blueprint-scrap ${className}`} aria-hidden="true">
+      <div className="blueprint-pin">
+        <span className="pin-head" />
+        <span className="pin-shadow" />
+      </div>
+      <div className="blueprint-header">
+        <span className="blueprint-label">UI/UX WIREFRAME</span>
+        <span className="blueprint-version">v2.4</span>
+      </div>
+      <div className="blueprint-wireframe-art">
+        <svg viewBox="0 0 80 50" fill="none" stroke="currentColor">
+          <rect x="2" y="2" width="76" height="46" rx="2" strokeWidth="1" strokeDasharray="2 1.5" />
+          <line x1="2" y1="12" x2="78" y2="12" strokeWidth="0.8" />
+          <circle cx="7" cy="7" r="1.2" fill="currentColor" />
+          <circle cx="12" cy="7" r="1.2" fill="currentColor" />
+          <circle cx="17" cy="7" r="1.2" fill="currentColor" />
+          {/* Wireframe Hero */}
+          <rect x="8" y="16" width="34" height="12" rx="1" strokeWidth="0.7" fill="currentColor" fillOpacity="0.12" />
+          <rect x="46" y="16" width="26" height="28" rx="1" strokeWidth="0.7" fill="currentColor" fillOpacity="0.08" />
+          {/* Wireframe Cards */}
+          <rect x="8" y="32" width="15" height="12" rx="1" strokeWidth="0.7" fill="none" />
+          <rect x="27" y="32" width="15" height="12" rx="1" strokeWidth="0.7" fill="none" />
+        </svg>
+      </div>
+      <div className="blueprint-notes">
+        <span>// 12-col responsive grid</span>
+        <span>// modern web architecture</span>
+      </div>
     </div>
   );
 }
