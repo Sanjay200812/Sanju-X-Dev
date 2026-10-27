@@ -244,15 +244,21 @@ test("/api/chat explains project starting and tracking clearly", async () => {
   assert.match(trackBody.answer, /SXD-001/);
 });
 
-test("enquiry builder defaults have exactly 5 website categories with correct features", () => {
+test("enquiry builder defaults have 11 website categories with correct features", () => {
   const expectedLabels = [
     "Personal Portfolio",
     "Blog / Content Website",
     "Business Website",
     "Agency Website",
     "E-Commerce Website",
+    "Restaurant / Food Business Website",
+    "Shop / Store Website",
+    "Educational Website",
+    "Booking / Appointment Website",
+    "Other / Custom Website",
+    "Not Sure — Help Me Decide",
   ];
-  assert.equal(seed.websiteCategories.length, 5);
+  assert.equal(seed.websiteCategories.length, 11);
   assert.deepEqual(
     seed.websiteCategories.map((c) => c.label),
     expectedLabels,
@@ -261,14 +267,20 @@ test("enquiry builder defaults have exactly 5 website categories with correct fe
   // Check Portfolio features
   const portfolio = seed.websiteCategories.find((c) => c.id === "portfolio");
   assert.ok(portfolio.features.includes("About Me"));
-  assert.ok(portfolio.features.includes("Skills & Experience"));
+  assert.ok(portfolio.features.includes("Skills"));
   assert.ok(portfolio.features.includes("Resume Download"));
 
   // Check E-Commerce features
   const ecommerce = seed.websiteCategories.find((c) => c.id === "ecommerce");
-  assert.ok(ecommerce.features.includes("Product Listings"));
-  assert.ok(ecommerce.features.includes("Online Payments"));
-  assert.ok(ecommerce.features.includes("WhatsApp Ordering"));
+  assert.ok(ecommerce.features.includes("Product Catalogue"));
+  assert.ok(ecommerce.features.includes("Shopping Cart"));
+  assert.ok(ecommerce.features.includes("Payments"));
+
+  // Check Restaurant features
+  const restaurant = seed.websiteCategories.find((c) => c.id === "restaurant");
+  assert.ok(restaurant.features.includes("Food Menu"));
+  assert.ok(restaurant.features.includes("Online Ordering"));
+  assert.ok(restaurant.features.includes("Table Booking"));
 });
 
 test("spideyy advises on shop website and provides 'Start With This Website Type' preselect link", async () => {

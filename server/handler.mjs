@@ -11,9 +11,11 @@ import {
   getLockoutStatus,
   recordFailedAttempt,
   clearLockout,
+  isAllowedOrigin,
 } from "./security.mjs";
 import {
   sendEnquiryNotification,
+  verifySmtpConnection,
   sendEmail,
   formatProjectAcceptedHtml,
   formatProgressUpdatedHtml,
@@ -56,6 +58,100 @@ export const configureEnvironment = (values) => {
   runtimeEnvironment = values;
 };
 const env = () => runtimeEnvironment || process.env;
+
+const aiStats = {
+  date: new Date().toISOString().slice(0, 10),
+  requestsToday: 0,
+  errorsToday: 0,
+  lastError: null,
+  lastUsed: null,
+  lastModel: null,
+};
+
+function getAiStats() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (aiStats.date !== today) {
+    aiStats.date = today;
+    aiStats.requestsToday = 0;
+    aiStats.errorsToday = 0;
+    aiStats.lastError = null;
+  }
+  return aiStats;
+}
+
+function sanitizeAiError(err, key) {
+  let msg = String(err?.message || err || "AI request failed");
+  if (key && typeof key === "string" && key.length > 5) {
+    msg = msg.split(key).join("[REDACTED]");
+  }
+  return msg;
+}
+
+function extractChatLinks(question, answer) {
+  const links = [];
+  const addedUrls = new Set();
+
+  function addLink(label, url) {
+    if (!url || addedUrls.has(url)) return;
+    addedUrls.add(url);
+    links.push({ label, url });
+  }
+
+  // 1. Markdown links from answer: [Label](url)
+  const mdLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let match;
+  while ((match = mdLinkRegex.exec(answer)) !== null) {
+    addLink(match[1].trim(), match[2].trim());
+  }
+
+  const textCombined = (question + " " + answer).toLowerCase();
+
+  // 2. The 5 Official Website Categories recommendation links
+  if (/e-commerce|ecommerce|online store|shopping cart|clothing shop|sell online|order online/i.test(textCombined)) {
+    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("E-Commerce Website"));
+  } else if (/business website|corporate|company website|local business|lead gen/i.test(textCombined)) {
+    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("Business Website"));
+  } else if (/portfolio|personal website|resume website|personal brand/i.test(textCombined)) {
+    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("Personal Portfolio"));
+  } else if (/blog|content website|news|publishing|articles/i.test(textCombined)) {
+    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("Blog / Content Website"));
+  } else if (/agency website|creative studio|creative agency/i.test(textCombined)) {
+    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("Agency Website"));
+  }
+
+  // 3. Project tracking queries
+  if (/sxd-|track|tracking|project status|check my project/i.test(textCombined)) {
+    addLink("Track My Project", "/track");
+  }
+
+  // 4. Portfolio / previous projects queries
+  if (/previous project|past work|portfolio|case stud|starx|ticketx|audiox|yuva shakti/i.test(textCombined)) {
+    addLink("Explore Our Work", "/work");
+  }
+
+  // 5. General project enquiry queries
+  if (/contact|brief|enquiry|quote|hire|start a project|how do i start/i.test(textCombined)) {
+    addLink("Start an Enquiry", "/contact");
+  }
+
+  return links.slice(0, 3);
+}
+
+
+function getSmtpConfig(e) {
+  return {
+    siteUrl: e.SITE_URL,
+    smtpHost: e.SMTP_HOST,
+    smtpPort: e.SMTP_PORT,
+    smtpSecure: e.SMTP_SECURE,
+    smtpUser: e.SMTP_USER,
+    smtpPass: e.SMTP_PASS,
+    fromEmail: e.SMTP_FROM_EMAIL,
+    toEmail: e.OWNER_NOTIFICATION_EMAIL,
+    resendApiKey: e.RESEND_API_KEY,
+  };
+}
+
 
 const OWNER_UID = "3984ceee-869a-432f-a5dd-23eb615d234d";
 
@@ -180,19 +276,25 @@ export default async function handler(req, res) {
     const client = db();
     let body = {};
 
-    if (req.method === "POST") {
-      const origin = req.headers.origin;
-      const permitted = [
-        env().SITE_URL,
-        env().VERCEL_URL ? "https://" + env().VERCEL_URL : null,
-        "http://127.0.0.1:3100",
-        "http://127.0.0.1:3101",
-        "http://localhost:3100",
-        "http://localhost:3101",
-      ].filter(Boolean);
+    if (req.method === "OPTIONS") {
+      const origin = req.headers?.origin;
+      if (origin && isAllowedOrigin(origin, env())) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.setHeader(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization, x-owner-authorization"
+        );
+      }
+      res.statusCode = 204;
+      return res.end();
+    }
 
-      if (!origin || !permitted.includes(origin))
+    if (req.method === "POST") {
+      const origin = req.headers?.origin;
+      if (!origin || !isAllowedOrigin(origin, env())) {
         throw fail(403, "Request origin is not allowed.");
+      }
 
       if (req.body)
         body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -492,144 +594,93 @@ export default async function handler(req, res) {
       const content = await site(client);
       const s = {
         ...content,
-        projects: content.projects.filter((p) => p.published),
+        projects: (content.projects || []).filter((p) => p.published),
       };
-      const q = body.question.toLowerCase().trim();
 
-      // Telugu-English mixed phrases
-      const isTeluguMixed = /(kavali|entha|untundi|cheyagalara|naku|ela|baguntundi|eppudu|chudali|ivvandi|chestaru|cheyali|cheyadam)/i.test(q);
-
-      // Check for specific project inquiries
-      const project = s.projects.find(
-        (p) => q.includes(p.short.toLowerCase()) || q.includes(p.slug),
-      );
-
-      // Check for specific services inquiries
-      const serviceMatch = s.services.find((srv) =>
-        q.includes(srv.name.toLowerCase()) ||
-        srv.name.toLowerCase().split(/\s+/).some((w) => w.length > 4 && q.includes(w)),
-      );
-
-      let answer = "";
-      let links = [];
-
-      if (isTeluguMixed) {
-        answer = "Namaste! SANJU X DEV can definitely build this for you. Whether you need a business website, online store, or custom application, we build it modern, mobile-friendly, and fast. You can share your project idea directly on our simple 2-step Contact page or email Sanjay at sanjuxdev27@gmail.com.";
-        links.push({ label: "Start a Project Brief", url: "/contact" });
-        links.push({ label: "Explore Our Work", url: "/work" });
-      } else if (project) {
-        answer = `${project.name}: ${project.summary} ${project.headline} Key features include: ${project.features.join(", ")}.`;
-        links.push({ label: "View " + project.short + " Case Study", url: "/work/" + project.slug });
-        links.push({ label: "Visit Live Site ↗", url: project.url });
-      } else if (/(website for my shop|for my shop|for my store)/i.test(q)) {
-        answer = "A Business Website could work if you want to show your products and receive enquiries. If you want customers to pay and place orders online, an E-Commerce Website may be better.";
-        links.push({ label: "Start With This Website Type", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
-        links.push({ label: "Start With Business Website", url: "/contact?category=" + encodeURIComponent("Business Website") });
-      } else if (/what kind of website|which website|kind of website|what type of website|recommend|need a website|help me decide/.test(q)) {
-        answer = "We specialize in five core website categories:\n• Personal Portfolio — Showcase work, skills, and resume.\n• Blog / Content Website — Share articles, stories, and updates.\n• Business Website — Help customers discover and contact your company.\n• Agency Website — Present your agency, team, and client case studies.\n• E-Commerce Website / Online Store — Showcase products, accept payments, and sell online.\nTell us about your idea and we'll help you take it forward!";
-        links.push({ label: "Start With This Website Type", url: "/contact" });
-        links.push({ label: "Explore Our Work", url: "/work" });
-      } else if (/how do i start|how to start|start a project|how do i get started|begin/.test(q)) {
-        answer = "Starting is simple and takes just 3 short steps! On our Contact page, select your website type, choose the features you'd like, and tell us how to reach you. You'll immediately receive your sequential SXD Tracking ID and no payment is required to enquire.";
-        links.push({ label: "Start With This Website Type", url: "/contact" });
-        links.push({ label: "Explore Our Work", url: "/work" });
-      } else if (/online store|ecommerce|e-commerce|sell products|shopping|clothing|store/.test(q)) {
-        answer = "Yes! We design and build modern online stores and e-commerce websites with clear product catalogues, mobile shopping, WhatsApp ordering, and secure payment checkout (UPI, cards, net banking). You can easily manage products and see incoming orders.";
-        links.push({ label: "Start With This Website Type", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
-        links.push({ label: "View TicketX Platform", url: "/work/ticketx" });
-      } else if (/track|tracking|status|check my project|project status|sxd-/.test(q)) {
-        answer = "You can track your project anytime on our Track Project page (/track). Enter your unique Tracking ID (such as SXD-001) and your registered email address to view real-time milestone progress, status updates, and countdown days remaining.";
-        links.push({ label: "Track My Project", url: "/track" });
-        links.push({ label: "Start an Enquiry", url: "/contact" });
-      } else if (/price|cost|budget|pricing|rate|how much|what does a website cost/.test(q)) {
-        answer = "Every website project is tailored to its specific scope, design requirements, and integrations. We don't use fixed packages or assumptions. Share a brief on our Contact page for an honest, tailored estimate based on your scope.";
-        links.push({ label: "Start a Project Brief", url: "/contact" });
-      } else if (/time|timeline|how long|launch|deadline/.test(q)) {
-        answer = "Project timelines depend on requirements and complexity—typically ranging from 2–4 weeks for focused business websites to 6–10 weeks for bespoke web applications. We confirm exact milestones after understanding your scope.";
-        links.push({ label: "Share Your Timeline", url: "/contact" });
-      } else if (/codexa|agency|affiliation|founder/.test(q)) {
-        answer = "Sanjay is a Co-Founder at CodeXa Agency. It is a distinct, separate professional affiliation alongside SANJU X DEV.";
-        links.push({ label: "About SANJU X DEV", url: "/about" });
-      } else if (/feature|features|whatsapp button|payment gateway|login|admin dashboard|chatbot/.test(q)) {
-        answer = "We support all essential modern website features without confusing jargon: WhatsApp direct chat buttons, online payments (UPI, cards), product listings, appointment booking, user login, admin dashboards, and custom AI assistants like spideyy.";
-        links.push({ label: "Start a Project Brief", url: "/contact" });
-      } else if (serviceMatch) {
-        answer = `${serviceMatch.name}: ${serviceMatch.description} Scope includes: ${serviceMatch.items}.`;
-        links.push({ label: "Discuss " + serviceMatch.name, url: "/contact?service=" + encodeURIComponent(serviceMatch.name) });
-      } else if (/work|portfolio|projects|case stud|past/.test(q)) {
-        answer = "We have five verified portfolio case studies: StarX Live, TicketX, StarX Connect, AudioX, and Yuva Shakti. Each includes real desktop/mobile screenshots, architectural summaries, and live links.";
-        links.push({ label: "Explore Our Work", url: "/work" });
-      } else if (/contact|email|phone|hire|message|touch|reach/.test(q)) {
-        answer = `You can start a project conversation through our simple 2-step contact form or email Sanjay directly at ${s.email}.`;
-        links.push({ label: "Start a Conversation", url: "/contact" });
-      } else {
-        const faqMatch = s.faqs.find((f) =>
-          f.q
-            .toLowerCase()
-            .split(/\W+/)
-            .filter((w) => w.length > 3)
-            .some((w) => q.includes(w)),
-        );
-        if (faqMatch) {
-          answer = faqMatch.a;
-        } else {
-          answer =
-            "SANJU X DEV creates custom business websites, online stores, UI/UX designs, custom web applications, and interactive experiences. Explore all five case studies in Our Work or start a project brief.";
-          links.push({ label: "Explore Our Work", url: "/work" });
-          links.push({ label: "Start a Project", url: "/contact" });
-        }
+      if (content.assistantEnabled === false) {
+        return send(200, {
+          answer: "spideyy assistant is currently offline. You can share your project requirements directly through our Contact page.",
+          mode: "offline",
+          links: [{ label: "Start a Project Brief", url: "/contact" }],
+        });
       }
 
-      let mode = "FAQ guide";
+      const rawQ = body.question.trim();
+      const q = rawQ.toLowerCase();
 
-      if (client && env().OPENAI_API_KEY && env().OPENAI_MODEL) {
-        await rate(client, req, "chat", 20);
-        const global = await checked(
-          client.rpc("studio_limit", {
-            key_value: "ai-global-" + new Date().toISOString().slice(0, 10),
-            maximum: 100,
-            seconds: 86400,
-          }),
-        );
-        if (global) {
+      const openAiKey = (env().OPENAI_API_KEY || "").trim();
+      const openAiModel = env().OPENAI_MODEL || "gpt-4o-mini";
+      const isAiConfigured = Boolean(openAiKey && openAiKey.length > 5);
+
+      let answer = "";
+      let mode = "FAQ guide";
+      let links = [];
+
+      // -------------------------------------------------------------
+      // 1. PRIMARY ENGINE: Real OpenAI API Conversational Intelligence
+      // -------------------------------------------------------------
+      if (isAiConfigured) {
+        const stats = getAiStats();
+        const dailyLimit = Number(content.aiDailyLimit || 100);
+
+        if (client) {
           try {
-            // Build conversation turns from history if provided
+            await rate(client, req, "chat", 30);
+          } catch {}
+        }
+
+        if (stats.requestsToday < dailyLimit) {
+          try {
             const history = Array.isArray(body.history) ? body.history : [];
             const historyMessages = history
-              .slice(-6)
+              .slice(-8)
               .map((h) => ({
                 role: h.role === "user" ? "user" : "assistant",
-                content: String(h.text || h.content || "").slice(0, 500),
+                content: String(h.text || h.content || "").slice(0, 600),
               }))
               .filter((m) => m.content);
 
             const systemPrompt =
-              "You are spideyy, the AI website assistant for SANJU X DEV (Design & Digital Development). " +
-              "Owner/Developer: Sanjay. Professional affiliation: Co-Founder at CodeXa Agency. " +
-              "Explain services in simple, non-technical words. Recommend appropriate website types (Business Website, Online Store, Portfolio, Booking Website, Educational Website, Business Application). " +
-              "Portfolio projects: StarX Live (entertainment website), TicketX (event/cinema booking application), StarX Connect (digital card), AudioX (audio utility app), Yuva Shakti (community portal). " +
-              "Explain features: WhatsApp button, online payments (UPI, cards), product listing, booking, admin dashboard, user login. " +
-              "Explain project tracking: Clients receive an SXD Tracking ID (e.g. SXD-001) and can track status anytime at /track with their registered email. " +
-              "If the visitor speaks in Telugu-English mixed phrasing (like 'website kavali', 'cost entha', 'ela start cheyali'), respond warmly in friendly English guiding them. " +
-              "Never invent prices, delivery deadlines, or false portfolio claims. Guide clients to /contact to submit requirements. " +
-              "Keep responses concise, helpful, and under 3 paragraphs. Facts: " +
-              JSON.stringify(s);
+              "You are spideyy, the intelligent, friendly, and authentic AI assistant for SANJU X DEV (modern web design and development studio led by Sanjay). " +
+              "Sanjay's professional affiliation: Co-Founder at CodeXa Agency. " +
+              "\n\nCONVERSATIONAL STYLE & INTELLIGENCE:" +
+              "\n- Answer naturally, conversationally, and clearly. Avoid robotic, boilerplate, or repeated phrases." +
+              "\n- Understand both English and mixed Telugu-English phrasing (e.g. 'naku website kavali', 'cost entha', 'ela start cheyali', 'clothing shop ki website kavali'). When the customer uses Telugu-English phrasing, respond warmly in friendly English addressing their specific needs." +
+              "\n- Multi-turn memory: You have memory of earlier messages in the current chat. Understand follow-up questions (e.g. 'Can customers pay online?', 'What did I just ask you?', 'How much?')." +
+              "\n- Ask useful clarification questions when a project idea is broad." +
+              "\n\nRECOMMEND FROM THE 5 OFFICIAL WEBSITE CATEGORIES:" +
+              "\n1. Personal Portfolio: For developers, designers, creators, artists, students, or personal brands (/contact?category=Personal%20Portfolio)." +
+              "\n2. Blog / Content Website: For articles, stories, news, knowledge base, tutorials, or regular updates (/contact?category=Blog%20%2F%20Content%20Website)." +
+              "\n3. Business Website: For companies, local businesses, services, and corporate websites focused on customer trust and enquiry generation (/contact?category=Business%20Website)." +
+              "\n4. Agency Website: For creative agencies, studios, and multidisciplinary teams showcasing multi-service capabilities and client work (/contact?category=Agency%20Website)." +
+              "\n5. E-Commerce Website: For clothing shops, retail stores, product sellers, or online shopping with product catalogues, shopping carts, WhatsApp ordering, and secure payments (UPI, cards, net banking) (/contact?category=E-Commerce%20Website)." +
+              "\nRecommend website categories based on customer's actual business needs rather than keyword matching alone." +
+              "\n\nPROJECT ENQUIRY INTEGRATION:" +
+              "\nWhen a visitor describes their website idea, explain why the recommended category suits them, and invite them to 'Start Your Project' with the relevant category preselected. Never create an enquiry without explicit customer consent and submission." +
+              "\n\nSTRICT TRACKING & PRIVACY RULES:" +
+              "\nClients receive an SXD Tracking ID (e.g. SXD-001) upon submitting an enquiry. To track status, progress milestones, or countdown days, clients must visit /track and enter their Tracking ID and registered email. NEVER disclose private client names, emails, phone numbers, or unverified project details in chat. Direct all tracking questions to /track." +
+              "\n\nSTRICT PRICING & TIMELINES RULES:" +
+              "\nNever invent fixed price packages, delivery guarantees, or false quotes. Every project is scoped individually without arbitrary assumptions. Guide clients to /contact to share a brief for a tailored estimate." +
+              "\n\nVERIFIED 5 PORTFOLIO PROJECTS (NO FALSE CLAIMS):" +
+              "\n1. StarX Live (entertainment streaming), 2. TicketX (event/cinema booking application), 3. StarX Connect (digital NFC & virtual card), 4. AudioX (audio utility app), 5. Yuva Shakti (youth community portal). Direct visitors to /work for full case studies." +
+              (content.knowledge ? "\n\nAPPROVED BUSINESS KNOWLEDGE:\n" + content.knowledge : "");
 
             const openAiBody = {
-              model: env().OPENAI_MODEL,
+              model: openAiModel,
               messages: [
                 { role: "system", content: systemPrompt },
                 ...historyMessages,
-                { role: body.question ? "user" : "user", content: body.question },
+                { role: "user", content: rawQ },
               ],
-              max_tokens: 450,
-              temperature: 0.6,
+              max_tokens: Number(content.aiMaxTokens || 450),
+              temperature: 0.65,
             };
 
-            const r = await fetch("https://api.openai.com/v1/chat/completions", {
+            const fetchImpl = env().OPENAI_FETCH || globalThis.fetch;
+            const r = await fetchImpl("https://api.openai.com/v1/chat/completions", {
               method: "POST",
               headers: {
-                Authorization: "Bearer " + env().OPENAI_API_KEY,
+                Authorization: "Bearer " + openAiKey,
                 "Content-Type": "application/json",
               },
               body: JSON.stringify(openAiBody),
@@ -642,42 +693,126 @@ export default async function handler(req, res) {
               if (text) {
                 answer = text;
                 mode = "AI assistant";
+                links = extractChatLinks(rawQ, text);
+                stats.requestsToday++;
+                stats.lastUsed = new Date().toISOString();
+                stats.lastModel = openAiModel;
+                return send(200, { answer, mode, links });
               }
             } else {
-              // Try fallback experimental responses endpoint if completions failed
-              const r2 = await fetch("https://api.openai.com/v1/responses", {
-                method: "POST",
-                headers: {
-                  Authorization: "Bearer " + env().OPENAI_API_KEY,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  model: env().OPENAI_MODEL,
-                  store: false,
-                  max_output_tokens: 400,
-                  instructions: systemPrompt,
-                  input: body.question,
-                }),
-                signal: AbortSignal.timeout(10000),
-              });
-              const d2 = await r2.json();
-              const text2 = d2.output
-                ?.flatMap((x) => x.content || [])
-                .filter((x) => x.type === "output_text")
-                .map((x) => x.text)
-                .join("\n");
-              if (r2.ok && text2) {
-                answer = text2;
-                mode = "AI assistant";
-              }
+              const errData = await r.json().catch(() => ({}));
+              const errMsg = errData.error?.message || `OpenAI API returned status ${r.status}`;
+              stats.errorsToday++;
+              stats.lastError = sanitizeAiError(errMsg, openAiKey);
             }
-          } catch {
-            /* factual fallback */
+          } catch (err) {
+            stats.errorsToday++;
+            stats.lastError = sanitizeAiError(err.message, openAiKey);
           }
+        } else {
+          stats.lastError = "Daily request quota reached (" + dailyLimit + " requests). Operating in FAQ Guide mode.";
         }
       }
 
-      return send(200, { answer, mode, links });
+      // -------------------------------------------------------------
+      // 2. SECONDARY ENGINE: Verified Rule-Based FAQ Guide Fallback
+      // -------------------------------------------------------------
+      mode = "FAQ guide";
+
+      // Telugu-English mixed phrases
+      const isTeluguMixed = /(kavali|entha|untundi|cheyagalara|naku|ela|baguntundi|eppudu|chudali|ivvandi|chestaru|cheyali|cheyadam)/i.test(q);
+
+      // Check for specific project inquiries
+      const project = s.projects.find(
+        (p) => q.includes(p.short.toLowerCase()) || q.includes(p.slug),
+      );
+
+      // Check for specific services inquiries
+      const serviceMatch = (s.services || []).find((srv) =>
+        q.includes(srv.name.toLowerCase()) ||
+        srv.name.toLowerCase().split(/\s+/).some((w) => w.length > 4 && q.includes(w)),
+      );
+
+      if (isTeluguMixed) {
+        answer = "Namaste! SANJU X DEV can definitely build this for you. Whether you need a business website, online store, or custom application, we build it modern, mobile-friendly, and fast. You can share your project idea directly on our simple 2-step Contact page or email Sanjay at sanjuxdev27@gmail.com.";
+        links.push({ label: "Start Your Project", url: "/contact" });
+        links.push({ label: "Explore Our Work", url: "/work" });
+      } else if (project) {
+        answer = `${project.name}: ${project.summary} ${project.headline} Key features include: ${project.features.join(", ")}.`;
+        links.push({ label: "View " + project.short + " Case Study", url: "/work/" + project.slug });
+        links.push({ label: "Visit Live Site ↗", url: project.url });
+      } else if (/(website for my shop|for my shop|for my store)/i.test(q) && !/clothing/i.test(q)) {
+        answer = "A Business Website could work if you want to show your products and receive enquiries. If you want customers to pay and place orders online, an E-Commerce Website may be better.";
+        links.push({ label: "Start With This Website Type", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "Start With Business Website", url: "/contact?category=" + encodeURIComponent("Business Website") });
+      } else if (/(clothing|online shop|clothing shop|retail)/i.test(q)) {
+        answer = "For a clothing shop or retail business where you want customers to browse items and place orders, an E-Commerce Website is the ideal choice. We build them with product catalogues, shopping carts, WhatsApp ordering, and secure payments (UPI, cards).";
+        links.push({ label: "Start Your Project", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "Start With This Website Type", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "View TicketX Platform", url: "/work/ticketx" });
+      } else if (/online payments?|pay online|upi|payment gateway|accept payments/i.test(q)) {
+        answer = "Yes! We integrate secure online payment gateways supporting UPI (Google Pay, PhonePe, Paytm), credit/debit cards, and net banking with instant checkout notifications and receipt generation.";
+        links.push({ label: "Start Your Project", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+      } else if (/right for me|what website is right|what kind of website|which website|kind of website|what type of website|recommend|need a website|help me decide/.test(q)) {
+        answer = "We specialize in five core website categories:\n• Personal Portfolio — Showcase work, skills, and resume.\n• Blog / Content Website — Share articles, stories, and updates.\n• Business Website — Help customers discover and contact your company.\n• Agency Website — Present your agency, team, and client case studies.\n• E-Commerce Website / Online Store — Showcase products, accept online payments, and sell.\nTell us about your project and we'll guide you to the perfect fit!";
+        links.push({ label: "Start Your Project", url: "/contact" });
+        links.push({ label: "Explore Our Work", url: "/work" });
+      } else if (/how do i start|how to start|start a project|how do i get started|begin/.test(q)) {
+        answer = "Starting is simple and takes just 3 short steps! On our Contact page, select your website category, choose the features you'd like, and tell us how to reach you. You'll immediately receive your sequential SXD Tracking ID and no payment is required to enquire.";
+        links.push({ label: "Start Your Project", url: "/contact" });
+        links.push({ label: "Explore Our Work", url: "/work" });
+      } else if (/online store|ecommerce|e-commerce|sell products|shopping/.test(q)) {
+        answer = "Yes! We design and build modern online stores and e-commerce websites with clear product catalogues, mobile shopping, WhatsApp ordering, and secure payment checkout (UPI, cards, net banking). You can easily manage products and see incoming orders.";
+        links.push({ label: "Start Your Project", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "View TicketX Platform", url: "/work/ticketx" });
+      } else if (/track|tracking|status|check my project|project status|sxd-/.test(q)) {
+        answer = "You can track your project anytime on our Track Project page (/track). For security, enter your unique Tracking ID (such as SXD-001) and your registered email address to view real-time milestone progress, status updates, and countdown days remaining.";
+        links.push({ label: "Track My Project", url: "/track" });
+        links.push({ label: "Start an Enquiry", url: "/contact" });
+      } else if (/price|cost|budget|pricing|rate|how much|what does a website cost/.test(q)) {
+        answer = "Every website project is tailored to its specific scope, design requirements, and integrations. We don't use fixed packages or assumptions. Share a brief on our Contact page for an honest, tailored estimate based on your scope.";
+        links.push({ label: "Start a Project Brief", url: "/contact" });
+      } else if (/time|timeline|how long|launch|deadline/.test(q)) {
+        answer = "Project timelines depend on requirements and complexity—typically ranging from 2–4 weeks for focused business websites to 6–10 weeks for bespoke web applications. We confirm exact milestones after understanding your scope.";
+        links.push({ label: "Share Your Timeline", url: "/contact" });
+      } else if (/codexa|agency|affiliation|founder/.test(q)) {
+        answer = "Sanjay is a Co-Founder at CodeXa Agency. It is a distinct, separate professional affiliation alongside SANJU X DEV.";
+        links.push({ label: "About SANJU X DEV", url: "/about" });
+      } else if (/feature|features|whatsapp button|login|admin dashboard|chatbot/.test(q)) {
+        answer = "We support all essential modern website features without confusing jargon: WhatsApp direct chat buttons, online payments (UPI, cards), product listings, appointment booking, user login, admin dashboards, and custom AI assistants like Spideyy.";
+        links.push({ label: "Start a Project Brief", url: "/contact" });
+      } else if (serviceMatch) {
+        answer = `${serviceMatch.name}: ${serviceMatch.description} Scope includes: ${serviceMatch.items}.`;
+        links.push({ label: "Discuss " + serviceMatch.name, url: "/contact?service=" + encodeURIComponent(serviceMatch.name) });
+      } else if (/work|portfolio|projects|case stud|past/.test(q)) {
+        answer = "We have five verified portfolio case studies: StarX Live, TicketX, StarX Connect, AudioX, and Yuva Shakti. Each includes real desktop/mobile screenshots, architectural summaries, and live links.";
+        links.push({ label: "Explore Our Work", url: "/work" });
+      } else if (/contact|email|phone|hire|message|touch|reach/.test(q)) {
+        answer = `You can start a project conversation through our simple 2-step contact form or email Sanjay directly at ${s.email}.`;
+        links.push({ label: "Start a Conversation", url: "/contact" });
+      } else {
+        const faqMatch = (s.faqs || []).find((f) =>
+          f.q
+            .toLowerCase()
+            .split(/\W+/)
+            .filter((w) => w.length > 3)
+            .some((w) => q.includes(w)),
+        );
+        if (faqMatch) {
+          answer = faqMatch.a;
+        } else {
+          answer =
+            "SANJU X DEV creates custom business websites, online stores, UI/UX designs, custom web applications, and interactive experiences. Explore all five case studies in Our Work or start a project brief.";
+          links.push({ label: "Explore Our Work", url: "/work" });
+          links.push({ label: "Start Your Project", url: "/contact" });
+        }
+      }
+
+      if (links.length === 0) {
+        links = extractChatLinks(rawQ, answer);
+      }
+
+      return send(200, { answer, mode: "FAQ guide", links });
     }
 
     if (path === "/api/admin" || path === "/api/spideyy") {
@@ -1044,6 +1179,24 @@ export default async function handler(req, res) {
             env().SUPABASE_URL + "/storage/v1/object/public/studio-media/",
           projects,
           emails,
+          aiConfig: {
+            provider: "OpenAI",
+            configured: Boolean(env().OPENAI_API_KEY && env().OPENAI_API_KEY.trim().length > 5),
+            model: env().OPENAI_MODEL || "gpt-4o-mini",
+            dailyLimit: Number(content?.aiDailyLimit || 100),
+            maxTokens: Number(content?.aiMaxTokens || 450),
+            stats: getAiStats(),
+          },
+          emailConfig: {
+            provider: "Gmail SMTP",
+            configured: Boolean(env().SMTP_USER && env().SMTP_PASS),
+            host: env().SMTP_HOST || "smtp.gmail.com",
+            port: Number(env().SMTP_PORT || 465),
+            secure: env().SMTP_SECURE !== "false",
+            user: env().SMTP_USER || "",
+            fromEmail: env().SMTP_FROM_EMAIL || (env().SMTP_USER ? `"SANJU X DEV" <${env().SMTP_USER}>` : '"SANJU X DEV" <sanjuxdev27@gmail.com>'),
+            ownerNotificationEmail: env().OWNER_NOTIFICATION_EMAIL || env().SMTP_USER || "sanjuxdev27@gmail.com",
+          },
         });
       }
 
@@ -1155,11 +1308,7 @@ export default async function handler(req, res) {
                 html,
                 trackingCode: insertRes.data.tracking_code,
                 template: "project_accepted",
-                options: {
-                  siteUrl: env().SITE_URL,
-                  resendApiKey: env().RESEND_API_KEY,
-                  fromEmail: env().RESEND_FROM_EMAIL,
-                },
+                options: getSmtpConfig(env()),
                 client: admin,
               });
             } catch {
@@ -1230,11 +1379,7 @@ export default async function handler(req, res) {
                 html,
                 trackingCode: updated.tracking_code,
                 template,
-                options: {
-                  siteUrl: env().SITE_URL,
-                  resendApiKey: env().RESEND_API_KEY,
-                  fromEmail: env().RESEND_FROM_EMAIL,
-                },
+                options: getSmtpConfig(env()),
                 client: admin,
               });
             } catch {
@@ -1264,58 +1409,114 @@ export default async function handler(req, res) {
             html: emailRecord.html || `<p>${emailRecord.subject}</p>`,
             trackingCode: emailRecord.tracking_code,
             template: emailRecord.template,
-            options: {
-              siteUrl: env().SITE_URL,
-              resendApiKey: env().RESEND_API_KEY,
-              fromEmail: env().RESEND_FROM_EMAIL,
-            },
+            options: getSmtpConfig(env()),
             client: admin,
           });
 
           if (!result.success) {
-            throw fail(502, result.error || "Retry failed to send email.");
+            throw fail(502, result.error || "Retry failed to send email via Gmail SMTP.");
           }
 
-          await audit(client, "Email retried successfully: " + emailRecord.recipient);
+          await audit(client, "Email retried successfully via Gmail SMTP: " + emailRecord.recipient);
           return send(200, { ok: true, id: result.id });
         }
 
         case "test-email": {
-          const testRecipient = body.recipient || env().OWNER_NOTIFICATION_EMAIL || "sanjuxdev27@gmail.com";
+          const e = env();
+          const testRecipient = body.recipient || e.OWNER_NOTIFICATION_EMAIL || e.SMTP_USER || "sanjuxdev27@gmail.com";
           const timeIST = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "medium" }) + " IST";
+          const host = e.SMTP_HOST || "smtp.gmail.com";
+          const port = e.SMTP_PORT || "465";
+          const user = e.SMTP_USER || "sanjuxdev27@gmail.com";
+          const fromDisplay = e.SMTP_FROM_EMAIL || (e.SMTP_USER ? `"SANJU X DEV" <${e.SMTP_USER}>` : '"SANJU X DEV" <sanjuxdev27@gmail.com>');
+
           const testHtml = `
-            <div style="font-family: -apple-system, sans-serif; padding: 24px; color: #222;">
-              <h2 style="color: #852c32; margin: 0 0 12px 0;">SANJU X DEV — Test Verification Email</h2>
-              <p>This is a verified test dispatch from your SANJU X DEV owner console.</p>
-              <div style="background: #fdfbf7; border: 1px solid #dcd3c4; padding: 14px; border-radius: 6px; margin: 16px 0;">
-                <div><strong>Timestamp:</strong> ${timeIST}</div>
-                <div><strong>Sender:</strong> ${env().RESEND_FROM_EMAIL || "SANJU X DEV <onboarding@resend.dev>"}</div>
-                <div><strong>Recipient:</strong> ${testRecipient}</div>
-                <div><strong>Status:</strong> System Operational</div>
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #222; background: #eee5d5;">
+              <div style="max-width: 560px; margin: 0 auto; background: #fff; border: 1px solid #dcd3c4; border-radius: 8px; padding: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+                <div style="font-size: 13px; font-weight: 700; color: #852c32; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px;">SANJU X DEV · System Test</div>
+                <h2 style="color: #201c1b; margin: 0 0 14px 0; font-size: 20px;">Gmail SMTP Test Verification</h2>
+                <p style="margin: 0 0 16px 0; font-size: 14px; color: #444;">This message verifies that server-side email dispatch via Gmail SMTP is operating properly with SSL/TLS encryption.</p>
+                <div style="background: #fdfbf7; border: 1px solid #dcd3c4; border-left: 4px solid #852c32; padding: 14px 16px; border-radius: 0 6px 6px 0; margin: 16px 0; font-size: 13px; line-height: 1.8;">
+                  <div><strong>Delivery Provider:</strong> Gmail SMTP</div>
+                  <div><strong>Server & Port:</strong> ${host}:${port} (SSL/TLS)</div>
+                  <div><strong>Authenticated Account:</strong> ${user}</div>
+                  <div><strong>Sender Address:</strong> ${fromDisplay}</div>
+                  <div><strong>Recipient:</strong> ${testRecipient}</div>
+                  <div><strong>Dispatched At:</strong> ${timeIST}</div>
+                  <div><strong>Status:</strong> Connection Established & Verified</div>
+                </div>
+                <p style="font-size: 13px; color: #666; margin: 16px 0 0 0;">Customer enquiries, tracking notifications, and project updates will be dispatched through this channel.</p>
               </div>
-              <p style="font-size: 13px; color: #666;">If you received this message, transactional email dispatch via Resend is working correctly.</p>
             </div>
           `;
 
           const result = await sendEmail({
             to: testRecipient,
-            subject: "SANJU X DEV — Test Email Dispatch Verification",
+            subject: "SANJU X DEV — Gmail SMTP Delivery Verification",
             html: testHtml,
             template: "test_verification",
-            options: {
-              siteUrl: env().SITE_URL,
-              resendApiKey: env().RESEND_API_KEY,
-              fromEmail: env().RESEND_FROM_EMAIL,
-            },
+            options: getSmtpConfig(e),
             client: admin,
           });
 
           if (!result.success) {
-            throw fail(502, result.error || "Test email dispatch failed. Verify RESEND_API_KEY.");
+            throw fail(502, result.error || "Gmail SMTP delivery test failed. Verify SMTP_USER and SMTP_PASS.");
           }
 
-          await audit(client, "Test email dispatched to " + testRecipient);
-          return send(200, { ok: true, id: result.id, recipient: testRecipient });
+          await audit(client, "Gmail SMTP test email dispatched to " + testRecipient);
+          return send(200, { ok: true, id: result.id, recipient: testRecipient, provider: "Gmail SMTP" });
+        }
+
+        case "test-ai": {
+          const openAiKey = (env().OPENAI_API_KEY || "").trim();
+          const openAiModel = env().OPENAI_MODEL || "gpt-4o-mini";
+          if (!openAiKey || openAiKey.length <= 5) {
+            throw fail(400, "OPENAI_API_KEY is not configured in environment variables (.env.local).");
+          }
+
+          try {
+            const fetchImpl = env().OPENAI_FETCH || globalThis.fetch;
+            const r = await fetchImpl("https://api.openai.com/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: "Bearer " + openAiKey,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: openAiModel,
+                messages: [
+                  { role: "system", content: "You are spideyy AI for SANJU X DEV. Respond in one short, energetic sentence confirming that the AI connection is verified and operational." },
+                  { role: "user", content: "Test connection." },
+                ],
+                max_tokens: 100,
+                temperature: 0.5,
+              }),
+              signal: AbortSignal.timeout(15000),
+            });
+
+            if (!r.ok) {
+              const errData = await r.json().catch(() => ({}));
+              const cleanMsg = sanitizeAiError(errData.error?.message || ("OpenAI status " + r.status), openAiKey);
+              throw fail(502, cleanMsg);
+            }
+
+            const d = await r.json();
+            const reply = d.choices?.[0]?.message?.content?.trim() || "AI responded successfully.";
+            const stats = getAiStats();
+            stats.requestsToday++;
+            stats.lastUsed = new Date().toISOString();
+            stats.lastModel = openAiModel;
+            await audit(client, "OpenAI connection tested successfully (" + openAiModel + ")");
+            return send(200, { ok: true, answer: reply, model: openAiModel, provider: "OpenAI" });
+          } catch (err) {
+            const clean = sanitizeAiError(err.message, openAiKey);
+            throw fail(502, clean);
+          }
+        }
+
+        case "verify-smtp": {
+          const status = await verifySmtpConnection(getSmtpConfig(env()));
+          return send(200, status);
         }
 
         case "save-form-options": {

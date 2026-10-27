@@ -1,42 +1,82 @@
 {
   "headline": "Thoughtful Design.\nPowerful Digital Experiences.",
-  "intro": "We create modern websites and digital solutions that bring ideas to life and help businesses grow.",
+  "intro": "SANJU X DEV builds professional digital experiences for individuals, businesses and organizations.",
   "about": "SANJU X DEV is a web development and digital solutions business. We bring design and engineering together to create clear, engaging experiences for businesses and their customers.",
   "email": "sanjuxdev27@gmail.com",
-  "instagram": "https://instagram.com/sanju_x_dev/",
+  "instagram": "https://www.instagram.com/sanju_x_dev/",
   "defaultTheme": "silver",
   "introEnabled": true,
   "assistantEnabled": true,
   "services": [
     {
-      "name": "Business websites",
-      "description": "A credible digital home built around your offer, your audience and a clear next step.",
-      "items": "Content structure, responsive development, enquiry pathways"
+      "name": "Personal Portfolio",
+      "description": "Show your skills, projects, achievements and experience in a modern personal website.",
+      "example": "Developer portfolios, design showcases, executive resumes, creator brands.",
+      "items": "Skills, projects, resume download, contact pathways",
+      "category": "Personal Portfolio"
     },
     {
-      "name": "E-commerce solutions",
-      "description": "Make discovery intuitive and give every product room to tell its story.",
-      "items": "Product browsing, storefront design, checkout integration"
+      "name": "Blog / Content Website",
+      "description": "Share articles, stories, news and regular updates with an easy publishing workflow.",
+      "example": "Industry blogs, editorial magazines, news portals, thought-leadership platforms.",
+      "items": "Articles, categories, search, admin publishing area",
+      "category": "Blog / Content Website"
     },
     {
-      "name": "UI/UX design",
-      "description": "Turn complex requirements into interfaces that feel clear and natural.",
-      "items": "User journeys, wireframes, visual systems"
+      "name": "Business Website",
+      "description": "Help customers learn about your business, build credibility and contact you easily.",
+      "example": "Corporate companies, local service providers, professional consultancies, clinics.",
+      "items": "Business information, services, gallery, WhatsApp, map location",
+      "category": "Business Website"
     },
     {
-      "name": "Custom web applications",
-      "description": "Purpose-built tools for the way your business actually works.",
-      "items": "Application interfaces, secure APIs, workflow development"
+      "name": "Agency Website",
+      "description": "Showcase your agency, services, team members, client case studies and completed work.",
+      "example": "Design studios, marketing firms, software development agencies, production houses.",
+      "items": "Agency services, team profiles, case studies, client enquiry forms",
+      "category": "Agency Website"
     },
     {
-      "name": "Interactive experiences",
-      "description": "Thoughtful motion and memorable interactions with a practical purpose.",
-      "items": "Interactive showcases, digital cards, selective 3D"
+      "name": "E-Commerce Website",
+      "description": "Sell products and receive online orders with shopping carts, checkout and secure payments.",
+      "example": "Fashion boutiques, electronic shops, digital downloads, specialty merchandise.",
+      "items": "Product catalogue, shopping cart, checkout, payments, customer login, order tracking",
+      "category": "E-Commerce Website"
     },
     {
-      "name": "Redesign & optimization",
-      "description": "Bring clarity, consistency and better usability to an existing website.",
-      "items": "Experience review, responsive refinement, performance work"
+      "name": "Restaurant / Food Business Website",
+      "description": "Show your food menu, opening hours, dining location, table bookings and ordering options.",
+      "example": "Cafes, dining restaurants, cloud kitchens, bakeries, food trucks.",
+      "items": "Food menu, online ordering, table booking, location, opening hours, WhatsApp",
+      "category": "Restaurant / Food Business Website"
+    },
+    {
+      "name": "Shop / Store Website",
+      "description": "Show products, seasonal offers, store location, and simple contact or ordering information.",
+      "example": "Local retail shops, jewelry stores, grocery outlets, home decor showrooms.",
+      "items": "Product gallery, product categories, WhatsApp ordering, payments, reviews",
+      "category": "Shop / Store Website"
+    },
+    {
+      "name": "Educational Website",
+      "description": "Create a website for a school, college, tuition institute, online course or learning service.",
+      "example": "Schools, coaching centers, online academies, individual tutors, skill workshops.",
+      "items": "Course info, about school/teacher, enrolment form, gallery, notice board",
+      "category": "Educational Website"
+    },
+    {
+      "name": "Booking Website",
+      "description": "Let customers request or schedule appointments, consultations and service slots online.",
+      "example": "Salons, dental clinics, fitness trainers, photography sessions, consultations.",
+      "items": "Service catalog, calendar booking, working hours, WhatsApp, reviews",
+      "category": "Booking Website"
+    },
+    {
+      "name": "Custom Website",
+      "description": "Build something completely tailored to your unique concept, workflow and requirements.",
+      "example": "Community portals, interactive utilities, web apps, member directories, custom tools.",
+      "items": "Custom pages, interactive forms, database integration, tailored workflows",
+      "category": "Other / Custom Website"
     }
   ],
   "projects": [
@@ -179,7 +219,7 @@
     {
       "id": "portfolio",
       "label": "Personal Portfolio",
-      "desc": "Showcase your work, skills, achievements and experience in one beautiful website.",
+      "desc": "Show your skills, projects, achievements and experience.",
       "examples": [
         "Student portfolio",
         "Developer or designer portfolio",
@@ -189,77 +229,58 @@
       ],
       "features": [
         "About Me",
-        "Skills & Experience",
-        "Projects / My Work",
+        "Skills",
+        "My Projects",
         "Resume Download",
-        "Photo or Video Gallery",
-        "Achievements / Certificates",
         "Contact Form",
-        "Social Media Links",
-        "Testimonials",
-        "Smooth Animations"
+        "Social Links"
       ],
       "enabled": true
     },
     {
       "id": "blog",
       "label": "Blog / Content Website",
-      "desc": "Share articles, stories, knowledge or regular updates with your audience.",
+      "desc": "Share articles, stories, news and regular updates.",
       "examples": [
         "Personal blog",
         "Articles and stories",
         "News or updates website",
         "Educational content website",
-        "Writing or publication website"
+        "Publication website"
       ],
       "features": [
-        "Publish Articles",
-        "Organize Posts by Category",
-        "Search Articles",
-        "Add Photos and Videos",
-        "Newsletter Sign-Up",
-        "Reader Comments",
-        "Featured Articles",
-        "Admin Area to Manage Posts",
-        "Author Profile",
-        "Social Sharing"
+        "Articles",
+        "Categories",
+        "Search",
+        "Admin Area to Publish Content"
       ],
-      "featureNotes": {
-        "Admin Area to Manage Posts": "A private page where you can add and edit your articles."
-      },
       "enabled": true
     },
     {
       "id": "business",
       "label": "Business Website",
-      "desc": "Give your business a professional online presence and help customers reach you.",
+      "desc": "Help customers learn about your business and contact you.",
       "examples": [
         "Small business website",
         "Company website",
         "Local service business",
         "Professional services website",
-        "Product or service showcase"
+        "Showcase website"
       ],
       "features": [
-        "About Our Business",
+        "Business Information",
         "Services",
-        "Product / Service Gallery",
-        "Contact Form",
-        "WhatsApp Contact",
-        "Google Maps Location",
-        "Customer Reviews",
-        "Team Information",
-        "Appointment Booking",
-        "FAQ Section",
-        "Request a Quote",
-        "Multiple Languages"
+        "Gallery",
+        "WhatsApp",
+        "Location",
+        "Contact Form"
       ],
       "enabled": true
     },
     {
       "id": "agency",
       "label": "Agency Website",
-      "desc": "Present your agency, services, team and completed projects professionally.",
+      "desc": "Showcase your agency, services, team and completed work.",
       "examples": [
         "Creative agency",
         "Digital agency",
@@ -268,47 +289,154 @@
         "Consulting agency"
       ],
       "features": [
-        "Agency Introduction",
         "Services",
-        "Our Work / Portfolio",
-        "Project Case Studies",
-        "Team Members",
-        "Client Testimonials",
-        "Project Enquiry Form",
-        "Book a Consultation",
-        "Careers / Open Positions",
-        "Blog / Insights",
-        "Smooth Animations",
-        "Private Admin Area"
+        "Our Work",
+        "Team",
+        "Case Studies",
+        "Client Enquiry Form"
       ],
       "enabled": true
     },
     {
       "id": "ecommerce",
       "label": "E-Commerce Website",
-      "desc": "Showcase products, accept orders and sell online.",
+      "desc": "Sell products and receive online orders.",
       "examples": [
-        "Small online shop",
-        "Multi-product store",
-        "Single-product website",
-        "Digital product store",
-        "Product catalogue with WhatsApp ordering"
+        "Online store",
+        "Multi-product shop",
+        "Brand merchandise store",
+        "Digital product shop"
       ],
       "features": [
-        "Product Listings",
-        "Product Categories",
-        "Product Search",
+        "Product Catalogue",
         "Shopping Cart",
-        "Online Payments",
-        "UPI Payments",
+        "Checkout",
+        "Payments",
+        "Customer Login",
+        "Order Tracking"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "restaurant",
+      "label": "Restaurant / Food Business Website",
+      "desc": "Show your menu, opening hours, location and ordering options.",
+      "examples": [
+        "Dine-in restaurant",
+        "Cafe & bistro",
+        "Cloud kitchen",
+        "Bakery",
+        "Food delivery brand"
+      ],
+      "features": [
+        "Food Menu",
+        "Online Ordering",
+        "Table Booking",
+        "Location",
+        "Opening Hours",
+        "WhatsApp"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "shop",
+      "label": "Shop / Store Website",
+      "desc": "Show products, offers and contact or ordering information.",
+      "examples": [
+        "Local retail shop",
+        "Clothing boutique",
+        "Jewelry showroom",
+        "Electronics store",
+        "Convenience store"
+      ],
+      "features": [
+        "Product Gallery",
+        "Product Categories",
         "WhatsApp Ordering",
-        "Customer Accounts",
-        "Order Tracking",
-        "Product Reviews",
-        "Discount Codes",
-        "Stock Management",
-        "Admin Area for Products and Orders",
-        "Delivery / Shipping Options"
+        "Online Payments",
+        "Customer Reviews"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "educational",
+      "label": "Educational Website",
+      "desc": "Create a website for a school, institute, course or learning service.",
+      "examples": [
+        "School website",
+        "Coaching institute",
+        "Tuition center",
+        "Online courses",
+        "Training academy"
+      ],
+      "features": [
+        "Course / Class Information",
+        "About the School / Teacher",
+        "Enrolment / Enquiry Form",
+        "Photo Gallery",
+        "Student / Parent Notice Board",
+        "Contact & Location"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "booking",
+      "label": "Booking / Appointment Website",
+      "desc": "Let customers request or schedule appointments.",
+      "examples": [
+        "Salon & spa",
+        "Medical / Dental clinic",
+        "Fitness studio",
+        "Consulting firm",
+        "Photography studio"
+      ],
+      "features": [
+        "Services List",
+        "Calendar / Appointment Booking",
+        "Working Hours & Availability",
+        "WhatsApp Enquiries",
+        "Customer Reviews",
+        "Directions & Map"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "custom",
+      "label": "Other / Custom Website",
+      "desc": "Build something based on the customer's unique idea.",
+      "examples": [
+        "Custom web app",
+        "Community portal",
+        "Directory",
+        "Interactive utility",
+        "Unique startup idea"
+      ],
+      "features": [
+        "Custom Pages",
+        "Interactive Forms",
+        "Database Integration",
+        "Special Features",
+        "Responsive Design",
+        "WhatsApp Integration"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "not_sure",
+      "label": "Not Sure — Help Me Decide",
+      "desc": "We'll help you pick the best fit for your goals.",
+      "examples": [
+        "First-time website owner",
+        "Exploring ideas",
+        "Flexible project scope"
+      ],
+      "features": [
+        "Clean Modern Design",
+        "Mobile Friendly",
+        "Contact Form",
+        "WhatsApp Integration",
+        "Easy to Update",
+        "Guidance on Features"
       ],
       "enabled": true
     }
@@ -402,5 +530,6 @@
     "Appointment Booking",
     "FAQ Section",
     "Customer Reviews"
-  ]
+  ],
+  "facebook": "https://www.facebook.com/sanju.x.dev"
 }

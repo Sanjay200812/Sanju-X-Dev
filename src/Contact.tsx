@@ -12,8 +12,15 @@ import {
   Layers,
   ShoppingBag,
   Sparkles,
+  Utensils,
+  Store,
+  GraduationCap,
+  Calendar,
+  Code,
+  HelpCircle,
 } from "lucide-react";
 import { useSite, Arrow } from "./App";
+import { InstagramIcon, FacebookIcon, MailIcon } from "./Decorations";
 import {
   DEFAULT_WEBSITE_CATEGORIES,
   DESIGN_STYLES,
@@ -74,7 +81,7 @@ export default function Contact() {
       );
       if (match) return match.label;
     }
-    return categories[2]?.label || "Business Website";
+    return ""; // Phase 6: No default selection
   }, [params, categories]);
 
   // Form State
@@ -272,6 +279,18 @@ export default function Contact() {
         return <Layers size={18} />;
       case "ecommerce":
         return <ShoppingBag size={18} />;
+      case "restaurant":
+        return <Utensils size={18} />;
+      case "shop":
+        return <Store size={18} />;
+      case "educational":
+        return <GraduationCap size={18} />;
+      case "booking":
+        return <Calendar size={18} />;
+      case "custom":
+        return <Code size={18} />;
+      case "not_sure":
+        return <HelpCircle size={18} />;
       default:
         return <Sparkles size={18} />;
     }
@@ -300,6 +319,7 @@ export default function Contact() {
       <div className="contact-grid">
         {/* Left Column: Context & Helpful Links */}
         <aside className="contact-aside">
+          <div className="paper-tape-pin" aria-hidden="true" />
           <h2>
             Simple, honest<br />
             consultation.
@@ -310,16 +330,52 @@ export default function Contact() {
             can focus on your business or brand.
           </p>
 
-          <a href={"mailto:" + s.email}>{s.email}</a>
+          <div className="contact-social-links">
+            <a href={"mailto:" + s.email} className="contact-social-card" aria-label="Direct email">
+              <span className="contact-social-icon"><MailIcon size={18} /></span>
+              <div className="contact-social-info">
+                <span className="contact-social-label">Email</span>
+                <span className="contact-social-val">{s.email}</span>
+              </div>
+            </a>
 
-          <div style={{ marginTop: 28 }}>
+            <a
+              href={s.instagram || "https://www.instagram.com/sanju_x_dev/"}
+              target="_blank"
+              rel="noreferrer"
+              className="contact-social-card"
+              aria-label="Instagram profile"
+            >
+              <span className="contact-social-icon"><InstagramIcon size={18} /></span>
+              <div className="contact-social-info">
+                <span className="contact-social-label">Instagram</span>
+                <span className="contact-social-val">@sanju_x_dev</span>
+              </div>
+            </a>
+
+            <a
+              href={(s as any).facebook || "https://www.facebook.com/sanju.x.dev"}
+              target="_blank"
+              rel="noreferrer"
+              className="contact-social-card"
+              aria-label="Facebook page"
+            >
+              <span className="contact-social-icon"><FacebookIcon size={18} /></span>
+              <div className="contact-social-info">
+                <span className="contact-social-label">Facebook</span>
+                <span className="contact-social-val">sanju_x_dev</span>
+              </div>
+            </a>
+          </div>
+
+          <div style={{ marginTop: 24 }}>
             <p style={{ margin: "6px 0 10px 0" }}>Already have an SXD enquiry?</p>
             <Link className="text-link" to="/track">
               Track project status <Arrow />
             </Link>
           </div>
 
-          <p style={{ marginTop: 20 }}>Prefer to explore our work first?</p>
+          <p style={{ marginTop: 18 }}>Prefer to explore our work first?</p>
           <Link className="text-link" to="/work">
             See our portfolio <Arrow />
           </Link>
@@ -479,7 +535,7 @@ export default function Contact() {
 
                   {/* Exactly 5 Main Website Category Cards */}
                   <div className="builder-categories-grid">
-                    {categories.slice(0, 5).map((cat) => {
+                    {categories.map((cat) => {
                       const isSelected = form.selectedCategory === cat.label;
                       return (
                         <div
@@ -524,6 +580,21 @@ export default function Contact() {
                     })}
                   </div>
 
+                  {form.selectedCategory === "Other / Custom Website" && (
+                    <div style={{ marginTop: 18, background: "var(--soft)", padding: 16, borderRadius: 8, border: "1px solid var(--line)" }}>
+                      <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                        Tell us what kind of custom website you have in mind:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Real Estate Portal, Event Booking, Community Hub..."
+                        value={form.otherFeatureText}
+                        onChange={(e) => update("otherFeatureText", e.target.value)}
+                        style={{ width: "100%", padding: "10px 12px" }}
+                      />
+                    </div>
+                  )}
+
                   {status && (
                     <p role="alert" className="status" style={{ color: "var(--accent)", marginBottom: 16 }}>
                       {status}
@@ -531,8 +602,8 @@ export default function Contact() {
                   )}
 
                   <div className="form-actions" style={{ justifyContent: "flex-end" }}>
-                    <button type="submit" className="button">
-                      Continue to Step 2: Choose Features <ArrowRight size={18} />
+                    <button type="submit" className="button" disabled={!form.selectedCategory}>
+                      {form.selectedCategory ? "Continue to Step 2: Tell Us About Your Idea" : "Select a Website Type to Continue"} <ArrowRight size={18} />
                     </button>
                   </div>
                 </form>

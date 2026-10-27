@@ -65,6 +65,11 @@ export default function Admin() {
   const [newMilestoneInput, setNewMilestoneInput] = useState("");
   const [testEmailBusy, setTestEmailBusy] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState("");
+  const [testEmailRecipient, setTestEmailRecipient] = useState("");
+  const [verifyingSmtp, setVerifyingSmtp] = useState(false);
+  const [smtpVerifyResult, setSmtpVerifyResult] = useState<any>(null);
+  const [testingAi, setTestingAi] = useState(false);
+  const [testAiResult, setTestAiResult] = useState<any>(null);
 
   // Lockout countdown timer
   useEffect(() => {
@@ -243,7 +248,6 @@ export default function Admin() {
     "Services",
     "Analytics",
     "Media",
-    "Themes",
     "spideyy",
     "SEO",
     "Security",
@@ -290,7 +294,7 @@ export default function Admin() {
   return (
     <section className="page wrap admin-shell">
       <span className="eyebrow">Private / SANJU X DEV</span>
-      <h1>spideyy — Private Access</h1>
+      <h1>Spideyy — Private Access</h1>
 
       {stage !== "workspace" ? (
         <div className="admin-card admin-login">
@@ -430,39 +434,45 @@ export default function Admin() {
                 </button>
               </form>
 
-              {/* SECONDARY LOGIN TOGGLE */}
-              <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+              {/* SECONDARY LOGIN DISCLOSURE */}
+              <div className="credentials-disclosure-section">
                 <button
                   type="button"
+                  id="credentials-toggle"
+                  className="credentials-disclosure-btn"
+                  aria-expanded={showSecondaryLogin}
+                  aria-controls="credentials-form-panel"
                   onClick={() => setShowSecondaryLogin(!showSecondaryLogin)}
-                  style={{
-                    fontSize: 13,
-                    color: "var(--muted)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 0",
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setShowSecondaryLogin(!showSecondaryLogin);
+                    }
                   }}
                 >
-                  <span>Login with spideyy</span>
+                  <span className="credentials-disclosure-label">Login with Credentials</span>
                   <ChevronDown
-                    size={16}
-                    style={{
-                      transform: showSecondaryLogin ? "rotate(180deg)" : "none",
-                      transition: "transform 0.2s",
-                    }}
+                    size={20}
+                    className={"credentials-chevron " + (showSecondaryLogin ? "rotated" : "")}
+                    aria-hidden="true"
                   />
                 </button>
 
-                {showSecondaryLogin && (
+                <div
+                  id="credentials-form-panel"
+                  className={"credentials-collapse " + (showSecondaryLogin ? "expanded" : "")}
+                  role="region"
+                  aria-labelledby="credentials-toggle"
+                >
                   <form
-                    style={{ marginTop: 14 }}
+                    className="credentials-form"
                     onSubmit={(e) => {
                       e.preventDefault();
+                      if (!email.trim() || !password.trim()) return;
                       void run(async () => {
                         const res = await api({
                           action: "login-password",
-                          email,
+                          email: email.trim(),
                           password,
                         });
                         setPassword("");
@@ -490,6 +500,7 @@ export default function Admin() {
                         autoComplete="username"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        placeholder="owner@domain.com"
                       />
                     </label>
                     <label>
@@ -503,6 +514,7 @@ export default function Admin() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           style={{ paddingRight: 40 }}
+                          placeholder="••••••••"
                         />
                         <button
                           type="button"
@@ -528,14 +540,15 @@ export default function Admin() {
                     )}
 
                     <button
+                      type="submit"
                       className="button secondary"
-                      style={{ width: "100%", marginTop: 12 }}
-                      disabled={busy || !auth || passwordLockout > 0}
+                      style={{ width: "100%", marginTop: 14 }}
+                      disabled={busy || !auth || passwordLockout > 0 || !email.trim() || !password.trim()}
                     >
-                      {busy ? "Signing in…" : "Sign in"}
+                      {busy ? "Signing in…" : "Login"}
                     </button>
                   </form>
-                )}
+                </div>
               </div>
             </div>
           )}
@@ -1544,40 +1557,159 @@ export default function Admin() {
                 <div>
                   <h3 style={{ margin: "0 0 4px 0" }}>Transactional Email Outbox</h3>
                   <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
-                    Audit history of customer confirmations, owner alerts, and milestone broadcasts via Resend.
+                    Audit history of customer tracking codes, owner inbox alerts, and milestone updates via Gmail SMTP (smtp.gmail.com:465 SSL/TLS).
                   </p>
                 </div>
-
-                <button
-                  type="button"
-                  className="button secondary"
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", fontSize: 13 }}
-                  disabled={testEmailBusy}
-                  onClick={() => {
-                    void run(async () => {
-                      setTestEmailBusy(true);
-                      setTestEmailResult("");
-                      try {
-                        const res = await api({ action: "test-email" });
-                        setTestEmailResult(`Test email dispatched to ${res.recipient}! Check your inbox.`);
-                        await load();
-                      } catch (err) {
-                        setTestEmailResult(`Dispatch failed: ${(err as Error).message}`);
-                      } finally {
-                        setTestEmailBusy(false);
-                      }
-                    });
-                  }}
-                >
-                  <Send size={14} /> {testEmailBusy ? "Sending test…" : "Send Test Email to Owner"}
-                </button>
               </div>
 
-              {testEmailResult && (
-                <div className="status" style={{ marginBottom: 16, fontSize: 13 }}>
-                  {testEmailResult}
+              {/* GMAIL SMTP STATUS & CONTROLS */}
+              <div
+                style={{
+                  background: "var(--soft)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 8,
+                  padding: "16px 18px",
+                  marginBottom: 20,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", fontWeight: 700 }}>
+                      Delivery Service
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+                      Gmail SMTP <span style={{ fontSize: 12, fontWeight: 500, color: "var(--muted)" }}>· {data?.emailConfig?.host || "smtp.gmail.com"}:{data?.emailConfig?.port || 465} (SSL/TLS)</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                      Authenticated Account: <span style={{ color: "var(--text)", fontWeight: 600 }}>{data?.emailConfig?.user || data?.emailConfig?.ownerNotificationEmail || "sanjuxdev27@gmail.com"}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 10px",
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        background: data?.emailConfig?.configured ? "#25d366" : "#b78103",
+                        color: "#fff",
+                      }}
+                    >
+                      {data?.emailConfig?.configured ? "SMTP Configured" : "Awaiting App Password"}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="button secondary"
+                      style={{ padding: "6px 12px", fontSize: 12 }}
+                      disabled={verifyingSmtp}
+                      onClick={() => {
+                        void run(async () => {
+                          setVerifyingSmtp(true);
+                          setSmtpVerifyResult(null);
+                          try {
+                            const res = await api({ action: "verify-smtp" });
+                            setSmtpVerifyResult(res);
+                          } catch (err) {
+                            setSmtpVerifyResult({ verified: false, error: (err as Error).message });
+                          } finally {
+                            setVerifyingSmtp(false);
+                          }
+                        });
+                      }}
+                    >
+                      {verifyingSmtp ? "Verifying…" : "Test SMTP Connection"}
+                    </button>
+                  </div>
                 </div>
-              )}
+
+                {smtpVerifyResult && (
+                  <div
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      marginBottom: 12,
+                      background: smtpVerifyResult.verified ? "#e6f9ed" : "#fef2f2",
+                      color: smtpVerifyResult.verified ? "#15803d" : "#b91c1c",
+                      border: `1px solid ${smtpVerifyResult.verified ? "#bbf7d0" : "#fecaca"}`,
+                    }}
+                  >
+                    {smtpVerifyResult.verified
+                      ? `✅ Connection to ${smtpVerifyResult.host}:${smtpVerifyResult.port} (SSL/TLS) verified successfully.`
+                      : `❌ Verification failed: ${smtpVerifyResult.error || "Unable to connect."}`}
+                  </div>
+                )}
+
+                {/* TEST EMAIL TRIGGER */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    paddingTop: 12,
+                    borderTop: "1px solid var(--line)",
+                  }}
+                >
+                  <input
+                    type="email"
+                    placeholder={`Test recipient (default: ${data?.emailConfig?.ownerNotificationEmail || "sanjuxdev27@gmail.com"})`}
+                    value={testEmailRecipient}
+                    onChange={(e) => setTestEmailRecipient(e.target.value)}
+                    style={{
+                      flex: "1 1 240px",
+                      maxWidth: 400,
+                      padding: "7px 12px",
+                      fontSize: 13,
+                      borderRadius: 5,
+                      border: "1px solid var(--line)",
+                      background: "var(--paper)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="button"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", fontSize: 13 }}
+                    disabled={testEmailBusy}
+                    onClick={() => {
+                      void run(async () => {
+                        setTestEmailBusy(true);
+                        setTestEmailResult("");
+                        try {
+                          const res = await api({ action: "test-email", recipient: testEmailRecipient.trim() || undefined });
+                          setTestEmailResult(`✅ Test email successfully dispatched via Gmail SMTP to ${res.recipient}! Check your inbox.`);
+                          await load();
+                        } catch (err) {
+                          setTestEmailResult(`❌ Dispatch failed: ${(err as Error).message}`);
+                        } finally {
+                          setTestEmailBusy(false);
+                        }
+                      });
+                    }}
+                  >
+                    <Send size={14} /> {testEmailBusy ? "Sending test…" : "Send Test Email"}
+                  </button>
+                </div>
+
+                {testEmailResult && (
+                  <div className="status" style={{ marginTop: 12, fontSize: 13 }}>
+                    {testEmailResult}
+                  </div>
+                )}
+              </div>
 
               {(!data?.emails || data.emails.length === 0) ? (
                 <div style={{ padding: "30px 20px", textAlign: "center", background: "var(--soft)", borderRadius: 6 }}>
@@ -1958,6 +2090,7 @@ export default function Admin() {
               {field("about", "About page summary text", true)}
               {field("email", "Business contact email address")}
               {field("instagram", "Official Instagram URL")}
+              {field("facebook", "Official Facebook URL")}
             </div>
           )}
 
@@ -1992,22 +2125,14 @@ export default function Admin() {
           )}
 
           {/* THEMES TAB */}
-          {tab === "Themes" && (
-            <div className="admin-card">
-              <h3>Site settings</h3>
-              <label>
-                Default theme
-                <select
-                  value={site.defaultTheme}
-                  onChange={(e) =>
-                    setSite({ ...site, defaultTheme: e.target.value })
-                  }
-                >
-                  <option value="silver">Paper / Crimson</option>
-                  <option value="gold">White / Gold</option>
-                  <option value="dark">Red / Black</option>
-                </select>
-              </label>
+          {/* Site theme is permanently unified to single refined premium theme */}
+          {tab === "Page content" && (
+            <div className="admin-card" style={{ marginBottom: 20 }}>
+              <h3>Primary Brand Theme & Display</h3>
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 14px 0" }}>
+                Active Theme: <strong>SANJU X DEV Primary (Silver, White &amp; Metallic Crimson)</strong>.
+                Theme-switching has been consolidated into this single refined identity.
+              </p>
               <label className="check">
                 <input
                   type="checkbox"
@@ -2016,7 +2141,7 @@ export default function Admin() {
                     setSite({ ...site, introEnabled: e.target.checked })
                   }
                 />
-                Play cinematic introduction once per session
+                Play introduction animation once per session
               </label>
             </div>
           )}
@@ -2366,7 +2491,173 @@ export default function Admin() {
           {/* SPIDEYY TAB */}
           {tab === "spideyy" && (
             <div className="admin-card">
-              <h3>spideyy AI Assistant Configuration</h3>
+              <h3>Spideyy Configuration</h3>
+
+              {/* AI ENGINE STATUS & LIVE DIAGNOSTICS */}
+              <div
+                style={{
+                  background: "var(--soft)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 8,
+                  padding: "16px 18px",
+                  marginBottom: 20,
+                  marginTop: 12,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", fontWeight: 700 }}>
+                      AI Response System
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+                      OpenAI Chat Completions <span style={{ fontSize: 12, fontWeight: 500, color: "var(--muted)" }}>· Model: {data?.aiConfig?.model || "gpt-4o-mini"}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                      Authentication: <span style={{ color: "var(--text)", fontWeight: 600 }}>{data?.aiConfig?.configured ? "Server-side Secret Active" : "Unconfigured in .env.local"}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 10px",
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        background: data?.aiConfig?.configured ? "#25d366" : "#b78103",
+                        color: "#fff",
+                      }}
+                    >
+                      {data?.aiConfig?.configured ? "AI Online (gpt-4o-mini)" : "FAQ Guide Mode Active"}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="button secondary"
+                      style={{ padding: "6px 12px", fontSize: 12 }}
+                      disabled={testingAi}
+                      onClick={() => {
+                        void run(async () => {
+                          setTestingAi(true);
+                          setTestAiResult(null);
+                          try {
+                            const res = await api({ action: "test-ai" });
+                            setTestAiResult({ ok: true, answer: res.answer, model: res.model });
+                            await load();
+                          } catch (err) {
+                            setTestAiResult({ ok: false, error: (err as Error).message });
+                          } finally {
+                            setTestingAi(false);
+                          }
+                        });
+                      }}
+                    >
+                      {testingAi ? "Testing AI…" : "Test AI Connection"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* REAL METRICS ROW */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                    gap: 10,
+                    margin: "12px 0",
+                    padding: "10px 0",
+                    borderTop: "1px solid var(--line)",
+                    borderBottom: "1px solid var(--line)",
+                  }}
+                >
+                  <div style={{ fontSize: 12 }}>
+                    <span style={{ color: "var(--muted)", display: "block" }}>Today's AI Requests</span>
+                    <strong style={{ fontSize: 16 }}>{data?.aiConfig?.stats?.requestsToday || 0}</strong>
+                  </div>
+                  <div style={{ fontSize: 12 }}>
+                    <span style={{ color: "var(--muted)", display: "block" }}>Today's AI Errors</span>
+                    <strong style={{ fontSize: 16, color: (data?.aiConfig?.stats?.errorsToday || 0) > 0 ? "var(--accent)" : "inherit" }}>
+                      {data?.aiConfig?.stats?.errorsToday || 0}
+                    </strong>
+                  </div>
+                  <div style={{ fontSize: 12 }}>
+                    <span style={{ color: "var(--muted)", display: "block" }}>Last Activity</span>
+                    <strong style={{ fontSize: 13 }}>
+                      {data?.aiConfig?.stats?.lastUsed ? new Date(data.aiConfig.stats.lastUsed).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" }) : "None today"}
+                    </strong>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 12, color: data?.aiConfig?.stats?.lastError ? "var(--accent)" : "var(--muted)" }}>
+                  <strong>Diagnostic Status:</strong> {data?.aiConfig?.stats?.lastError ? `⚠️ ${data.aiConfig.stats.lastError}` : "✅ Ready for live customer enquiries."}
+                </div>
+
+                {testAiResult && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: "10px 14px",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      background: testAiResult.ok ? "#e6f9ed" : "#fef2f2",
+                      color: testAiResult.ok ? "#15803d" : "#b91c1c",
+                      border: `1px solid ${testAiResult.ok ? "#bbf7d0" : "#fecaca"}`,
+                    }}
+                  >
+                    {testAiResult.ok ? (
+                      <>
+                        <strong>✅ Verified AI Response (${testAiResult.model}):</strong> ${testAiResult.answer}
+                      </>
+                    ) : (
+                      <>
+                        <strong>❌ AI Test Failed:</strong> ${testAiResult.error}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* USAGE LIMITS & COST CONTROLS */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
+                <label>
+                  Daily Request Quota (Cost Protection)
+                  <input
+                    type="number"
+                    min="10"
+                    max="1000"
+                    value={(site as any).aiDailyLimit || 100}
+                    onChange={(e) => setSite({ ...site, aiDailyLimit: Number(e.target.value) || 100 })}
+                  />
+                  <small style={{ color: "var(--muted)", display: "block", marginTop: 4 }}>
+                    Max customer questions answered by OpenAI per day before falling back to verified FAQ guide.
+                  </small>
+                </label>
+
+                <label>
+                  Max Output Tokens Per Turn
+                  <input
+                    type="number"
+                    min="150"
+                    max="1000"
+                    value={(site as any).aiMaxTokens || 450}
+                    onChange={(e) => setSite({ ...site, aiMaxTokens: Number(e.target.value) || 450 })}
+                  />
+                  <small style={{ color: "var(--muted)", display: "block", marginTop: 4 }}>
+                    Length limit per response (450 tokens ≈ 350 English words).
+                  </small>
+                </label>
+              </div>
+
               <label className="check">
                 <input
                   type="checkbox"
@@ -2375,7 +2666,7 @@ export default function Admin() {
                     setSite({ ...site, assistantEnabled: e.target.checked })
                   }
                 />
-                Enable spideyy assistant across the website
+                Enable Spideyy across the website
               </label>
 
               <div style={{ marginTop: 16 }}>
@@ -2387,7 +2678,7 @@ export default function Admin() {
                     onChange={(e) =>
                       setSite({ ...site, assistantWelcome: e.target.value })
                     }
-                    placeholder="Hi, I’m spideyy! I can help you understand our services..."
+                    placeholder="Hi, I'm Spideyy! I can help you understand our services..."
                   />
                 </label>
               </div>
