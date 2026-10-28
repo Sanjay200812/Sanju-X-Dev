@@ -2367,6 +2367,60 @@ export default function Admin() {
                 ))}
               </div>
 
+              {/* PRIMARY OBJECTIVES */}
+              <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: 16 }}>Primary Objective Options</h4>
+                <p style={{ fontSize: 12.5, color: "var(--muted)", margin: "0 0 14px 0" }}>
+                  Selectable checkboxes displayed in Step 2 (&quot;What Should Your Website Do?&quot;).
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  {((site as any).primaryObjectives || defaults.primaryObjectives || []).map((obj: string, oIdx: number) => (
+                    <span
+                      key={oIdx}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: "var(--paper)",
+                        border: "1px solid var(--line)",
+                        borderRadius: 4,
+                        padding: "4px 10px",
+                        fontSize: 12.5,
+                      }}
+                    >
+                      {obj}
+                      <button
+                        type="button"
+                        style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--accent)", fontSize: 12 }}
+                        onClick={() => {
+                          const newObjs = ((site as any).primaryObjectives || defaults.primaryObjectives).filter((_: string, k: number) => k !== oIdx);
+                          setSite({ ...site, primaryObjectives: newObjs });
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const input = e.currentTarget.elements.namedItem("addObjective") as HTMLInputElement;
+                    const val = input.value.trim();
+                    if (!val) return;
+                    const newObjs = [...((site as any).primaryObjectives || defaults.primaryObjectives), val];
+                    setSite({ ...site, primaryObjectives: newObjs });
+                    input.value = "";
+                  }}
+                  style={{ display: "flex", gap: 8, maxWidth: 360 }}
+                >
+                  <input name="addObjective" placeholder="Add new primary objective..." style={{ flex: 1, fontSize: 12.5 }} />
+                  <button type="submit" className="button secondary" style={{ fontSize: 12.5, padding: "4px 12px" }}>
+                    Add
+                  </button>
+                </form>
+              </div>
+
               {/* 2. DESIGN PREFERENCES */}
               <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
                 <h4 style={{ margin: "0 0 8px 0", fontSize: 16 }}>2. Design Style Preferences</h4>
@@ -2457,6 +2511,7 @@ export default function Admin() {
                         })
                       }
                     >
+                      <option value="">(None - Start Unselected)</option>
                       {((site as any).websiteCategories || defaults.websiteCategories || []).map((cat: any) => (
                         <option key={cat.label} value={cat.label}>
                           {cat.label}

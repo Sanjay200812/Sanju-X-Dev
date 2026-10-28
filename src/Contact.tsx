@@ -26,23 +26,30 @@ import {
   DESIGN_STYLES,
   TIMELINE_CHOICES,
   BUDGET_CHOICES,
+  PRIMARY_OBJECTIVES,
+  CATEGORY_OBJECTIVES_MAP,
+  getCategoryFeatureHeading,
   type WebsiteCategory,
 } from "./content";
 
-export default function Contact() {
+export function EnquiryBuilder({
+  isHomepageSection = false,
+}: {
+  isHomepageSection?: boolean;
+}) {
   const s = useSite();
   const [params] = useSearchParams();
 
-  // 3-step builder: 0 = Category, 1 = Features & Preferences, 2 = Contact Details
+  // 3-step builder: 0 = Category, 1 = Objectives & Features, 2 = Contact Details
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [sent, setSent] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [copied, setCopied] = useState(false);
-  const [showOptionalContact, setShowOptionalContact] = useState(false);
+  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
 
-  // Available categories from owner dashboard or default 5
+  // Available categories from site config or defaults
   const categories: WebsiteCategory[] = useMemo(() => {
     const fromSite = (s as any).websiteCategories;
     if (Array.isArray(fromSite) && fromSite.length > 0) {
@@ -51,7 +58,7 @@ export default function Contact() {
     return DEFAULT_WEBSITE_CATEGORIES;
   }, [s]);
 
-  // Design styles, timeline and budget options
+  // Options
   const designStyles = useMemo(() => {
     return Array.isArray((s as any).designStyles) && (s as any).designStyles.length > 0
       ? (s as any).designStyles
@@ -70,7 +77,7 @@ export default function Contact() {
       : BUDGET_CHOICES;
   }, [s]);
 
-  // Initial category from URL param (spideyy recommendation) or default
+  // Initial category from URL param (if navigated via Spideyy suggestion)
   const initialCategory = useMemo(() => {
     const paramVal = params.get("category") || params.get("service");
     if (paramVal) {
@@ -81,15 +88,17 @@ export default function Contact() {
       );
       if (match) return match.label;
     }
-    return ""; // Phase 6: No default selection
+    return ""; // Requirement: No category selected by default
   }, [params, categories]);
 
   // Form State
   const [form, setForm] = useState({
     // Step 1: Category
     selectedCategory: initialCategory,
+    customCategoryText: "",
 
-    // Step 2: Features & Preferences
+    // Step 2: Objectives & Features
+    selectedObjectives: [] as string[],
     selectedFeatures: [] as string[],
     otherFeatureText: "",
     includeOtherFeature: false,
@@ -129,6 +138,32 @@ export default function Contact() {
     );
   }, [categories, form.selectedCategory]);
 
+  // Relevant primary objectives for the chosen category
+  const relevantObjectives = useMemo(() => {
+    const catId = activeCategory.id || "business";
+    const mapped = CATEGORY_OBJECTIVES_MAP[catId];
+    if (Array.isArray(mapped) && mapped.length > 0) return mapped;
+    return PRIMARY_OBJECTIVES;
+  }, [activeCategory]);
+
+  // Dynamic feature heading
+  const dynamicFeatureHeading = useMemo(() => {
+    return getCategoryFeatureHeading(activeCategory.label);
+  }, [activeCategory.label]);
+
+  // Toggle objective selection
+  const toggleObjective = (obj: string) => {
+    setForm((f) => {
+      const exists = f.selectedObjectives.includes(obj);
+      return {
+        ...f,
+        selectedObjectives: exists
+          ? f.selectedObjectives.filter((item) => item !== obj)
+          : [...f.selectedObjectives, obj],
+      };
+    });
+  };
+
   // Toggle feature selection
   const toggleFeature = (feat: string) => {
     setForm((f) => {
@@ -160,7 +195,10 @@ export default function Contact() {
     }
     setStatus("");
     setStep(1);
-    window.scrollTo({ top: 180, behavior: "smooth" });
+    const targetElement = document.getElementById(isHomepageSection ? "choose-website" : "enquiry-top");
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
 
   // Step 2 -> Step 3 validation
@@ -168,7 +206,10 @@ export default function Contact() {
     e.preventDefault();
     setStatus("");
     setStep(2);
-    window.scrollTo({ top: 180, behavior: "smooth" });
+    const targetElement = document.getElementById(isHomepageSection ? "choose-website" : "enquiry-top");
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
 
   // Final Step 3 submission
@@ -199,18 +240,27 @@ export default function Contact() {
         ? `${form.countryCode} ${form.phone.trim()}`
         : "";
 
-      // Compile features list including custom note if entered
+      // Compile features and objectives list
       const compiledFeatures = [...form.selectedFeatures];
+      if (form.selectedObjectives.length > 0) {
+        form.selectedObjectives.forEach((obj) => {
+          compiledFeatures.push(`Objective: ${obj}`);
+        });
+      }
       if (form.includeOtherFeature && form.otherFeatureText.trim()) {
         compiledFeatures.push(`Other: ${form.otherFeatureText.trim()}`);
       } else if (form.includeOtherFeature) {
-        compiledFeatures.push("Other Feature — Tell Us What You Need");
+        compiledFeatures.push("Other Feature — Custom requirement");
       }
       if (form.includeNotSureFeature) {
         compiledFeatures.push("Not Sure — Help Me Decide");
       }
 
-      // Build structured payload
+      const categoryDescription =
+        form.selectedCategory === "Other / Custom Website" && form.customCategoryText.trim()
+          ? `${form.selectedCategory} (${form.customCategoryText.trim()})`
+          : form.selectedCategory;
+
       const payload = {
         name: form.name.trim(),
         email: form.email.trim(),
@@ -221,8 +271,8 @@ export default function Contact() {
         business_name: form.isBusiness ? form.businessName.trim() : "",
         is_business: form.isBusiness,
         is_individual: !form.isBusiness,
-        service: form.selectedCategory,
-        categories: [form.selectedCategory],
+        service: categoryDescription,
+        categories: [categoryDescription],
         features: compiledFeatures,
         design_preference: form.designStyle,
         reference_url: form.referenceUrl.trim(),
@@ -232,7 +282,7 @@ export default function Contact() {
         has_domain: form.hasDomain,
         timeline: form.timeline,
         budget: form.budget,
-        description: form.description.trim(),
+        description: form.description.trim() || `Enquiry for ${categoryDescription}`,
         city: form.city.trim(),
         additional_message: form.additionalMessage.trim(),
         consent: form.consent,
@@ -250,7 +300,10 @@ export default function Contact() {
 
       setTrackingCode(d.trackingCode || "SXD-001");
       setSent(true);
-      window.scrollTo({ top: 150, behavior: "smooth" });
+      const targetElement = document.getElementById(isHomepageSection ? "choose-website" : "enquiry-top");
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } catch (err) {
       setStatus((err as Error).message);
     } finally {
@@ -266,54 +319,820 @@ export default function Contact() {
     }
   }
 
-  // Icons for 5 categories
   function renderCategoryIcon(id: string) {
     switch (id) {
       case "portfolio":
-        return <User size={18} />;
+        return <User size={20} />;
       case "blog":
-        return <BookOpen size={18} />;
+        return <BookOpen size={20} />;
       case "business":
-        return <Building2 size={18} />;
+        return <Building2 size={20} />;
       case "agency":
-        return <Layers size={18} />;
+        return <Layers size={20} />;
       case "ecommerce":
-        return <ShoppingBag size={18} />;
+        return <ShoppingBag size={20} />;
       case "restaurant":
-        return <Utensils size={18} />;
+        return <Utensils size={20} />;
       case "shop":
-        return <Store size={18} />;
+        return <Store size={20} />;
       case "educational":
-        return <GraduationCap size={18} />;
+        return <GraduationCap size={20} />;
       case "booking":
-        return <Calendar size={18} />;
+        return <Calendar size={20} />;
       case "custom":
-        return <Code size={18} />;
+        return <Code size={20} />;
       case "not_sure":
-        return <HelpCircle size={18} />;
+        return <HelpCircle size={20} />;
       default:
-        return <Sparkles size={18} />;
+        return <Sparkles size={20} />;
     }
   }
 
   return (
-    <section className="page wrap">
+    <div className="enquiry-builder-root" id="enquiry-top">
+      {/* 3-Step Progress Indicator */}
+      {!sent && (
+        <div className="builder-steps" role="navigation" aria-label="Enquiry progress">
+          <div
+            className={`builder-step-pill ${step === 0 ? "active" : step > 0 ? "completed" : ""}`}
+            onClick={() => setStep(0)}
+            style={{ cursor: step > 0 ? "pointer" : "default" }}
+          >
+            <span className="builder-step-num">{step > 0 ? "✓" : "1"}</span>
+            <span className="builder-step-label">Website Type</span>
+          </div>
+          <div
+            className={`builder-step-pill ${step === 1 ? "active" : step > 1 ? "completed" : ""}`}
+            onClick={() => {
+              if (form.selectedCategory) setStep(1);
+            }}
+            style={{ cursor: step > 1 ? "pointer" : "default" }}
+          >
+            <span className="builder-step-num">{step > 1 ? "✓" : "2"}</span>
+            <span className="builder-step-label">Objectives & Features</span>
+          </div>
+          <div
+            className={`builder-step-pill ${step === 2 ? "active" : ""}`}
+          >
+            <span className="builder-step-num">3</span>
+            <span className="builder-step-label">Contact Details</span>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION SCREEN */}
+      {sent ? (
+        <div className="builder-confirmation-panel">
+          <span className="eyebrow confirmation-eyebrow">
+            Enquiry Received Successfully
+          </span>
+          <h2 className="confirmation-title">
+            Thank You! We&apos;ve Received Your Request.
+          </h2>
+          <p className="confirmation-desc">
+            Your project enquiry has been submitted. A confirmation with your tracking code has been dispatched to{" "}
+            <strong>{form.email}</strong>.
+          </p>
+
+          <div className="confirmation-badge-box">
+            <span className="confirmation-badge-label">Your Unique Tracking Code</span>
+            <div className="confirmation-code-display">{trackingCode}</div>
+            <p className="confirmation-code-note">
+              Use this code anytime to monitor progress, milestones, and delivery status.
+            </p>
+
+            <button
+              type="button"
+              onClick={copyTrackingId}
+              className="confirmation-copy-btn"
+            >
+              {copied ? (
+                <>
+                  <Check size={16} style={{ color: "#25d366" }} />
+                  <span>Copied to Clipboard!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={16} />
+                  <span>Copy Tracking Code</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="confirmation-actions">
+            <Link to={`/track?code=${trackingCode}`} className="button">
+              Track My Project <Arrow />
+            </Link>
+            <Link to="/" className="button secondary">
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* ================================================================
+              STEP 1 — SELECT WEBSITE TYPE
+              ================================================================ */}
+          {step === 0 && (
+            <form onSubmit={handleGoToStep2} className="builder-step-form">
+              <div className="builder-step-header">
+                <span className="eyebrow">Step 1 of 3</span>
+                <h3 className="builder-step-title">
+                  What Kind of Website Do You Need?
+                </h3>
+                <p className="builder-step-sub">
+                  Choose what you&apos;re planning to create. We&apos;ll help with the rest.
+                </p>
+              </div>
+
+              {/* 11 Selectable Category Cards Grid (2-Column Desktop, 1-Column Mobile) */}
+              <div className="builder-categories-grid" role="radiogroup" aria-label="Website Categories">
+                {categories.map((cat) => {
+                  const isSelected = form.selectedCategory === cat.label;
+                  return (
+                    <div
+                      key={cat.id || cat.label}
+                      className={`builder-category-card ${isSelected ? "selected" : ""}`}
+                      onClick={() => update("selectedCategory", cat.label)}
+                      role="radio"
+                      aria-checked={isSelected}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === " " || e.key === "Enter") {
+                          e.preventDefault();
+                          update("selectedCategory", cat.label);
+                        }
+                      }}
+                    >
+                      <div className="builder-cat-header">
+                        <div className="builder-cat-icon">
+                          {renderCategoryIcon(cat.id)}
+                        </div>
+                        {/* Radio selection indicator */}
+                        <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
+                          {isSelected && <span className="builder-radio-dot" />}
+                        </div>
+                      </div>
+
+                      <div className="builder-cat-body">
+                        <h4 className="builder-cat-title">{cat.label}</h4>
+                        <p className="builder-cat-desc">{cat.desc}</p>
+                      </div>
+
+                      {cat.examples && cat.examples.length > 0 && (
+                        <div className="builder-cat-examples">
+                          <span className="builder-examples-label">Examples:</span>
+                          <div className="builder-examples-tags">
+                            {cat.examples.map((ex: string, idx: number) => (
+                              <span key={idx} className="builder-example-tag">
+                                {ex}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Conditional custom project description field for Other / Custom Website */}
+              {form.selectedCategory === "Other / Custom Website" && (
+                <div className="builder-custom-category-box">
+                  <label>
+                    <span className="builder-custom-label">
+                      Describe your custom website or unique concept:
+                    </span>
+                    <input
+                      type="text"
+                      className="builder-input"
+                      placeholder="e.g. Real Estate Portal, Community Network, Specialized Booking Utility..."
+                      value={form.customCategoryText}
+                      onChange={(e) => update("customCategoryText", e.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
+
+              {status && (
+                <p role="alert" className="builder-status-alert">
+                  {status}
+                </p>
+              )}
+
+              <div className="builder-step-actions">
+                <button
+                  type="submit"
+                  className="button builder-continue-btn"
+                  disabled={!form.selectedCategory}
+                >
+                  {form.selectedCategory
+                    ? `Continue to Step 2: What Should Your Website Do?`
+                    : "Select a Website Type to Continue"}{" "}
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ================================================================
+              STEP 2 — WHAT SHOULD YOUR WEBSITE DO? & FEATURES
+              ================================================================ */}
+          {step === 1 && (
+            <form onSubmit={handleGoToStep3} className="builder-step-form">
+              {/* PRIMARY OBJECTIVES (MATCHING CODEXA INTERACTION REFERENCE) */}
+              <div className="builder-step-header">
+                <span className="eyebrow">
+                  Step 2 · For {form.selectedCategory}
+                </span>
+                <h3 className="builder-step-title">
+                  What Should Your Website Do?
+                </h3>
+                <p className="builder-step-sub">
+                  Choose the things you&apos;d like your website to help with.
+                </p>
+              </div>
+
+              {/* Primary Objectives Checkbox Grid */}
+              <div className="builder-objectives-grid" role="group" aria-label="Primary Objectives">
+                {relevantObjectives.map((obj) => {
+                  const isChecked = form.selectedObjectives.includes(obj);
+                  return (
+                    <div
+                      key={obj}
+                      className={`builder-objective-card ${isChecked ? "selected" : ""}`}
+                      onClick={() => toggleObjective(obj)}
+                      role="checkbox"
+                      aria-checked={isChecked}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === " " || e.key === "Enter") {
+                          e.preventDefault();
+                          toggleObjective(obj);
+                        }
+                      }}
+                    >
+                      <span className="builder-objective-name">{obj}</span>
+                      <div className={`builder-checkbox-box ${isChecked ? "checked" : ""}`}>
+                        {isChecked && "✓"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* CATEGORY-SPECIFIC FEATURE SELECTION */}
+              <div className="builder-features-section">
+                <div className="builder-features-header">
+                  <div>
+                    <h4 className="builder-features-title">
+                      {dynamicFeatureHeading}
+                    </h4>
+                    <p className="builder-features-sub">
+                      Select specific features you want included.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={skipFeatures}
+                    className="builder-skip-link"
+                  >
+                    Skip this part
+                  </button>
+                </div>
+
+                <div className="builder-feature-grid" role="group" aria-label="Features">
+                  {(activeCategory.features || []).map((feat: string) => {
+                    const isSelected = form.selectedFeatures.includes(feat);
+                    const note = activeCategory.featureNotes?.[feat];
+                    return (
+                      <div
+                        key={feat}
+                        className={`builder-feature-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => toggleFeature(feat)}
+                        role="checkbox"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === " " || e.key === "Enter") {
+                            e.preventDefault();
+                            toggleFeature(feat);
+                          }
+                        }}
+                      >
+                        <div className="builder-feature-info">
+                          <span className="builder-feature-label">{feat}</span>
+                          {note && (
+                            <span className="builder-feature-sub">{note}</span>
+                          )}
+                        </div>
+                        <div className={`builder-checkbox-box ${isSelected ? "checked" : ""}`}>
+                          {isSelected && "✓"}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Other Feature Option */}
+                  <div
+                    className={`builder-feature-card ${form.includeOtherFeature ? "selected" : ""}`}
+                    onClick={() =>
+                      update("includeOtherFeature", !form.includeOtherFeature)
+                    }
+                    role="checkbox"
+                    aria-checked={form.includeOtherFeature}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        update("includeOtherFeature", !form.includeOtherFeature);
+                      }
+                    }}
+                  >
+                    <div className="builder-feature-info">
+                      <span className="builder-feature-label">
+                        Other Feature — Tell Us What You Need
+                      </span>
+                      <span className="builder-feature-sub">
+                        Add a custom feature or requirement
+                      </span>
+                    </div>
+                    <div className={`builder-checkbox-box ${form.includeOtherFeature ? "checked" : ""}`}>
+                      {form.includeOtherFeature && "✓"}
+                    </div>
+                  </div>
+
+                  {/* Not Sure Help Me Decide Option */}
+                  <div
+                    className={`builder-feature-card ${form.includeNotSureFeature ? "selected" : ""}`}
+                    onClick={() =>
+                      update("includeNotSureFeature", !form.includeNotSureFeature)
+                    }
+                    role="checkbox"
+                    aria-checked={form.includeNotSureFeature}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        update("includeNotSureFeature", !form.includeNotSureFeature);
+                      }
+                    }}
+                  >
+                    <div className="builder-feature-info">
+                      <span className="builder-feature-label">
+                        Not Sure — Help Me Decide
+                      </span>
+                      <span className="builder-feature-sub">
+                        We will suggest the best features for your goals
+                      </span>
+                    </div>
+                    <div className={`builder-checkbox-box ${form.includeNotSureFeature ? "checked" : ""}`}>
+                      {form.includeNotSureFeature && "✓"}
+                    </div>
+                  </div>
+                </div>
+
+                {form.includeOtherFeature && (
+                  <div className="builder-other-feature-input-wrap">
+                    <label>
+                      <span className="builder-custom-label">
+                        Describe your custom feature or capability:
+                      </span>
+                      <input
+                        type="text"
+                        className="builder-input"
+                        value={form.otherFeatureText}
+                        onChange={(e) => update("otherFeatureText", e.target.value)}
+                        placeholder="e.g. Real-time calendar sync, custom pricing calculator, member portal..."
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* DESIGN & PROJECT PREFERENCES */}
+              <div className="builder-preferences-section">
+                <h4 className="builder-preferences-title">
+                  Design & Project Preferences (Optional)
+                </h4>
+
+                <div className="builder-pref-block">
+                  <span className="builder-pref-label">What design aesthetic do you prefer?</span>
+                  <div className="builder-radio-group">
+                    {designStyles.map((style: any) => {
+                      const isSelected = form.designStyle === style.label;
+                      return (
+                        <div
+                          key={style.id || style.label}
+                          className={`builder-radio-card ${isSelected ? "selected" : ""}`}
+                          onClick={() => update("designStyle", style.label)}
+                          role="radio"
+                          aria-checked={isSelected}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === " " || e.key === "Enter") {
+                              e.preventDefault();
+                              update("designStyle", style.label);
+                            }
+                          }}
+                        >
+                          <span className="builder-radio-title">{style.label}</span>
+                          <span className="builder-radio-desc">{style.desc}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {form.designStyle === "Inspired by a Website" && (
+                    <div style={{ marginTop: 10 }}>
+                      <label>
+                        <span className="builder-custom-label">Reference Website URL:</span>
+                        <input
+                          type="url"
+                          className="builder-input"
+                          value={form.referenceUrl}
+                          onChange={(e) => update("referenceUrl", e.target.value)}
+                          placeholder="https://example.com"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-grid" style={{ marginTop: 18 }}>
+                  <div>
+                    <span className="builder-pref-label">Do you already have a website?</span>
+                    <div className="pill-toggle-group">
+                      {[
+                        "No, I need a new website.",
+                        "Yes, I want to improve my existing website.",
+                      ].map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`pill-toggle-btn ${form.hasExistingWebsite === choice ? "selected" : ""}`}
+                          onClick={() => update("hasExistingWebsite", choice)}
+                        >
+                          {choice}
+                        </button>
+                      ))}
+                    </div>
+                    {form.hasExistingWebsite.includes("Yes") && (
+                      <input
+                        type="url"
+                        className="builder-input"
+                        value={form.existingWebsiteUrl}
+                        onChange={(e) => update("existingWebsiteUrl", e.target.value)}
+                        placeholder="https://mycurrentsite.com"
+                        style={{ marginTop: 6 }}
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="builder-pref-label">Timeline preference:</span>
+                    <div className="pill-toggle-group">
+                      {timelineChoices.map((t: string) => (
+                        <button
+                          key={t}
+                          type="button"
+                          className={`pill-toggle-btn ${form.timeline === t ? "selected" : ""}`}
+                          onClick={() => update("timeline", t)}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <span className="builder-pref-label">Do you have a budget in mind?</span>
+                  <div className="pill-toggle-group">
+                    {budgetChoices.map((b: string) => (
+                      <button
+                        key={b}
+                        type="button"
+                        className={`pill-toggle-btn ${form.budget === b ? "selected" : ""}`}
+                        onClick={() => update("budget", b)}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <label>
+                    <span className="builder-pref-label">Tell us a short sentence about your idea (Optional):</span>
+                    <textarea
+                      rows={2}
+                      maxLength={5000}
+                      className="builder-textarea"
+                      value={form.description}
+                      onChange={(e) => update("description", e.target.value)}
+                      placeholder="e.g. I run a boutique bakery in Bangalore and want a website to showcase our menu and let customers place weekend orders over WhatsApp."
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {status && (
+                <p role="alert" className="builder-status-alert">
+                  {status}
+                </p>
+              )}
+
+              <div className="builder-step-actions split">
+                <button
+                  type="button"
+                  onClick={() => setStep(0)}
+                  className="button secondary"
+                >
+                  <ArrowLeft size={16} /> Back to Step 1
+                </button>
+
+                <button type="submit" className="button">
+                  Continue to Step 3: Contact Details <ArrowRight size={18} />
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ================================================================
+              STEP 3 — CUSTOMER INFORMATION & SUBMISSION
+              ================================================================ */}
+          {step === 2 && (
+            <form onSubmit={handleSubmit} className="builder-step-form">
+              <div className="builder-step-header">
+                <span className="eyebrow">Step 3 of 3 · Final Step</span>
+                <h3 className="builder-step-title">
+                  Tell Us How to Reach You
+                </h3>
+                <p className="builder-step-sub">
+                  Where should we send your project proposal and tracking details?
+                </p>
+              </div>
+
+              {/* Required Contact Fields */}
+              <div className="form-grid">
+                <label>
+                  <span>Your Full Name *</span>
+                  <input
+                    required
+                    type="text"
+                    autoComplete="name"
+                    className="builder-input"
+                    value={form.name}
+                    onChange={(e) => update("name", e.target.value)}
+                    placeholder="e.g. Sanjay Verma"
+                  />
+                </label>
+
+                <label>
+                  <span>Email Address *</span>
+                  <input
+                    required
+                    type="email"
+                    autoComplete="email"
+                    className="builder-input"
+                    value={form.email}
+                    onChange={(e) => update("email", e.target.value)}
+                    placeholder="e.g. sanjay@example.com"
+                  />
+                </label>
+              </div>
+
+              <div className="form-grid">
+                <label>
+                  <span>Mobile / WhatsApp Number *</span>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="text"
+                      className="builder-input"
+                      style={{ width: 85, textAlign: "center" }}
+                      value={form.countryCode}
+                      onChange={(e) => update("countryCode", e.target.value)}
+                      placeholder="+91"
+                    />
+                    <input
+                      required
+                      type="tel"
+                      autoComplete="tel"
+                      className="builder-input"
+                      style={{ flex: 1 }}
+                      value={form.phone}
+                      onChange={(e) => update("phone", e.target.value)}
+                      placeholder="e.g. 9876543210"
+                    />
+                  </div>
+                </label>
+
+                <label>
+                  <span>Preferred Contact Method</span>
+                  <select
+                    className="builder-select"
+                    value={form.preferredContact}
+                    onChange={(e) => update("preferredContact", e.target.value)}
+                  >
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Phone Call">Phone Call</option>
+                    <option value="Email">Email</option>
+                  </select>
+                </label>
+              </div>
+
+              {/* Individual vs Business */}
+              <div style={{ margin: "14px 0" }}>
+                <span className="builder-pref-label">Are you enquiring for yourself or a business?</span>
+                <div className="pill-toggle-group">
+                  <button
+                    type="button"
+                    className={`pill-toggle-btn ${!form.isBusiness ? "selected" : ""}`}
+                    onClick={() => update("isBusiness", false)}
+                  >
+                    For Myself / Individual
+                  </button>
+                  <button
+                    type="button"
+                    className={`pill-toggle-btn ${form.isBusiness ? "selected" : ""}`}
+                    onClick={() => update("isBusiness", true)}
+                  >
+                    For My Business / Brand
+                  </button>
+                </div>
+
+                {form.isBusiness && (
+                  <label style={{ display: "block", marginTop: 8 }}>
+                    <span>Business / Brand Name *</span>
+                    <input
+                      required
+                      type="text"
+                      className="builder-input"
+                      value={form.businessName}
+                      onChange={(e) => update("businessName", e.target.value)}
+                      placeholder="e.g. Studio Luxe, Apex Innovations..."
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Collapsible Optional Details */}
+              <div style={{ margin: "14px 0" }}>
+                <button
+                  type="button"
+                  className="collapsible-trigger"
+                  onClick={() => setShowOptionalDetails(!showOptionalDetails)}
+                >
+                  <span>
+                    {showOptionalDetails
+                      ? "Hide optional details"
+                      : "+ Add location, existing website, or additional message (Optional)"}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    style={{
+                      transform: showOptionalDetails ? "rotate(180deg)" : "none",
+                      transition: "transform 0.2s",
+                    }}
+                  />
+                </button>
+
+                {showOptionalDetails && (
+                  <div className="builder-optional-panel">
+                    <div className="form-grid">
+                      <label>
+                        <span>City / Location</span>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={form.city}
+                          onChange={(e) => update("city", e.target.value)}
+                          placeholder="e.g. Bangalore, India"
+                        />
+                      </label>
+
+                      <label>
+                        <span>Existing Website URL</span>
+                        <input
+                          type="url"
+                          className="builder-input"
+                          value={form.existingWebsiteUrl}
+                          onChange={(e) => update("existingWebsiteUrl", e.target.value)}
+                          placeholder="https://example.com"
+                        />
+                      </label>
+                    </div>
+
+                    <label style={{ display: "block", marginTop: 8 }}>
+                      <span>Additional Requirements or Notes</span>
+                      <textarea
+                        rows={2}
+                        maxLength={3000}
+                        className="builder-textarea"
+                        value={form.additionalMessage}
+                        onChange={(e) => update("additionalMessage", e.target.value)}
+                        placeholder="Any additional notes or specific questions for Sanjay..."
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Review Summary Card */}
+              <div className="enquiry-summary-card">
+                <div className="enquiry-summary-title">Review Your Enquiry:</div>
+                <div className="enquiry-summary-grid">
+                  <div>
+                    <b>Website Type:</b> {form.selectedCategory}
+                    {form.customCategoryText ? ` (${form.customCategoryText})` : ""}
+                  </div>
+                  {form.selectedObjectives.length > 0 && (
+                    <div>
+                      <b>Primary Objectives:</b> {form.selectedObjectives.join(", ")}
+                    </div>
+                  )}
+                  <div>
+                    <b>Features:</b>{" "}
+                    {form.selectedFeatures.length > 0
+                      ? form.selectedFeatures.join(", ")
+                      : "General scoping / Not specified"}
+                    {form.includeOtherFeature ? " (+ Custom feature)" : ""}
+                  </div>
+                  <div>
+                    <b>Style & Timeline:</b> {form.designStyle} · {form.timeline} · {form.budget}
+                  </div>
+                  <div>
+                    <b>Contact:</b> {form.name} ({form.email}, {form.countryCode} {form.phone})
+                  </div>
+                </div>
+              </div>
+
+              {/* Consent Checkbox */}
+              <label className="check builder-consent-check">
+                <input
+                  type="checkbox"
+                  required
+                  checked={form.consent}
+                  onChange={(e) => update("consent", e.target.checked)}
+                />
+                <span className="builder-consent-text">
+                  I agree to receive a project proposal and tracking updates from SANJU X DEV. Your details are strictly confidential and will never be shared.{" "}
+                  <Link to="/privacy" style={{ textDecoration: "underline", color: "var(--accent)" }}>
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+
+              {/* Honeypot */}
+              <label className="honeypot" aria-hidden="true" style={{ display: "none" }}>
+                Website
+                <input
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={form.website}
+                  onChange={(e) => update("website", e.target.value)}
+                />
+              </label>
+
+              {status && (
+                <p role="alert" className="builder-status-alert">
+                  {status}
+                </p>
+              )}
+
+              <div className="builder-step-actions split">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="button secondary"
+                >
+                  <ArrowLeft size={16} /> Back to Step 2
+                </button>
+
+                <button type="submit" className="button" disabled={busy}>
+                  {busy ? "Sending Enquiry…" : "Send My Enquiry"}
+                  <Arrow />
+                </button>
+              </div>
+            </form>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function Contact() {
+  const s = useSite();
+
+  return (
+    <section className="page wrap enquiry-page-wrap">
       <span className="eyebrow">Start a project</span>
-      <h1 style={{ marginBottom: 12 }}>Let&apos;s Build Your Website</h1>
-      <p
-        style={{
-          fontSize: 16,
-          lineHeight: 1.6,
-          color: "var(--text)",
-          maxWidth: 620,
-          margin: "0 0 8px 0",
-        }}
-      >
-        Choose the kind of website you need. Tell us a little about your idea,
-        and we&apos;ll help you take it forward.
-      </p>
-      <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 32px 0" }}>
-        No technical knowledge needed. No payment required to enquire.
+      <h1 className="enquiry-page-headline">Let&apos;s Build Your Website</h1>
+      <p className="enquiry-page-sub">
+        Choose what you&apos;re planning to create. We&apos;ll help with the rest.
       </p>
 
       <div className="contact-grid">
@@ -326,7 +1145,7 @@ export default function Contact() {
           </h2>
           <p>
             You don&apos;t need to worry about servers, code frameworks, or
-            complex databases. We handle the full technical architecture so you
+            complex setups. We handle the full digital architecture so you
             can focus on your business or brand.
           </p>
 
@@ -381,826 +1200,9 @@ export default function Contact() {
           </Link>
         </aside>
 
-        {/* Right Column: 3-Step Enquiry Builder */}
+        {/* Right Column: Shared Enquiry Builder */}
         <div className="form-panel">
-          {/* 3-Step Progress Indicator */}
-          {!sent && (
-            <div className="builder-steps" role="navigation" aria-label="Enquiry steps">
-              <div
-                className={`builder-step-pill ${step === 0 ? "active" : step > 0 ? "completed" : ""}`}
-                onClick={() => setStep(0)}
-                style={{ cursor: step > 0 ? "pointer" : "default" }}
-              >
-                <span className="builder-step-num">{step > 0 ? "✓" : "1"}</span>
-                <span>Website Type</span>
-              </div>
-              <div
-                className={`builder-step-pill ${step === 1 ? "active" : step > 1 ? "completed" : ""}`}
-                onClick={() => {
-                  if (form.selectedCategory) setStep(1);
-                }}
-                style={{ cursor: step > 1 ? "pointer" : "default" }}
-              >
-                <span className="builder-step-num">{step > 1 ? "✓" : "2"}</span>
-                <span>What You Need</span>
-              </div>
-              <div
-                className={`builder-step-pill ${step === 2 ? "active" : ""}`}
-              >
-                <span className="builder-step-num">3</span>
-                <span>Contact Details</span>
-              </div>
-            </div>
-          )}
-
-          {/* SUBMISSION CONFIRMATION SCREEN */}
-          {sent ? (
-            <div style={{ textAlign: "center", padding: "16px 0 28px" }}>
-              <span className="eyebrow" style={{ color: "var(--accent)" }}>
-                Enquiry Received Successfully
-              </span>
-              <h2 style={{ margin: "10px 0 16px", fontSize: 28 }}>
-                Thank You! We&apos;ve Received Your Enquiry.
-              </h2>
-              <p
-                style={{
-                  color: "var(--muted)",
-                  maxWidth: 480,
-                  margin: "0 auto 20px",
-                  lineHeight: 1.7,
-                }}
-              >
-                Your request has been submitted successfully. A confirmation email
-                with your requirements has been dispatched to{" "}
-                <strong>{form.email}</strong>.
-              </p>
-
-              {/* Sequential SXD Tracking ID Badge */}
-              <div
-                style={{
-                  background: "var(--soft)",
-                  border: "1px dashed var(--accent)",
-                  borderRadius: 8,
-                  padding: "24px 20px",
-                  maxWidth: 380,
-                  margin: "0 auto 24px",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.15em",
-                    color: "var(--muted)",
-                    marginBottom: 6,
-                  }}
-                >
-                  Your Tracking Code
-                </div>
-                <div
-                  style={{
-                    fontFamily: "ui-monospace, Menlo, Consolas, monospace",
-                    fontSize: 30,
-                    fontWeight: 700,
-                    color: "var(--accent)",
-                    letterSpacing: "0.08em",
-                    marginBottom: 8,
-                  }}
-                >
-                  {trackingCode}
-                </div>
-                <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 16px" }}>
-                  This number helps you check the progress of your request.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={copyTrackingId}
-                  style={{
-                    background: "var(--paper)",
-                    border: "1px solid var(--line)",
-                    padding: "8px 16px",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "var(--text)",
-                  }}
-                >
-                  {copied ? (
-                    <Check size={16} style={{ color: "#25d366" }} />
-                  ) : (
-                    <Copy size={16} />
-                  )}
-                  {copied ? "Copied to Clipboard!" : "Copy Tracking ID"}
-                </button>
-              </div>
-
-              {/* Action Buttons */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  flexWrap: "wrap",
-                  gap: 14,
-                }}
-              >
-                <Link to={`/track?code=${trackingCode}`} className="button">
-                  Track My Request <Arrow />
-                </Link>
-                <Link to="/" className="button secondary">
-                  Back to Home
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* ==============================================================
-                  STEP 1 — WHAT KIND OF WEBSITE DO YOU NEED?
-                  ============================================================== */}
-              {step === 0 && (
-                <form onSubmit={handleGoToStep2}>
-                  <div style={{ marginBottom: 18 }}>
-                    <h3 style={{ margin: "0 0 6px 0", fontSize: 20 }}>
-                      What kind of website do you need?
-                    </h3>
-                    <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
-                      Select the primary website type you are looking to build.
-                      Category selection is required to show relevant features in the next step.
-                    </p>
-                  </div>
-
-                  {/* Exactly 5 Main Website Category Cards */}
-                  <div className="builder-categories-grid">
-                    {categories.map((cat) => {
-                      const isSelected = form.selectedCategory === cat.label;
-                      return (
-                        <div
-                          key={cat.id || cat.label}
-                          className={`builder-category-card ${isSelected ? "selected" : ""}`}
-                          onClick={() => update("selectedCategory", cat.label)}
-                          role="radio"
-                          aria-checked={isSelected}
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === " " || e.key === "Enter") {
-                              e.preventDefault();
-                              update("selectedCategory", cat.label);
-                            }
-                          }}
-                        >
-                          <div>
-                            <div className="builder-cat-header">
-                              <div className="builder-cat-icon">
-                                {renderCategoryIcon(cat.id)}
-                              </div>
-                              <div className="builder-cat-check">
-                                {isSelected ? "✓" : ""}
-                              </div>
-                            </div>
-
-                            <div className="builder-cat-title">{cat.label}</div>
-                            <div className="builder-cat-desc">{cat.desc}</div>
-                          </div>
-
-                          {cat.examples?.length > 0 && (
-                            <div className="builder-cat-examples">
-                              {cat.examples.map((ex: string, idx: number) => (
-                                <span key={idx} className="builder-example-tag">
-                                  {ex}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {form.selectedCategory === "Other / Custom Website" && (
-                    <div style={{ marginTop: 18, background: "var(--soft)", padding: 16, borderRadius: 8, border: "1px solid var(--line)" }}>
-                      <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>
-                        Tell us what kind of custom website you have in mind:
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Real Estate Portal, Event Booking, Community Hub..."
-                        value={form.otherFeatureText}
-                        onChange={(e) => update("otherFeatureText", e.target.value)}
-                        style={{ width: "100%", padding: "10px 12px" }}
-                      />
-                    </div>
-                  )}
-
-                  {status && (
-                    <p role="alert" className="status" style={{ color: "var(--accent)", marginBottom: 16 }}>
-                      {status}
-                    </p>
-                  )}
-
-                  <div className="form-actions" style={{ justifyContent: "flex-end" }}>
-                    <button type="submit" className="button" disabled={!form.selectedCategory}>
-                      {form.selectedCategory ? "Continue to Step 2: Tell Us About Your Idea" : "Select a Website Type to Continue"} <ArrowRight size={18} />
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* ==============================================================
-                  STEP 2 — WHAT WOULD YOU LIKE ON YOUR WEBSITE?
-                  ============================================================== */}
-              {step === 1 && (
-                <form onSubmit={handleGoToStep3}>
-                  <div style={{ marginBottom: 20 }}>
-                    <div
-                      style={{
-                        display: "inline-block",
-                        fontSize: 11,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.15em",
-                        color: "var(--accent)",
-                        fontWeight: 700,
-                        marginBottom: 4,
-                      }}
-                    >
-                      Step 2 · For {form.selectedCategory}
-                    </div>
-                    <h3 style={{ margin: "0 0 6px 0", fontSize: 22 }}>
-                      Choose What You Need
-                    </h3>
-                    <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
-                      Select anything you&apos;d like. Not sure? You can skip this part
-                      and we&apos;ll help you decide.
-                    </p>
-                  </div>
-
-                  {/* Feature Checklist Header with Skip button */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      margin: "18px 0 8px",
-                    }}
-                  >
-                    <span style={{ fontWeight: 600, fontSize: 13.5 }}>
-                      Relevant Features for {form.selectedCategory}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={skipFeatures}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        fontSize: 12,
-                        color: "var(--muted)",
-                        textDecoration: "underline",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Skip this part
-                    </button>
-                  </div>
-
-                  {/* Dynamic Relevant Features Grid */}
-                  <div className="builder-feature-grid">
-                    {(activeCategory.features || []).map((feat: string) => {
-                      const isSelected = form.selectedFeatures.includes(feat);
-                      const note = activeCategory.featureNotes?.[feat];
-                      return (
-                        <div
-                          key={feat}
-                          className={`builder-feature-card ${isSelected ? "selected" : ""}`}
-                          onClick={() => toggleFeature(feat)}
-                          role="checkbox"
-                          aria-checked={isSelected}
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === " " || e.key === "Enter") {
-                              e.preventDefault();
-                              toggleFeature(feat);
-                            }
-                          }}
-                        >
-                          <div>
-                            <div className="builder-feature-label">{feat}</div>
-                            {note && <div className="builder-feature-sub">{note}</div>}
-                          </div>
-                          <div className="builder-checkbox-box">
-                            {isSelected ? "✓" : ""}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Standard: Other Feature Option */}
-                    <div
-                      className={`builder-feature-card ${form.includeOtherFeature ? "selected" : ""}`}
-                      onClick={() =>
-                        update("includeOtherFeature", !form.includeOtherFeature)
-                      }
-                      role="checkbox"
-                      aria-checked={form.includeOtherFeature}
-                      tabIndex={0}
-                    >
-                      <div>
-                        <div className="builder-feature-label">
-                          Other Feature — Tell Us What You Need
-                        </div>
-                        <div className="builder-feature-sub">
-                          Add a custom feature or requirement
-                        </div>
-                      </div>
-                      <div className="builder-checkbox-box">
-                        {form.includeOtherFeature ? "✓" : ""}
-                      </div>
-                    </div>
-
-                    {/* Standard: Not Sure Help Me Decide */}
-                    <div
-                      className={`builder-feature-card ${form.includeNotSureFeature ? "selected" : ""}`}
-                      onClick={() =>
-                        update("includeNotSureFeature", !form.includeNotSureFeature)
-                      }
-                      role="checkbox"
-                      aria-checked={form.includeNotSureFeature}
-                      tabIndex={0}
-                    >
-                      <div>
-                        <div className="builder-feature-label">
-                          Not Sure — Help Me Decide
-                        </div>
-                        <div className="builder-feature-sub">
-                          We will recommend the best features for you
-                        </div>
-                      </div>
-                      <div className="builder-checkbox-box">
-                        {form.includeNotSureFeature ? "✓" : ""}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Other Feature Text Field when checked */}
-                  {form.includeOtherFeature && (
-                    <div style={{ marginBottom: 20 }}>
-                      <label>
-                        Describe your custom feature:
-                        <input
-                          type="text"
-                          value={form.otherFeatureText}
-                          onChange={(e) => update("otherFeatureText", e.target.value)}
-                          placeholder="e.g. Real-time calendar sync, custom calculator, member portal..."
-                        />
-                      </label>
-                    </div>
-                  )}
-
-                  {/* DESIGN PREFERENCE */}
-                  <div style={{ margin: "28px 0 16px", paddingTop: 18, borderTop: "1px solid var(--line)" }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
-                      What style would you like?
-                    </div>
-                    <p style={{ margin: "0 0 10px 0", fontSize: 12.5, color: "var(--muted)" }}>
-                      These are preferences to guide our design direction.
-                    </p>
-
-                    <div className="builder-radio-group">
-                      {designStyles.map((style: any) => {
-                        const isSelected = form.designStyle === style.label;
-                        return (
-                          <div
-                            key={style.id || style.label}
-                            className={`builder-radio-card ${isSelected ? "selected" : ""}`}
-                            onClick={() => update("designStyle", style.label)}
-                          >
-                            <div className="builder-radio-title">{style.label}</div>
-                            <div className="builder-radio-desc">{style.desc}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* If Inspired by a website is chosen: optional reference link */}
-                    {form.designStyle === "Inspired by a Website" && (
-                      <label style={{ display: "block", marginTop: 10 }}>
-                        Reference Website URL (Optional)
-                        <input
-                          type="url"
-                          value={form.referenceUrl}
-                          onChange={(e) => update("referenceUrl", e.target.value)}
-                          placeholder="https://example.com"
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  {/* OPTIONAL WEBSITE DETAILS */}
-                  <div style={{ margin: "24px 0 16px", paddingTop: 18, borderTop: "1px solid var(--line)" }}>
-                    <div className="form-grid">
-                      {/* Existing Website Question */}
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
-                          Do you already have a website?
-                        </div>
-                        <div className="pill-toggle-group">
-                          {[
-                            "No, I need a new website.",
-                            "Yes, I want to improve my existing website.",
-                          ].map((choice) => (
-                            <button
-                              key={choice}
-                              type="button"
-                              className={`pill-toggle-btn ${form.hasExistingWebsite === choice ? "selected" : ""}`}
-                              onClick={() => update("hasExistingWebsite", choice)}
-                            >
-                              {choice}
-                            </button>
-                          ))}
-                        </div>
-
-                        {form.hasExistingWebsite.includes("Yes") && (
-                          <input
-                            type="url"
-                            value={form.existingWebsiteUrl}
-                            onChange={(e) => update("existingWebsiteUrl", e.target.value)}
-                            placeholder="https://mycurrentsite.com"
-                            style={{ marginTop: 6 }}
-                          />
-                        )}
-                      </div>
-
-                      {/* Domain Name Question */}
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
-                          Do you already have a domain name?
-                        </div>
-                        <p style={{ margin: "0 0 6px 0", fontSize: 11.5, color: "var(--muted)" }}>
-                          A domain name is your website address, like yourbusiness.com.
-                        </p>
-                        <div className="pill-toggle-group">
-                          {["Yes", "No", "Not Sure"].map((choice) => (
-                            <button
-                              key={choice}
-                              type="button"
-                              className={`pill-toggle-btn ${form.hasDomain === choice ? "selected" : ""}`}
-                              onClick={() => update("hasDomain", choice)}
-                            >
-                              {choice}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* TIMELINE & BUDGET */}
-                  <div style={{ margin: "24px 0 16px", paddingTop: 18, borderTop: "1px solid var(--line)" }}>
-                    <div className="form-grid">
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
-                          When would you like your website ready?
-                        </div>
-                        <p style={{ margin: "0 0 6px 0", fontSize: 11.5, color: "var(--muted)" }}>
-                          Preferences, not promised delivery dates.
-                        </p>
-                        <div className="pill-toggle-group">
-                          {timelineChoices.map((t: string) => (
-                            <button
-                              key={t}
-                              type="button"
-                              className={`pill-toggle-btn ${form.timeline === t ? "selected" : ""}`}
-                              onClick={() => update("timeline", t)}
-                            >
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 4 }}>
-                          Do you have a budget in mind? (Optional)
-                        </div>
-                        <p style={{ margin: "0 0 6px 0", fontSize: 11.5, color: "var(--muted)" }}>
-                          Help us tailor our proposal. No advance payment required.
-                        </p>
-                        <div className="pill-toggle-group">
-                          {budgetChoices.map((b: string) => (
-                            <button
-                              key={b}
-                              type="button"
-                              className={`pill-toggle-btn ${form.budget === b ? "selected" : ""}`}
-                              onClick={() => update("budget", b)}
-                            >
-                              {b}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* PROJECT IDEA */}
-                  <div style={{ margin: "24px 0 16px", paddingTop: 18, borderTop: "1px solid var(--line)" }}>
-                    <label style={{ display: "block" }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
-                        Tell us a little about your idea
-                      </div>
-                      <textarea
-                        rows={3}
-                        maxLength={5000}
-                        value={form.description}
-                        onChange={(e) => update("description", e.target.value)}
-                        placeholder="I have a clothing brand and want a website to show my products and let customers contact me through WhatsApp."
-                        style={{ width: "100%", fontSize: 13, lineHeight: 1.6 }}
-                      />
-                      <small style={{ color: "var(--muted)", fontSize: 11, display: "block", marginTop: 4 }}>
-                        Optional if you&apos;ve selected sufficient choices, but a short sentence helps us understand your vision.
-                      </small>
-                    </label>
-                  </div>
-
-                  {status && (
-                    <p role="alert" className="status" style={{ color: "var(--accent)", marginBottom: 16 }}>
-                      {status}
-                    </p>
-                  )}
-
-                  <div className="form-actions">
-                    <button
-                      type="button"
-                      onClick={() => setStep(0)}
-                      className="button secondary"
-                    >
-                      <ArrowLeft size={16} /> Back to Step 1
-                    </button>
-
-                    <button type="submit" className="button">
-                      Continue to Step 3: Contact Details <ArrowRight size={18} />
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* ==============================================================
-                  STEP 3 — HOW CAN WE CONTACT YOU?
-                  ============================================================== */}
-              {step === 2 && (
-                <form onSubmit={handleSubmit}>
-                  <div style={{ marginBottom: 20 }}>
-                    <div
-                      style={{
-                        display: "inline-block",
-                        fontSize: 11,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.15em",
-                        color: "var(--accent)",
-                        fontWeight: 700,
-                        marginBottom: 4,
-                      }}
-                    >
-                      Step 3 · Final Step
-                    </div>
-                    <h3 style={{ margin: "0 0 6px 0", fontSize: 22 }}>
-                      How can we contact you?
-                    </h3>
-                    <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>
-                      Where should we send your project proposal and tracking details?
-                    </p>
-                  </div>
-
-                  {/* Core Required Contact Fields */}
-                  <div className="form-grid">
-                    <label>
-                      Your Full Name *
-                      <input
-                        required
-                        type="text"
-                        autoComplete="name"
-                        value={form.name}
-                        onChange={(e) => update("name", e.target.value)}
-                        placeholder="e.g. Rahul Sharma"
-                      />
-                    </label>
-
-                    <label>
-                      Email Address *
-                      <input
-                        required
-                        type="email"
-                        autoComplete="email"
-                        value={form.email}
-                        onChange={(e) => update("email", e.target.value)}
-                        placeholder="e.g. rahul@example.com"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="form-grid">
-                    <label>
-                      Mobile / WhatsApp Number *
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <input
-                          type="text"
-                          style={{ width: 85, textAlign: "center" }}
-                          value={form.countryCode}
-                          onChange={(e) => update("countryCode", e.target.value)}
-                          placeholder="+91"
-                        />
-                        <input
-                          required
-                          type="tel"
-                          autoComplete="tel"
-                          style={{ flex: 1 }}
-                          value={form.phone}
-                          onChange={(e) => update("phone", e.target.value)}
-                          placeholder="e.g. 9876543210"
-                        />
-                      </div>
-                    </label>
-
-                    <label>
-                      Preferred Contact Method
-                      <select
-                        value={form.preferredContact}
-                        onChange={(e) => update("preferredContact", e.target.value)}
-                      >
-                        <option value="WhatsApp">WhatsApp</option>
-                        <option value="Phone Call">Phone Call</option>
-                        <option value="Email">Email</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  {/* Enquiring for Myself or Business */}
-                  <div style={{ margin: "16px 0" }}>
-                    <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 6 }}>
-                      Are you enquiring for yourself or a business?
-                    </div>
-                    <div className="pill-toggle-group">
-                      <button
-                        type="button"
-                        className={`pill-toggle-btn ${!form.isBusiness ? "selected" : ""}`}
-                        onClick={() => update("isBusiness", false)}
-                      >
-                        For Myself
-                      </button>
-                      <button
-                        type="button"
-                        className={`pill-toggle-btn ${form.isBusiness ? "selected" : ""}`}
-                        onClick={() => update("isBusiness", true)}
-                      >
-                        For My Business / Organization
-                      </button>
-                    </div>
-
-                    {form.isBusiness && (
-                      <label style={{ display: "block", marginTop: 8 }}>
-                        Business / Brand Name *
-                        <input
-                          required
-                          type="text"
-                          value={form.businessName}
-                          onChange={(e) => update("businessName", e.target.value)}
-                          placeholder="e.g. Bloom Apparel, Apex Logistics..."
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  {/* Collapsible Optional Contact Info */}
-                  <div style={{ margin: "14px 0" }}>
-                    <button
-                      type="button"
-                      className="collapsible-trigger"
-                      onClick={() => setShowOptionalContact(!showOptionalContact)}
-                    >
-                      <span>
-                        {showOptionalContact
-                          ? "Hide optional details"
-                          : "+ Add location, existing website, or additional message (Optional)"}
-                      </span>
-                      <ChevronDown
-                        size={16}
-                        style={{
-                          transform: showOptionalContact ? "rotate(180deg)" : "none",
-                          transition: "transform 0.2s",
-                        }}
-                      />
-                    </button>
-
-                    {showOptionalContact && (
-                      <div style={{ background: "var(--panel)", padding: 16, borderRadius: 8, marginBottom: 14 }}>
-                        <div className="form-grid">
-                          <label>
-                            City / Location (Optional)
-                            <input
-                              type="text"
-                              value={form.city}
-                              onChange={(e) => update("city", e.target.value)}
-                              placeholder="e.g. Hyderabad, India"
-                            />
-                          </label>
-
-                          <label>
-                            Existing Website (Optional)
-                            <input
-                              type="url"
-                              value={form.existingWebsiteUrl}
-                              onChange={(e) => update("existingWebsiteUrl", e.target.value)}
-                              placeholder="https://example.com"
-                            />
-                          </label>
-                        </div>
-
-                        <label style={{ display: "block", marginTop: 10 }}>
-                          Additional Message (Optional)
-                          <textarea
-                            rows={2}
-                            maxLength={3000}
-                            value={form.additionalMessage}
-                            onChange={(e) => update("additionalMessage", e.target.value)}
-                            placeholder="Any other specific requests or notes for our team..."
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Concise Review Summary Card */}
-                  <div className="enquiry-summary-card">
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: "var(--text)" }}>
-                      Review Your Enquiry:
-                    </div>
-                    <div style={{ color: "var(--muted)", fontSize: 12.5, lineHeight: 1.6 }}>
-                      <div><b>Website Type:</b> {form.selectedCategory}</div>
-                      <div>
-                        <b>Features:</b>{" "}
-                        {form.selectedFeatures.length > 0
-                          ? form.selectedFeatures.join(", ")
-                          : "General consultation / Not specified"}
-                        {form.includeOtherFeature ? " (+ Custom feature)" : ""}
-                      </div>
-                      <div><b>Design Style:</b> {form.designStyle}</div>
-                      <div><b>Timeline / Budget:</b> {form.timeline} · {form.budget}</div>
-                      <div><b>Contact:</b> {form.name} ({form.email}, {form.countryCode} {form.phone})</div>
-                    </div>
-                  </div>
-
-                  {/* Single Clear Consent Checkbox */}
-                  <label className="check" style={{ marginTop: 16, marginBottom: 16 }}>
-                    <input
-                      type="checkbox"
-                      required
-                      checked={form.consent}
-                      onChange={(e) => update("consent", e.target.checked)}
-                    />
-                    <span style={{ fontSize: 12.5, lineHeight: 1.5 }}>
-                      I agree to receive a project proposal and tracking updates from SANJU X DEV. Your details are strictly confidential and will never be shared.{" "}
-                      <Link to="/privacy" style={{ textDecoration: "underline", color: "var(--accent)" }}>
-                        Privacy Policy
-                      </Link>
-                    </span>
-                  </label>
-
-                  {/* Honeypot */}
-                  <label className="honeypot" aria-hidden="true">
-                    Website
-                    <input
-                      tabIndex={-1}
-                      autoComplete="off"
-                      value={form.website}
-                      onChange={(e) => update("website", e.target.value)}
-                    />
-                  </label>
-
-                  {status && (
-                    <p role="alert" className="status" style={{ color: "var(--accent)", marginBottom: 16 }}>
-                      {status}
-                    </p>
-                  )}
-
-                  <div className="form-actions">
-                    <button
-                      type="button"
-                      onClick={() => setStep(1)}
-                      className="button secondary"
-                    >
-                      <ArrowLeft size={16} /> Back to Step 2
-                    </button>
-
-                    <button type="submit" className="button" disabled={busy}>
-                      {busy ? "Sending Enquiry…" : "Send My Enquiry"}
-                      <Arrow />
-                    </button>
-                  </div>
-                </form>
-              )}
-            </>
-          )}
+          <EnquiryBuilder />
         </div>
       </div>
     </section>

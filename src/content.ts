@@ -35,7 +35,7 @@ export const projects = [
     color: "#b23e32",
     headline: "From discovery to the next show.",
     summary:
-      "Cinema and event discovery organized around locations, listings and showtimes.",
+      "An event and ticket-booking digital platform.",
     story:
       "Movie listings, theatre directories, language browsing and event discovery connect to showtime and account entry points in a single public interface.",
     features: [
@@ -120,78 +120,80 @@ export const projects = [
     order: 5,
   },
 ];
+
 export const services = [
   {
-    "name": "Personal Portfolio",
-    "description": "Show your skills, projects, achievements and experience in a modern personal website.",
-    "example": "Developer portfolios, design showcases, executive resumes, creator brands.",
-    "items": "Skills, projects, resume download, contact pathways",
-    "category": "Personal Portfolio"
+    name: "Personal Portfolio",
+    description: "Show your skills, projects, achievements and experience in a modern personal website.",
+    example: "Developer portfolios, design showcases, executive resumes, creator brands.",
+    items: "Skills, projects, resume download, contact pathways",
+    category: "Personal Portfolio"
   },
   {
-    "name": "Blog / Content Website",
-    "description": "Share articles, stories, news and regular updates with an easy publishing workflow.",
-    "example": "Industry blogs, editorial magazines, news portals, thought-leadership platforms.",
-    "items": "Articles, categories, search, admin publishing area",
-    "category": "Blog / Content Website"
+    name: "Blog / Content Website",
+    description: "Share articles, stories, news and regular updates with an easy publishing workflow.",
+    example: "Industry blogs, editorial magazines, news portals, thought-leadership platforms.",
+    items: "Articles, categories, search, admin publishing area",
+    category: "Blog / Content Website"
   },
   {
-    "name": "Business Website",
-    "description": "Help customers learn about your business, build credibility and contact you easily.",
-    "example": "Corporate companies, local service providers, professional consultancies, clinics.",
-    "items": "Business information, services, gallery, WhatsApp, map location",
-    "category": "Business Website"
+    name: "Business Website",
+    description: "Help customers learn about your business, build credibility and contact you easily.",
+    example: "Corporate companies, local service providers, professional consultancies, clinics.",
+    items: "Business information, services, gallery, WhatsApp, map location",
+    category: "Business Website"
   },
   {
-    "name": "Agency Website",
-    "description": "Showcase your agency, services, team members, client case studies and completed work.",
-    "example": "Design studios, marketing firms, software development agencies, production houses.",
-    "items": "Agency services, team profiles, case studies, client enquiry forms",
-    "category": "Agency Website"
+    name: "Agency Website",
+    description: "Showcase your agency, services, team members, client case studies and completed work.",
+    example: "Design studios, marketing firms, software development agencies, production houses.",
+    items: "Agency services, team profiles, case studies, client enquiry forms",
+    category: "Agency Website"
   },
   {
-    "name": "E-Commerce Website",
-    "description": "Sell products and receive online orders with shopping carts, checkout and secure payments.",
-    "example": "Fashion boutiques, electronic shops, digital downloads, specialty merchandise.",
-    "items": "Product catalogue, shopping cart, checkout, payments, customer login, order tracking",
-    "category": "E-Commerce Website"
+    name: "E-Commerce Website",
+    description: "Sell products and receive online orders with shopping carts, checkout and secure payments.",
+    example: "Fashion boutiques, electronic shops, digital downloads, specialty merchandise.",
+    items: "Product catalogue, shopping cart, checkout, payments, customer login, order tracking",
+    category: "E-Commerce Website"
   },
   {
-    "name": "Restaurant / Food Business Website",
-    "description": "Show your food menu, opening hours, dining location, table bookings and ordering options.",
-    "example": "Cafes, dining restaurants, cloud kitchens, bakeries, food trucks.",
-    "items": "Food menu, online ordering, table booking, location, opening hours, WhatsApp",
-    "category": "Restaurant / Food Business Website"
+    name: "Restaurant Website",
+    description: "Display food menus, restaurant information and ordering options.",
+    example: "Cafes, dining restaurants, cloud kitchens, bakeries, food outlets.",
+    items: "Food menu, food photos, online food ordering, table reservation, location, hours",
+    category: "Restaurant Website"
   },
   {
-    "name": "Shop / Store Website",
-    "description": "Show products, seasonal offers, store location, and simple contact or ordering information.",
-    "example": "Local retail shops, jewelry stores, grocery outlets, home decor showrooms.",
-    "items": "Product gallery, product categories, WhatsApp ordering, payments, reviews",
-    "category": "Shop / Store Website"
+    name: "Shop / Local Store Website",
+    description: "Show products, seasonal offers, store location, and simple contact or ordering information.",
+    example: "Local retail shops, jewelry stores, grocery outlets, home decor showrooms.",
+    items: "Product gallery, product categories, WhatsApp ordering, payments, reviews",
+    category: "Shop / Local Store Website"
   },
   {
-    "name": "Educational Website",
-    "description": "Create a website for a school, college, tuition institute, online course or learning service.",
-    "example": "Schools, coaching centers, online academies, individual tutors, skill workshops.",
-    "items": "Course info, about school/teacher, enrolment form, gallery, notice board",
-    "category": "Educational Website"
+    name: "Booking / Appointment Website",
+    description: "Let customers request or schedule appointments, consultations and service slots online.",
+    example: "Salons, dental clinics, fitness trainers, photography sessions, consultations.",
+    items: "Service catalog, calendar booking, working hours, WhatsApp, reviews",
+    category: "Booking / Appointment Website"
   },
   {
-    "name": "Booking Website",
-    "description": "Let customers request or schedule appointments, consultations and service slots online.",
-    "example": "Salons, dental clinics, fitness trainers, photography sessions, consultations.",
-    "items": "Service catalog, calendar booking, working hours, WhatsApp, reviews",
-    "category": "Booking Website"
+    name: "Educational Website",
+    description: "Create a website for a school, college, tuition institute, online course or learning service.",
+    example: "Schools, coaching centers, online academies, individual tutors, skill workshops.",
+    items: "Course info, about school/teacher, enrolment form, gallery, notice board",
+    category: "Educational Website"
   },
   {
-    "name": "Custom Website",
-    "description": "Build something completely tailored to your unique concept, workflow and requirements.",
-    "example": "Community portals, interactive utilities, web apps, member directories, custom tools.",
-    "items": "Custom pages, interactive forms, database integration, tailored workflows",
-    "category": "Other / Custom Website"
+    name: "Other / Custom Website",
+    description: "Build something completely tailored to your unique concept, workflow and requirements.",
+    example: "Community portals, interactive utilities, web apps, member directories, custom tools.",
+    items: "Custom pages, interactive forms, database integration, tailored workflows",
+    category: "Other / Custom Website"
   }
 ];
+
 export interface WebsiteCategory {
   id: string;
   label: string;
@@ -202,222 +204,370 @@ export interface WebsiteCategory {
   enabled?: boolean;
 }
 
+export const PRIMARY_OBJECTIVES = [
+  "Show My Work",
+  "Introduce My Business",
+  "Display Products",
+  "Sell Products Online",
+  "Show My Services",
+  "Receive Customer Enquiries",
+  "Accept Bookings",
+  "Receive Online Payments",
+  "Share Articles or Updates",
+  "Show Business Location",
+  "Manage Customers",
+  "Manage My Team",
+  "Add Customer Login",
+  "Add an AI Chatbot",
+  "Manage My Website Content",
+  "Something Else",
+  "Not Sure",
+];
+
+export const CATEGORY_OBJECTIVES_MAP: Record<string, string[]> = {
+  portfolio: [
+    "Show My Work",
+    "Show My Services",
+    "Receive Customer Enquiries",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  blog: [
+    "Share Articles or Updates",
+    "Receive Customer Enquiries",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  business: [
+    "Introduce My Business",
+    "Show My Services",
+    "Receive Customer Enquiries",
+    "Accept Bookings",
+    "Show Business Location",
+    "Manage Customers",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  agency: [
+    "Introduce My Business",
+    "Show My Work",
+    "Show My Services",
+    "Receive Customer Enquiries",
+    "Accept Bookings",
+    "Manage My Team",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  ecommerce: [
+    "Display Products",
+    "Sell Products Online",
+    "Receive Online Payments",
+    "Receive Customer Enquiries",
+    "Manage Customers",
+    "Add Customer Login",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  restaurant: [
+    "Introduce My Business",
+    "Display Products",
+    "Accept Bookings",
+    "Show Business Location",
+    "Receive Customer Enquiries",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  shop: [
+    "Display Products",
+    "Sell Products Online",
+    "Show Business Location",
+    "Receive Customer Enquiries",
+    "Receive Online Payments",
+    "Add Customer Login",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  booking: [
+    "Show My Services",
+    "Accept Bookings",
+    "Receive Online Payments",
+    "Receive Customer Enquiries",
+    "Manage Customers",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  educational: [
+    "Show My Services",
+    "Share Articles or Updates",
+    "Receive Customer Enquiries",
+    "Manage Customers",
+    "Manage My Team",
+    "Add Customer Login",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+  custom: PRIMARY_OBJECTIVES,
+  not_sure: [
+    "Introduce My Business",
+    "Show My Work",
+    "Show My Services",
+    "Display Products",
+    "Receive Customer Enquiries",
+    "Add an AI Chatbot",
+    "Manage My Website Content",
+    "Something Else",
+    "Not Sure",
+  ],
+};
+
+export function getCategoryFeatureHeading(categoryLabel: string): string {
+  if (/portfolio/i.test(categoryLabel)) return "Features for Your Portfolio";
+  if (/restaurant/i.test(categoryLabel)) return "Features for Your Restaurant Website";
+  if (/e-commerce|ecommerce|online store/i.test(categoryLabel)) return "Features for Your Online Store";
+  if (/shop|local store/i.test(categoryLabel)) return "Features for Your Store Website";
+  if (/blog|content/i.test(categoryLabel)) return "Features for Your Blog";
+  if (/agency/i.test(categoryLabel)) return "Features for Your Agency Website";
+  if (/booking|appointment/i.test(categoryLabel)) return "Features for Your Booking Website";
+  if (/educational|school|course/i.test(categoryLabel)) return "Features for Your Educational Website";
+  if (/custom|other/i.test(categoryLabel)) return "Features for Your Custom Website";
+  if (/not sure/i.test(categoryLabel)) return "Features We Recommend for You";
+  return `Features for Your ${categoryLabel}`;
+}
+
 export const DEFAULT_WEBSITE_CATEGORIES: WebsiteCategory[] = [
   {
-    "id": "portfolio",
-    "label": "Personal Portfolio",
-    "desc": "Show your skills, projects, achievements and experience.",
-    "examples": [
-      "Student portfolio",
-      "Developer or designer portfolio",
-      "Professional resume website",
-      "Artist or creator portfolio",
-      "Personal brand website"
+    id: "portfolio",
+    label: "Personal Portfolio",
+    desc: "Show your work, skills and achievements.",
+    examples: [
+      "Student Portfolio",
+      "Developer Portfolio",
+      "Designer Portfolio"
     ],
-    "features": [
-      "About Me",
-      "Skills",
+    features: [
       "My Projects",
+      "Skills & Experience",
       "Resume Download",
+      "Certificates",
       "Contact Form",
-      "Social Links"
+      "Social Media Links",
+      "Photo Gallery",
+      "Animations"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "blog",
-    "label": "Blog / Content Website",
-    "desc": "Share articles, stories, news and regular updates.",
-    "examples": [
-      "Personal blog",
-      "Articles and stories",
-      "News or updates website",
-      "Educational content website",
-      "Publication website"
+    id: "blog",
+    label: "Blog / Content Website",
+    desc: "Publish stories, articles or regular updates.",
+    examples: [
+      "Personal Blog",
+      "News Website",
+      "Educational Articles"
     ],
-    "features": [
+    features: [
       "Articles",
       "Categories",
-      "Search",
-      "Admin Area to Publish Content"
+      "Article Search",
+      "Photos & Videos",
+      "Author Profile",
+      "Admin Page to Add Posts",
+      "Reader Comments"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "business",
-    "label": "Business Website",
-    "desc": "Help customers learn about your business and contact you.",
-    "examples": [
-      "Small business website",
-      "Company website",
-      "Local service business",
-      "Professional services website",
-      "Showcase website"
+    id: "business",
+    label: "Business Website",
+    desc: "Help customers learn about your business and contact you.",
+    examples: [
+      "Local Business",
+      "Service Company",
+      "Professional Office"
     ],
-    "features": [
-      "Business Information",
+    features: [
       "Services",
-      "Gallery",
+      "Contact Form",
       "WhatsApp",
-      "Location",
-      "Contact Form"
+      "Google Maps",
+      "Gallery",
+      "Customer Reviews",
+      "Request a Quote",
+      "Booking Option"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "agency",
-    "label": "Agency Website",
-    "desc": "Showcase your agency, services, team and completed work.",
-    "examples": [
-      "Creative agency",
-      "Digital agency",
-      "Technology agency",
-      "Marketing agency",
-      "Consulting agency"
+    id: "agency",
+    label: "Agency Website",
+    desc: "Present your agency, projects, services and team.",
+    examples: [
+      "Digital Agency",
+      "Marketing Agency",
+      "Creative Studio"
     ],
-    "features": [
+    features: [
       "Services",
-      "Our Work",
+      "Featured Work",
       "Team",
-      "Case Studies",
-      "Client Enquiry Form"
+      "Client Reviews",
+      "Project Enquiry",
+      "Consultation Booking",
+      "Careers",
+      "Blog"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "ecommerce",
-    "label": "E-Commerce Website",
-    "desc": "Sell products and receive online orders.",
-    "examples": [
-      "Online store",
-      "Multi-product shop",
-      "Brand merchandise store",
-      "Digital product shop"
+    id: "ecommerce",
+    label: "E-Commerce Website",
+    desc: "Sell products online with a shopping cart and payment options.",
+    examples: [
+      "Clothing Store",
+      "Electronics Store",
+      "Online Brand"
     ],
-    "features": [
+    features: [
       "Product Catalogue",
+      "Product Search",
       "Shopping Cart",
-      "Checkout",
-      "Payments",
+      "Online Checkout",
+      "UPI / Card Payments",
+      "Order Tracking",
       "Customer Login",
-      "Order Tracking"
+      "Offers & Discounts",
+      "Stock Management"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "restaurant",
-    "label": "Restaurant / Food Business Website",
-    "desc": "Show your menu, opening hours, location and ordering options.",
-    "examples": [
-      "Dine-in restaurant",
-      "Cafe & bistro",
-      "Cloud kitchen",
+    id: "restaurant",
+    label: "Restaurant Website",
+    desc: "Display food menus, restaurant information and ordering options.",
+    examples: [
+      "Restaurant",
+      "Cafe",
       "Bakery",
-      "Food delivery brand"
+      "Food Outlet"
     ],
-    "features": [
-      "Food Menu",
-      "Online Ordering",
-      "Table Booking",
-      "Location",
+    features: [
+      "Digital Food Menu",
+      "Food Photos",
+      "Online Food Ordering",
+      "Table Reservation",
+      "Restaurant Location",
       "Opening Hours",
-      "WhatsApp"
-    ],
-    "enabled": true
-  },
-  {
-    "id": "shop",
-    "label": "Shop / Store Website",
-    "desc": "Show products, offers and contact or ordering information.",
-    "examples": [
-      "Local retail shop",
-      "Clothing boutique",
-      "Jewelry showroom",
-      "Electronics store",
-      "Convenience store"
-    ],
-    "features": [
-      "Product Gallery",
-      "Product Categories",
-      "WhatsApp Ordering",
-      "Online Payments",
+      "WhatsApp Contact",
       "Customer Reviews"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "educational",
-    "label": "Educational Website",
-    "desc": "Create a website for a school, institute, course or learning service.",
-    "examples": [
-      "School website",
-      "Coaching institute",
-      "Tuition center",
-      "Online courses",
-      "Training academy"
+    id: "shop",
+    label: "Shop / Local Store Website",
+    desc: "Show your store's products and help customers enquire or order.",
+    examples: [
+      "Clothing Shop",
+      "Grocery Store",
+      "Mobile Shop",
+      "Furniture Store"
     ],
-    "features": [
-      "Course / Class Information",
-      "About the School / Teacher",
-      "Enrolment / Enquiry Form",
-      "Photo Gallery",
-      "Student / Parent Notice Board",
-      "Contact & Location"
+    features: [
+      "Product Gallery",
+      "Product Categories",
+      "Product Enquiry",
+      "WhatsApp Ordering",
+      "Store Location",
+      "Offers",
+      "Online Payments",
+      "Stock Information"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "booking",
-    "label": "Booking / Appointment Website",
-    "desc": "Let customers request or schedule appointments.",
-    "examples": [
-      "Salon & spa",
-      "Medical / Dental clinic",
-      "Fitness studio",
-      "Consulting firm",
-      "Photography studio"
+    id: "booking",
+    label: "Booking / Appointment Website",
+    desc: "Let customers request or book appointments.",
+    examples: [
+      "Salon",
+      "Clinic",
+      "Gym",
+      "Consulting Service"
     ],
-    "features": [
-      "Services List",
-      "Calendar / Appointment Booking",
-      "Working Hours & Availability",
-      "WhatsApp Enquiries",
-      "Customer Reviews",
-      "Directions & Map"
+    features: [
+      "Available Services",
+      "Appointment Calendar",
+      "Choose Time Slot",
+      "Booking Confirmation",
+      "Online Payment",
+      "WhatsApp Reminders"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "custom",
-    "label": "Other / Custom Website",
-    "desc": "Build something based on the customer's unique idea.",
-    "examples": [
-      "Custom web app",
-      "Community portal",
-      "Directory",
-      "Interactive utility",
-      "Unique startup idea"
+    id: "educational",
+    label: "Educational Website",
+    desc: "Share courses, information and learning resources.",
+    examples: [
+      "School",
+      "Coaching Centre",
+      "Online Courses"
     ],
-    "features": [
-      "Custom Pages",
-      "Interactive Forms",
-      "Database Integration",
-      "Special Features",
-      "Responsive Design",
-      "WhatsApp Integration"
+    features: [
+      "Courses",
+      "Admissions / Enquiry Form",
+      "Faculty / Teachers",
+      "Timetable",
+      "Learning Materials",
+      "Student Login",
+      "Announcements"
     ],
-    "enabled": true
+    enabled: true
   },
   {
-    "id": "not_sure",
-    "label": "Not Sure — Help Me Decide",
-    "desc": "We'll help you pick the best fit for your goals.",
-    "examples": [
-      "First-time website owner",
-      "Exploring ideas",
-      "Flexible project scope"
+    id: "custom",
+    label: "Other / Custom Website",
+    desc: "For any website idea not listed above.",
+    examples: [
+      "Custom Web App",
+      "Community Portal",
+      "Interactive Tool"
     ],
-    "features": [
+    features: [
+      "Free-text requirements",
+      "Relevant suggested features",
+      "Not Sure option"
+    ],
+    enabled: true
+  },
+  {
+    id: "not_sure",
+    label: "Not Sure — Help Me Choose",
+    desc: "For customers who need guidance selecting a website.",
+    examples: [
+      "First-time Website",
+      "Flexible Scope",
+      "Free Consultation"
+    ],
+    features: [
       "Clean Modern Design",
       "Mobile Friendly",
       "Contact Form",
@@ -425,7 +575,7 @@ export const DEFAULT_WEBSITE_CATEGORIES: WebsiteCategory[] = [
       "Easy to Update",
       "Guidance on Features"
     ],
-    "enabled": true
+    enabled: true
   }
 ];
 
@@ -495,14 +645,14 @@ export const defaults = {
     "What kind of website does my business need?",
     "Can you build an online store?",
     "How do I start a project?",
-    "How can I check my project status?",
   ],
   websiteCategories: DEFAULT_WEBSITE_CATEGORIES,
   designStyles: DESIGN_STYLES,
   timelineChoices: TIMELINE_CHOICES,
   budgetChoices: BUDGET_CHOICES,
+  primaryObjectives: PRIMARY_OBJECTIVES,
   formConfig: {
-    defaultCategory: "Business Website",
+    defaultCategory: "",
     defaultDesignStyle: "Clean & Simple",
     requireDescription: false,
     customQuestions: [] as { id: string; question: string; required: boolean }[],
@@ -525,4 +675,3 @@ export const defaults = {
     "Customer Reviews",
   ],
 };
-

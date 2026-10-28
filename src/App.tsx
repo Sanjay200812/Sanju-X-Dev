@@ -20,6 +20,7 @@ import {
   ArrowUpRight,
   ArrowRight,
   ArrowUp,
+  ArrowDown,
   Menu,
   X,
   Monitor,
@@ -29,16 +30,10 @@ import {
   Minus,
 } from "lucide-react";
 import { defaults, projects as seed } from "./content";
-import Contact from "./Contact";
+import Contact, { EnquiryBuilder } from "./Contact";
 import Assistant from "./Assistant";
 import { ChatProvider, useChat } from "./chat-context";
 import {
-  PostmarkStamp,
-  BotanicalSprig,
-  WashiTape,
-  TornMemoScrap,
-  DeveloperStationIllustration,
-  WireframeBlueprintScrap,
   InstagramIcon,
   FacebookIcon,
   MailIcon,
@@ -80,7 +75,7 @@ function Brand() {
       />
       <span className="brand-copy">
         <span className="brand-title">SANJU X DEV</span>
-        <span className="brand-sub">IDEAS · CODE · DESIGN · PEOPLE</span>
+        <span className="brand-sub">Thoughtful Design · Powerful Digital Experiences</span>
       </span>
     </Link>
   );
@@ -88,92 +83,137 @@ function Brand() {
 
 function Affiliation() {
   return (
-    <section className="affiliation-scrapbook">
-      <div className="washi-tape-strip top-center" aria-hidden="true" />
-      <span className="eyebrow">A separate professional affiliation</span>
-      <div className="affiliation-content">
-        <h2>
-          Co-Founder <span>— CodeXa Agency</span>
+    <section className="affiliation-section wrap" aria-label="Professional Affiliation">
+      <div className="affiliation-card">
+        <div className="washi-tape-strip top-center" aria-hidden="true" />
+        <span className="eyebrow">Professional Affiliation</span>
+        <h2 className="affiliation-title">
+          Co-Founder at CodeXa Agency
         </h2>
-        <p>
-          Sanjay is a Co-Founder at CodeXa Agency. A distinct business
-          association, alongside SANJU X DEV.
+        <p className="affiliation-desc">
+          Sanjay is a Co-Founder at CodeXa Agency — a distinct business association delivering full-scale digital agency solutions, alongside SANJU X DEV.
         </p>
+        <a
+          href="https://codxa-agency.online/"
+          target="_blank"
+          rel="noreferrer"
+          className="button secondary affiliation-btn"
+        >
+          Visit CodeXa <ArrowUpRight size={16} />
+        </a>
       </div>
-      <a
-        href="https://codxa-agency.online/"
-        target="_blank"
-        rel="noreferrer"
-        className="affiliation-link"
-      >
-        Explore CodeXa <Arrow />
-      </a>
     </section>
   );
 }
 
-function Footer() {
+function ContactSection() {
   const s = useSite();
   const facebookUrl =
     (s as any).facebook || "https://www.facebook.com/sanju.x.dev";
   const instagramUrl =
     s.instagram || "https://www.instagram.com/sanju_x_dev/";
+  const whatsappUrl = (s as any).whatsapp;
 
   return (
-    <footer className="scrapbook-footer">
-      <div className="footer-top">
-        <span className="eyebrow">Good things start with a conversation</span>
-        <Link to="/contact" className="footer-title">
-          What’s next
-          <br />
-          for your business? <ArrowUpRight />
-        </Link>
-        <div className="footer-contact-actions">
+    <section id="contact" className="final-contact-section wrap" aria-label="Contact Information">
+      <div className="final-contact-card">
+        <div className="washi-tape-strip top-center" aria-hidden="true" />
+        <span className="eyebrow">Get In Touch</span>
+        <h2 className="final-contact-title">Let&apos;s Connect</h2>
+        <p className="final-contact-sub">
+          Have a question, an idea, or want to discuss a custom digital project? Reach out directly.
+        </p>
+
+        <div className="final-contact-grid">
           <a
             href={"mailto:" + s.email}
-            className="footer-contact-badge"
-            aria-label="Direct email"
+            className="final-contact-item"
+            aria-label="Direct email to SANJU X DEV"
           >
-            <MailIcon size={16} />
-            <span>{s.email}</span>
+            <div className="contact-item-icon">
+              <MailIcon size={22} />
+            </div>
+            <div className="contact-item-info">
+              <span className="contact-item-label">Email</span>
+              <span className="contact-item-value">{s.email}</span>
+            </div>
           </a>
+
           <a
             href={instagramUrl}
             target="_blank"
             rel="noreferrer"
-            className="footer-contact-badge"
+            className="final-contact-item"
             aria-label="Instagram profile"
           >
-            <InstagramIcon size={16} />
-            <span>@sanju_x_dev</span>
+            <div className="contact-item-icon">
+              <InstagramIcon size={22} />
+            </div>
+            <div className="contact-item-info">
+              <span className="contact-item-label">Instagram</span>
+              <span className="contact-item-value">@sanju_x_dev</span>
+            </div>
           </a>
+
           <a
             href={facebookUrl}
             target="_blank"
             rel="noreferrer"
-            className="footer-contact-badge"
-            aria-label="Facebook page"
+            className="final-contact-item"
+            aria-label="Facebook profile"
           >
-            <FacebookIcon size={16} />
-            <span>sanju_x_dev</span>
+            <div className="contact-item-icon">
+              <FacebookIcon size={22} />
+            </div>
+            <div className="contact-item-info">
+              <span className="contact-item-label">Facebook</span>
+              <span className="contact-item-value">sanju_x_dev</span>
+            </div>
           </a>
+
+          {whatsappUrl && (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="final-contact-item"
+              aria-label="WhatsApp contact"
+            >
+              <div className="contact-item-icon">
+                <span style={{ fontSize: 20 }}>💬</span>
+              </div>
+              <div className="contact-item-info">
+                <span className="contact-item-label">WhatsApp</span>
+                <span className="contact-item-value">Message on WhatsApp</span>
+              </div>
+            </a>
+          )}
         </div>
       </div>
-      <div className="footer-bottom">
-        <Brand />
-        <span className="footer-tagline">
-          Thoughtful Design. Powerful Digital Experiences.
-        </span>
-        <div className="footer-nav-links">
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="compact-footer">
+      <div className="compact-footer-inner wrap">
+        <div className="compact-footer-brand">
+          <Brand />
+          <span className="footer-tagline">
+            Thoughtful Design. Powerful Digital Experiences.
+          </span>
+        </div>
+        <div className="compact-footer-nav">
           <Link to="/">Home</Link>
-          <Link to="/work">Our Work</Link>
-          <Link to="/services">Services</Link>
-          <Link to="/about">About</Link>
-          <Link to="/contact">Contact</Link>
+          <Link to="/work">Projects</Link>
+          <Link to="/contact">Start a Project</Link>
           <Link to="/track">Track Project</Link>
           <Link to="/privacy">Privacy</Link>
         </div>
-        <small>© {new Date().getFullYear()} SANJU X DEV. All rights reserved.</small>
+        <small className="footer-copy">
+          © {new Date().getFullYear()} SANJU X DEV. All rights reserved.
+        </small>
       </div>
     </footer>
   );
@@ -270,12 +310,12 @@ function HomepageAiConsole() {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Exactly 3 clean suggestions
   const defaultQuestions = [
     "What website is right for me?",
     "Can you build an online store?",
     "How do I start my project?",
   ];
-  const exampleList = defaultQuestions;
 
   const handleSubmit = (q: string) => {
     const target = q.trim();
@@ -336,7 +376,7 @@ function HomepageAiConsole() {
       <div className="home-ai-chips-wrap">
         <span className="home-ai-chips-label">Quick questions:</span>
         <div className="home-ai-chips">
-          {exampleList.map((qText, idx) => (
+          {defaultQuestions.map((qText, idx) => (
             <button
               key={idx}
               type="button"
@@ -421,254 +461,139 @@ function Home() {
     .filter((p) => p.published)
     .sort((a, b) => a.order - b.order);
 
-  const heroProject = p[0] || seed[0];
-
+  // Exactly three featured projects: TicketX, StarX Connect, AudioX
   const featuredCards = [
-    p.find((x) => x.slug === "ticketx") || p[1] || seed[1],
-    p.find((x) => x.slug === "starx-connect") || p[2] || seed[2],
-    p.find((x) => x.slug === "audiox") || p[3] || seed[3],
+    p.find((x) => x.slug === "ticketx") || seed[1],
+    p.find((x) => x.slug === "starx-connect") || seed[2],
+    p.find((x) => x.slug === "audiox") || seed[3],
   ];
 
   return (
-    <div className="scrapbook-page-canvas">
-      {/* HERO SECTION — ASYMMETRIC EDITORIAL COLLAGE MATCHING IMAGE 2 */}
-      <section className="scrapbook-hero wrap">
-        {/* Left Margin Pressed Botanical & Map Accent */}
-        <div className="hero-left-botanical-scrap" aria-hidden="true">
-          <div className="map-paper-texture" />
-          <BotanicalSprig className="left-sprig" />
-        </div>
-
-        {/* HERO LEFT COLUMN */}
-        <div className="hero-left-column">
-          <div className="hero-top-kicker">
-            <span className="hero-est">EST. 2024</span>
+    <div className="homepage-five-sections">
+      {/* ==============================================================
+          SECTION 1 — LANDING / HERO
+          Only: SANJU X DEV + Spideyy AI Console + Start Your Project
+          ============================================================== */}
+      <section className="hero-landing-section wrap" aria-label="SANJU X DEV Landing">
+        <div className="hero-landing-container">
+          <div className="hero-main-header">
+            <h1 className="hero-studio-name">SANJU X DEV</h1>
           </div>
 
-          <div className="hero-title-wrap">
-            <h1 className="hero-editorial-headline">
-              <span>Design.</span>
-              <span>Develop.</span>
-              <span>Create.</span>
-            </h1>
-            <div className="hero-cursive-note" aria-hidden="true">
-              Good Design
-              <br />
-              Brighter Days
-            </div>
-          </div>
-
-          {/* Supporting quote as requested */}
-          <blockquote className="hero-supporting-quote">
-            “Thoughtful Design. Powerful Digital Experiences.”
-          </blockquote>
-
-          {/* Exact requested short description */}
-          <p className="hero-intro-paragraph">
-            Thoughtfully designed websites, applications and digital experiences
-            for businesses, brands and individuals.
-          </p>
-
-          <div className="hero-cta-group">
-            <Link to="/work" className="btn-scrapbook-primary">
-              Our Work <ArrowRight size={17} />
-            </Link>
-            <div className="hero-sub-cta">
-              <Link to="/contact" className="btn-scrapbook-secondary">
-                Start Your Project
-              </Link>
-              <span className="hero-subtext-stamp">
-                THOUGHTFUL DESIGN · REAL IMPACT
-              </span>
-            </div>
-          </div>
-
-          {/* Naturally Integrated Compact Spideyy Input */}
-          <div className="hero-spideyy-embed">
+          {/* Working Spideyy AI Console */}
+          <div className="hero-spideyy-wrap">
             <HomepageAiConsole />
           </div>
-        </div>
 
-        {/* HERO RIGHT COLUMN — SCRAPBOOK COLLAGE MATCHING IMAGE 2 */}
-        <div className="hero-right-collage" aria-label="Creative studio collage">
-          {/* Postmark stamp top-right with handwritten annotation */}
-          <div className="collage-stamp-group">
-            <PostmarkStamp className="hero-postmark" />
-            <span className="hero-stamp-note">Same Person Different Ideas ...</span>
-          </div>
-
-          {/* Central Polaroid Photo Frame showcasing real StarX Live website */}
-          <div className="polaroid-frame-wrap">
-            <WashiTape className="tape-top-center" />
-            <div className="polaroid-frame">
-              <div className="polaroid-browser-header">
-                <div className="polaroid-browser-dots">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <span className="polaroid-browser-url">
-                  starxlive.online · Live Project
-                </span>
-                <span className="polaroid-status-tag">ACTIVE</span>
-              </div>
-
-              <div className="polaroid-photo-canvas">
-                <img
-                  src={heroProject.image}
-                  alt={heroProject.name + " real website showcase"}
-                  className="polaroid-img"
-                  loading="eager"
-                />
-              </div>
-
-              <div className="polaroid-caption">
-                <span className="polaroid-handwriting">
-                  Still building a kinder internet. ☺
-                </span>
-                <Link
-                  to={"/work/" + heroProject.slug}
-                  className="polaroid-case-link"
-                  title="View full case study"
-                >
-                  View Case Study <Arrow />
-                </Link>
-              </div>
-            </div>
-            <WashiTape className="tape-bottom-left" />
-          </div>
-
-          {/* Botanical Wildflower Sprig pressed beside the Polaroid */}
-          <div className="collage-botanical-wrap" aria-hidden="true">
-            <BotanicalSprig className="collage-botanical-sprig" />
-          </div>
-
-          {/* Pinned UI/UX Wireframe & Blueprint Scrap */}
-          <div className="collage-blueprint-wrap">
-            <WireframeBlueprintScrap className="collage-blueprint" />
-          </div>
-
-          {/* Pinned Torn Memo Scrap on far right */}
-          <div className="collage-memo-wrap">
-            <TornMemoScrap className="collage-memo" />
-          </div>
-
-          {/* Web Development / Digital Craft Paper Elements */}
-          <div className="collage-dev-tag" aria-hidden="true">
-            <code>&lt;sanju-x-dev /&gt;</code>
-            <span>// crafted with intention</span>
+          {/* Clear Start Your Project Button */}
+          <div className="hero-start-project-wrap">
+            <a href="#choose-website" className="button hero-start-project-btn">
+              Start Your Project <ArrowDown size={18} />
+            </a>
           </div>
         </div>
       </section>
 
-      {/* BOTTOM SECTION — 2 COLUMNS MATCHING IMAGE 2 EXACTLY */}
-      <section className="scrapbook-bottom-section wrap">
-        {/* LEFT COLUMN: FEATURED PROJECTS (3 HORIZONTAL SCRAPBOOK PHOTO CARDS) */}
-        <div className="bottom-featured-column">
-          <div className="bottom-section-header">
-            <span className="bottom-header-title">FEATURED PROJECTS</span>
-            <Link to="/work" className="bottom-header-link">
-              VIEW ALL →
-            </Link>
+      {/* ==============================================================
+          SECTION 2 — THREE FEATURED PROJECTS (Varun Portfolio Presentation)
+          TicketX, StarX Connect, AudioX
+          ============================================================== */}
+      <section id="featured-projects" className="featured-projects-section wrap" aria-label="Featured Projects">
+        <div className="featured-section-header">
+          <div>
+            <span className="eyebrow">Featured Work</span>
+            <h2 className="featured-section-title">Selected Projects</h2>
           </div>
+          <Link to="/work" className="featured-all-link">
+            Explore All Projects →
+          </Link>
+        </div>
 
-          <div className="featured-cards-row">
-            {featuredCards.map((card) => (
-              <article key={card.slug} className="scrapbook-photo-card">
-                <div className="photo-card-tape" aria-hidden="true" />
-                <Link
-                  to={"/work/" + card.slug}
-                  className="photo-card-media"
-                  style={{ "--project-tint": card.color } as React.CSSProperties}
-                >
+        <div className="featured-projects-grid">
+          {featuredCards.map((card) => (
+            <article key={card.slug} className="varun-project-card">
+              <div className="project-card-tape" aria-hidden="true" />
+
+              {/* Large, uncropped screenshot preview */}
+              <Link
+                to={"/work/" + card.slug}
+                className="varun-project-preview"
+                style={{ "--project-color": card.color } as React.CSSProperties}
+              >
+                <div className="preview-browser-bar">
+                  <div className="preview-dots">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <span className="preview-hostname">{new URL(card.url).hostname}</span>
+                </div>
+                <div className="preview-image-canvas">
                   <img
                     src={card.slug === "starx-connect" ? card.mobile : card.image}
-                    alt={card.short + " website preview"}
+                    alt={card.name + " real website showcase"}
                     loading="lazy"
                   />
-                  <span className="photo-card-arrow">
-                    <ArrowRight size={14} />
-                  </span>
-                </Link>
-                <div className="photo-card-details">
-                  <span className="photo-card-category">{card.category}</span>
-                  <h3 className="photo-card-title">
-                    <Link to={"/work/" + card.slug}>{card.short}</Link>
-                  </h3>
-                  <p className="photo-card-desc">{card.summary}</p>
-                  <Link to={"/work/" + card.slug} className="photo-card-action">
-                    View Project <ArrowRight size={13} />
+                </div>
+              </Link>
+
+              {/* Clean project information */}
+              <div className="varun-project-meta">
+                <span className="varun-project-category">{card.category}</span>
+                <h3 className="varun-project-title">
+                  <Link to={"/work/" + card.slug}>{card.short}</Link>
+                </h3>
+                <p className="varun-project-desc">{card.summary}</p>
+                <div className="varun-project-actions">
+                  <Link to={"/work/" + card.slug} className="button varun-view-btn">
+                    View Project <ArrowRight size={15} />
                   </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: ABOUT ME (MATCHING IMAGE 2 WITH DEVELOPER WORKSTATION) */}
-        <div className="bottom-about-column">
-          <div className="bottom-section-header">
-            <span className="bottom-header-title">ABOUT ME</span>
-            <span className="bottom-cursive-signature" aria-hidden="true">
-              Curious mind Always building - Sanju
-            </span>
-          </div>
-
-          <div className="about-scrapbook-card">
-            <div className="about-engraving-container">
-              <DeveloperStationIllustration className="about-studio-engraving" />
-            </div>
-
-            <div className="about-editorial-text">
-              <h2 className="about-credo-headline">
-                I believe in slow ideas, clean design and a kinder internet.
-              </h2>
-              <p className="about-credo-bio">
-                I’m a designer & developer passionate about creating digital
-                spaces that feel human. I love mixing design, code and
-                storytelling to build things that matter.
-              </p>
-
-              {/* 4 Micro-Badges with Illustrated Icons */}
-              <div className="about-micro-badges">
-                <div className="about-micro-badge">
-                  <span className="badge-icon">☕</span>
-                  <span className="badge-text">
-                    <b>Coffee</b>
-                    <small>Fuel</small>
-                  </span>
-                </div>
-                <div className="about-micro-badge">
-                  <span className="badge-icon">💻</span>
-                  <span className="badge-text">
-                    <b>Design</b>
-                    <small>Expression</small>
-                  </span>
-                </div>
-                <div className="about-micro-badge">
-                  <span className="badge-icon">🌿</span>
-                  <span className="badge-text">
-                    <b>Code</b>
-                    <small>Freedom</small>
-                  </span>
-                </div>
-                <div className="about-micro-badge">
-                  <span className="badge-icon">⛰️</span>
-                  <span className="badge-text">
-                    <b>Explore</b>
-                    <small>Balance</small>
-                  </span>
+                  <a
+                    href={card.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="varun-live-link"
+                  >
+                    Live Site ↗
+                  </a>
                 </div>
               </div>
-            </div>
-          </div>
+            </article>
+          ))}
         </div>
       </section>
 
-      {/* SEPARATE PROFESSIONAL AFFILIATION */}
-      <div className="wrap affiliation-wrap">
+      {/* ==============================================================
+          SECTION 3 — CO-FOUNDER AT CODEXA AGENCY
+          Short affiliation panel
+          ============================================================== */}
+      <div className="wrap">
         <Affiliation />
       </div>
+
+      {/* ==============================================================
+          SECTION 4 — CHOOSE YOUR WEBSITE / PROJECT ENQUIRY
+          Interactive 3-Step Wizard with CodeXa Structure & SANJU X DEV Theme
+          ============================================================== */}
+      <section id="choose-website" className="homepage-enquiry-section wrap" aria-label="Choose Your Website">
+        <div className="homepage-enquiry-header">
+          <span className="eyebrow">Project Enquiry</span>
+          <h2 className="homepage-enquiry-title">Choose Your Website</h2>
+          <p className="homepage-enquiry-sub">
+            Select what you&apos;re planning to create, pick your features, and get an honest proposal with your unique tracking code.
+          </p>
+        </div>
+
+        <div className="homepage-enquiry-card-wrapper">
+          <EnquiryBuilder isHomepageSection={true} />
+        </div>
+      </section>
+
+      {/* ==============================================================
+          SECTION 5 — CONTACT INFORMATION
+          Let's Connect (Must be last section)
+          ============================================================== */}
+      <ContactSection />
     </div>
   );
 }
@@ -757,7 +682,7 @@ function Work() {
       <span className="eyebrow">Our Work</span>
       <h1>Selected Projects</h1>
       <p className="lede">
-        Five verified public projects built for entertainment, discovery and
+        Verified public projects built for entertainment, discovery and
         direct business action. Explore the interfaces and the thinking behind
         them.
       </p>
@@ -1025,7 +950,13 @@ export default function App() {
 
   useEffect(() => {
     setMenu(false);
-    window.scrollTo(0, 0);
+    if (!loc.hash) {
+      window.scrollTo(0, 0);
+    } else {
+      const el = document.getElementById(loc.hash.replace("#", ""));
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }
+
     const p = site.projects.find((p) => loc.pathname === "/work/" + p.slug);
     document.title =
       (loc.pathname === "/"
@@ -1035,7 +966,7 @@ export default function App() {
             : ((
                 {
                   "/": "",
-                  "/work": "Our Work",
+                  "/work": "Selected Projects",
                   "/about": "About",
                   "/services": "Services",
                   "/contact": "Start a Project",
@@ -1044,7 +975,7 @@ export default function App() {
                   "/admin": "Spideyy — Private Access",
                 } as Record<string, string>
               )[loc.pathname] ?? "Page not found")) + " — ") + site.seoTitle;
-  }, [loc.pathname, site]);
+  }, [loc.pathname, loc.hash, site]);
 
   return (
     <Context.Provider value={site}>
@@ -1085,20 +1016,30 @@ export default function App() {
                 {menu ? <X /> : <Menu />}
               </button>
               <nav className={menu ? "expanded" : ""}>
-                {[
-                  ["/", "Home"],
-                  ["/work", "Our Work"],
-                  ["/services", "Services"],
-                  ["/about", "About"],
-                  ["/contact", "Contact"],
-                ].map(([to, t]) => (
-                  <NavLink key={to} to={to} end={to === "/"}>
-                    {t}
-                  </NavLink>
-                ))}
-                <Link to="/contact" className="nav-cta-btn">
+                <NavLink to="/" end>
+                  Home
+                </NavLink>
+                {loc.pathname === "/" ? (
+                  <a href="#featured-projects">Projects</a>
+                ) : (
+                  <NavLink to="/work">Projects</NavLink>
+                )}
+                {loc.pathname === "/" ? (
+                  <a href="#choose-website">Start a Project</a>
+                ) : (
+                  <NavLink to="/contact">Start a Project</NavLink>
+                )}
+                {loc.pathname === "/" ? (
+                  <a href="#contact">Contact</a>
+                ) : (
+                  <a href="/#contact">Contact</a>
+                )}
+                <a
+                  href={loc.pathname === "/" ? "#choose-website" : "/contact"}
+                  className="nav-cta-btn"
+                >
                   Start Your Project <ArrowRight size={15} />
-                </Link>
+                </a>
               </nav>
             </div>
           </header>

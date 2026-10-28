@@ -251,12 +251,12 @@ test("enquiry builder defaults have 11 website categories with correct features"
     "Business Website",
     "Agency Website",
     "E-Commerce Website",
-    "Restaurant / Food Business Website",
-    "Shop / Store Website",
-    "Educational Website",
+    "Restaurant Website",
+    "Shop / Local Store Website",
     "Booking / Appointment Website",
+    "Educational Website",
     "Other / Custom Website",
-    "Not Sure — Help Me Decide",
+    "Not Sure — Help Me Choose",
   ];
   assert.equal(seed.websiteCategories.length, 11);
   assert.deepEqual(
@@ -266,21 +266,21 @@ test("enquiry builder defaults have 11 website categories with correct features"
 
   // Check Portfolio features
   const portfolio = seed.websiteCategories.find((c) => c.id === "portfolio");
-  assert.ok(portfolio.features.includes("About Me"));
-  assert.ok(portfolio.features.includes("Skills"));
+  assert.ok(portfolio.features.includes("My Projects"));
+  assert.ok(portfolio.features.includes("Skills & Experience"));
   assert.ok(portfolio.features.includes("Resume Download"));
 
   // Check E-Commerce features
   const ecommerce = seed.websiteCategories.find((c) => c.id === "ecommerce");
   assert.ok(ecommerce.features.includes("Product Catalogue"));
   assert.ok(ecommerce.features.includes("Shopping Cart"));
-  assert.ok(ecommerce.features.includes("Payments"));
+  assert.ok(ecommerce.features.includes("UPI / Card Payments"));
 
   // Check Restaurant features
   const restaurant = seed.websiteCategories.find((c) => c.id === "restaurant");
-  assert.ok(restaurant.features.includes("Food Menu"));
-  assert.ok(restaurant.features.includes("Online Ordering"));
-  assert.ok(restaurant.features.includes("Table Booking"));
+  assert.ok(restaurant.features.includes("Digital Food Menu"));
+  assert.ok(restaurant.features.includes("Online Food Ordering"));
+  assert.ok(restaurant.features.includes("Table Reservation"));
 });
 
 test("spideyy advises on shop website and provides 'Start With This Website Type' preselect link", async () => {
