@@ -28,8 +28,10 @@ import {
   Expand,
   Plus,
   Minus,
+  Phone,
+  MessageCircle,
 } from "lucide-react";
-import { defaults, projects as seed } from "./content";
+import { defaults, projects as seed, SANJU_BUSINESS_PHONE, SANJU_WHATSAPP_NUMBER } from "./content";
 import Contact, { EnquiryBuilder } from "./Contact";
 import Assistant from "./Assistant";
 import { ChatProvider, useChat } from "./chat-context";
@@ -112,7 +114,8 @@ function ContactSection() {
     (s as any).facebook || "https://www.facebook.com/sanju.x.dev";
   const instagramUrl =
     s.instagram || "https://www.instagram.com/sanju_x_dev/";
-  const whatsappUrl = (s as any).whatsapp;
+  const phone = (s as any).phone || SANJU_BUSINESS_PHONE;
+  const whatsappUrl = `https://wa.me/${SANJU_WHATSAPP_NUMBER}?text=${encodeURIComponent("Hello SANJU X DEV, I would like to enquire about a website.")}`;
 
   return (
     <section id="contact" className="final-contact-section wrap" aria-label="Contact Information">
@@ -136,6 +139,36 @@ function ContactSection() {
             <div className="contact-item-info">
               <span className="contact-item-label">Email</span>
               <span className="contact-item-value">{s.email}</span>
+            </div>
+          </a>
+
+          <a
+            href={"tel:" + phone.replace(/\s+/g, "")}
+            className="final-contact-item"
+            aria-label="Call SANJU X DEV directly"
+          >
+            <div className="contact-item-icon">
+              <Phone size={20} />
+            </div>
+            <div className="contact-item-info">
+              <span className="contact-item-label">Phone</span>
+              <span className="contact-item-value">{phone}</span>
+            </div>
+          </a>
+
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="final-contact-item whatsapp-highlight"
+            aria-label="Chat with SANJU X DEV on WhatsApp"
+          >
+            <div className="contact-item-icon" style={{ color: "#25d366" }}>
+              <MessageCircle size={22} />
+            </div>
+            <div className="contact-item-info">
+              <span className="contact-item-label">WhatsApp</span>
+              <span className="contact-item-value">{phone}</span>
             </div>
           </a>
 
@@ -170,24 +203,6 @@ function ContactSection() {
               <span className="contact-item-value">sanju_x_dev</span>
             </div>
           </a>
-
-          {whatsappUrl && (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="final-contact-item"
-              aria-label="WhatsApp contact"
-            >
-              <div className="contact-item-icon">
-                <span style={{ fontSize: 20 }}>💬</span>
-              </div>
-              <div className="contact-item-info">
-                <span className="contact-item-label">WhatsApp</span>
-                <span className="contact-item-value">Message on WhatsApp</span>
-              </div>
-            </a>
-          )}
         </div>
       </div>
     </section>

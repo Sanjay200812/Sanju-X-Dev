@@ -264,9 +264,14 @@ export default function Admin() {
         if (search.trim()) {
           const q = search.toLowerCase();
           const match =
+            r.tracking_code?.toLowerCase().includes(q) ||
             r.data?.name?.toLowerCase().includes(q) ||
             r.data?.email?.toLowerCase().includes(q) ||
             r.data?.company?.toLowerCase().includes(q) ||
+            r.data?.business_name?.toLowerCase().includes(q) ||
+            r.phone?.toLowerCase().includes(q) ||
+            r.data?.phone?.toLowerCase().includes(q) ||
+            r.data?.whatsapp?.toLowerCase().includes(q) ||
             r.data?.description?.toLowerCase().includes(q) ||
             r.notes?.toLowerCase().includes(q);
           if (!match) return false;
@@ -1227,12 +1232,27 @@ export default function Admin() {
                       </div>
 
                       <div>
-                        <small style={{ color: "var(--muted)", display: "block" }}>Phone / WhatsApp</small>
+                        <small style={{ color: "var(--muted)", display: "block" }}>Phone / Mobile</small>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span>{r.phone || r.data.phone || "Not provided"}</span>
                           {(r.phone || r.data.phone) && (
                             <a
-                              href={`https://wa.me/${(r.phone || r.data.phone).replace(/[^0-9]/g, "")}`}
+                              href={`tel:${(r.phone || r.data.phone).replace(/[^0-9+]/g, "")}`}
+                              style={{ fontSize: 11, color: "var(--accent)", textDecoration: "underline" }}
+                            >
+                              Call
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <small style={{ color: "var(--muted)", display: "block" }}>WhatsApp Number</small>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span>{r.data.whatsapp || r.phone || r.data.phone || "Not provided"}</span>
+                          {(r.data.whatsapp || r.phone || r.data.phone) && (
+                            <a
+                              href={`https://wa.me/${(r.data.whatsapp || r.phone || r.data.phone).replace(/[^0-9]/g, "")}`}
                               target="_blank"
                               rel="noreferrer"
                               style={{
@@ -1242,7 +1262,7 @@ export default function Admin() {
                                 textDecoration: "underline",
                               }}
                             >
-                              WhatsApp
+                              💬 WhatsApp
                             </a>
                           )}
                         </div>
@@ -1324,6 +1344,74 @@ export default function Admin() {
                           )}
                         </div>
                       </div>
+
+                      {/* 4-Step Technical Architecture Fields */}
+                      {r.data.primary_purpose && (
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <small style={{ color: "var(--muted)", display: "block", marginBottom: 4 }}>Step 1 — Primary Objectives / Purpose</small>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {(Array.isArray(r.data.primary_purpose) ? r.data.primary_purpose : [r.data.primary_purpose]).map((p: string, idx: number) => (
+                              <span key={idx} style={{ background: "rgba(184,51,42,0.08)", border: "1px solid var(--accent)", color: "var(--foreground)", padding: "2px 8px", borderRadius: 4, fontSize: 11.5, fontWeight: 500 }}>
+                                ✓ {p}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {r.data.login_option && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>User Accounts / Login</small>
+                          <div style={{ fontWeight: 600 }}>{r.data.login_option}</div>
+                          {r.data.login_security && Array.isArray(r.data.login_security) && r.data.login_security.length > 0 && (
+                            <small style={{ color: "var(--muted)", display: "block", fontSize: 11, marginTop: 2 }}>Security: {r.data.login_security.join(", ")}</small>
+                          )}
+                        </div>
+                      )}
+
+                      {r.data.dashboard_option && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>Dashboard / Admin</small>
+                          <div style={{ fontWeight: 600 }}>{r.data.dashboard_option}</div>
+                        </div>
+                      )}
+
+                      {r.data.data_storage && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>Data Storage</small>
+                          <div style={{ fontWeight: 600 }}>{r.data.data_storage}</div>
+                        </div>
+                      )}
+
+                      {r.data.animation_preference && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>Animation & Motion</small>
+                          <div style={{ fontWeight: 600 }}>{r.data.animation_preference}</div>
+                        </div>
+                      )}
+
+                      {r.data.page_count && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>Estimated Pages</small>
+                          <div style={{ fontWeight: 600 }}>{r.data.page_count}</div>
+                        </div>
+                      )}
+
+                      {r.data.existing_design_option && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>Design Mind / Assets</small>
+                          <div>{r.data.existing_design_option}</div>
+                        </div>
+                      )}
+
+                      {r.data.figma_url && (
+                        <div>
+                          <small style={{ color: "var(--muted)", display: "block" }}>Figma Link</small>
+                          <a href={r.data.figma_url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline", color: "var(--accent)", fontSize: 12 }}>
+                            {r.data.figma_url} ↗
+                          </a>
+                        </div>
+                      )}
                     </div>
 
                     {/* Selected Features */}
@@ -1408,9 +1496,20 @@ export default function Admin() {
                         <label>
                           Enquiry Status
                           <select name="status" defaultValue={r.status}>
-                            <option value="new">New</option>
-                            <option value="in-progress">In-progress</option>
+                            <option value="new">Enquiry Received (New)</option>
+                            <option value="under_review">Under Review</option>
+                            <option value="more_details_needed">More Details Needed</option>
                             <option value="accepted">Accepted</option>
+                            <option value="in-progress">In-Progress</option>
+                            <option value="planning">Planning</option>
+                            <option value="designing">Designing</option>
+                            <option value="development">Development in Progress</option>
+                            <option value="testing">Testing</option>
+                            <option value="waiting_for_customer">Waiting for Customer</option>
+                            <option value="on_hold">On Hold</option>
+                            <option value="ready_for_review">Ready for Review</option>
+                            <option value="completed">Completed</option>
+                            <option value="delivered">Delivered</option>
                             <option value="declined">Declined</option>
                             <option value="closed">Closed</option>
                           </select>
@@ -1436,10 +1535,57 @@ export default function Admin() {
                           marginTop: 12,
                         }}
                       >
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                           <button className="button" style={{ padding: "8px 16px" }} disabled={busy}>
                             Save update
                           </button>
+                          {(() => {
+                            const clientWa = (r.data.whatsapp || r.phone || r.data.phone || "").replace(/[^0-9]/g, "");
+                            const waChatUrl = clientWa ? `https://wa.me/${clientWa}?text=${encodeURIComponent(`Hi ${r.data.name || ''}, this is Sanju from Sanju X Dev regarding your project enquiry (${r.tracking_code || r.data?.tracking_code || 'SXD'}).`)}` : null;
+                            const clientEmailUrl = r.data.email ? `mailto:${r.data.email}?subject=${encodeURIComponent(`Sanju X Dev — Regarding your enquiry ${r.tracking_code || r.data?.tracking_code || ''}`)}` : null;
+                            return (
+                              <>
+                                {waChatUrl && (
+                                  <a
+                                    href={waChatUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="button"
+                                    style={{
+                                      padding: "8px 14px",
+                                      background: "#25d366",
+                                      borderColor: "#25d366",
+                                      color: "#ffffff",
+                                      fontSize: 12.5,
+                                      fontWeight: 600,
+                                      textDecoration: "none",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 6,
+                                    }}
+                                  >
+                                    💬 WhatsApp Chat
+                                  </a>
+                                )}
+                                {clientEmailUrl && (
+                                  <a
+                                    href={clientEmailUrl}
+                                    className="button secondary"
+                                    style={{
+                                      padding: "8px 14px",
+                                      fontSize: 12.5,
+                                      textDecoration: "none",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 6,
+                                    }}
+                                  >
+                                    ✉ Send Email
+                                  </a>
+                                )}
+                              </>
+                            );
+                          })()}
                           <button
                             type="button"
                             className="button secondary"
@@ -3230,12 +3376,19 @@ export default function Admin() {
                         value={editingProject.status}
                         onChange={(e) => setEditingProject({ ...editingProject, status: e.target.value })}
                       >
+                        <option value="enquiry_received">Enquiry Received</option>
                         <option value="under_review">Under Review</option>
-                        <option value="scope_confirmed">Scope Confirmed</option>
-                        <option value="in_progress">In Active Development</option>
-                        <option value="testing">Quality & Responsive Testing</option>
-                        <option value="completed">Completed & Delivered</option>
+                        <option value="more_details_needed">More Details Needed</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="planning">Planning</option>
+                        <option value="designing">Designing</option>
+                        <option value="development_in_progress">Development in Progress</option>
+                        <option value="testing">Testing</option>
+                        <option value="waiting_for_customer">Waiting for Customer</option>
                         <option value="on_hold">On Hold</option>
+                        <option value="ready_for_review">Ready for Review</option>
+                        <option value="completed">Completed</option>
+                        <option value="delivered">Delivered</option>
                         <option value="declined">Declined</option>
                       </select>
                     </label>
