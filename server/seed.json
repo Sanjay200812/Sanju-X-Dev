@@ -219,40 +219,41 @@
     {
       "id": "portfolio",
       "label": "Personal Portfolio",
-      "desc": "Show your skills, projects, achievements and experience.",
+      "desc": "Show your work, skills and achievements.",
       "examples": [
-        "Student portfolio",
-        "Developer or designer portfolio",
-        "Professional resume website",
-        "Artist or creator portfolio",
-        "Personal brand website"
+        "Student Portfolio",
+        "Developer Portfolio",
+        "Designer Portfolio"
       ],
       "features": [
-        "About Me",
-        "Skills",
         "My Projects",
+        "Skills & Experience",
         "Resume Download",
+        "Certificates",
         "Contact Form",
-        "Social Links"
+        "Social Media Links",
+        "Photo Gallery",
+        "Animations"
       ],
       "enabled": true
     },
     {
       "id": "blog",
       "label": "Blog / Content Website",
-      "desc": "Share articles, stories, news and regular updates.",
+      "desc": "Publish stories, articles or regular updates.",
       "examples": [
-        "Personal blog",
-        "Articles and stories",
-        "News or updates website",
-        "Educational content website",
-        "Publication website"
+        "Personal Blog",
+        "News Website",
+        "Educational Articles"
       ],
       "features": [
         "Articles",
         "Categories",
-        "Search",
-        "Admin Area to Publish Content"
+        "Article Search",
+        "Photos & Videos",
+        "Author Profile",
+        "Admin Page to Add Posts",
+        "Reader Comments"
       ],
       "enabled": true
     },
@@ -261,174 +262,173 @@
       "label": "Business Website",
       "desc": "Help customers learn about your business and contact you.",
       "examples": [
-        "Small business website",
-        "Company website",
-        "Local service business",
-        "Professional services website",
-        "Showcase website"
+        "Local Business",
+        "Service Company",
+        "Professional Office"
       ],
       "features": [
-        "Business Information",
         "Services",
-        "Gallery",
+        "Contact Form",
         "WhatsApp",
-        "Location",
-        "Contact Form"
+        "Google Maps",
+        "Gallery",
+        "Customer Reviews",
+        "Request a Quote",
+        "Booking Option"
       ],
       "enabled": true
     },
     {
       "id": "agency",
       "label": "Agency Website",
-      "desc": "Showcase your agency, services, team and completed work.",
+      "desc": "Present your agency, projects, services and team.",
       "examples": [
-        "Creative agency",
-        "Digital agency",
-        "Technology agency",
-        "Marketing agency",
-        "Consulting agency"
+        "Digital Agency",
+        "Marketing Agency",
+        "Creative Studio"
       ],
       "features": [
         "Services",
-        "Our Work",
+        "Featured Work",
         "Team",
-        "Case Studies",
-        "Client Enquiry Form"
+        "Client Reviews",
+        "Project Enquiry",
+        "Consultation Booking",
+        "Careers",
+        "Blog"
       ],
       "enabled": true
     },
     {
       "id": "ecommerce",
       "label": "E-Commerce Website",
-      "desc": "Sell products and receive online orders.",
+      "desc": "Sell products online with a shopping cart and payment options.",
       "examples": [
-        "Online store",
-        "Multi-product shop",
-        "Brand merchandise store",
-        "Digital product shop"
+        "Clothing Store",
+        "Electronics Store",
+        "Online Brand"
       ],
       "features": [
         "Product Catalogue",
+        "Product Search",
         "Shopping Cart",
-        "Checkout",
-        "Payments",
+        "Online Checkout",
+        "UPI / Card Payments",
+        "Order Tracking",
         "Customer Login",
-        "Order Tracking"
+        "Offers & Discounts",
+        "Stock Management"
       ],
       "enabled": true
     },
     {
       "id": "restaurant",
-      "label": "Restaurant / Food Business Website",
-      "desc": "Show your menu, opening hours, location and ordering options.",
+      "label": "Restaurant Website",
+      "desc": "Display food menus, restaurant information and ordering options.",
       "examples": [
-        "Dine-in restaurant",
-        "Cafe & bistro",
-        "Cloud kitchen",
+        "Restaurant",
+        "Cafe",
         "Bakery",
-        "Food delivery brand"
+        "Food Outlet"
       ],
       "features": [
-        "Food Menu",
-        "Online Ordering",
-        "Table Booking",
-        "Location",
+        "Digital Food Menu",
+        "Food Photos",
+        "Online Food Ordering",
+        "Table Reservation",
+        "Restaurant Location",
         "Opening Hours",
-        "WhatsApp"
-      ],
-      "enabled": true
-    },
-    {
-      "id": "shop",
-      "label": "Shop / Store Website",
-      "desc": "Show products, offers and contact or ordering information.",
-      "examples": [
-        "Local retail shop",
-        "Clothing boutique",
-        "Jewelry showroom",
-        "Electronics store",
-        "Convenience store"
-      ],
-      "features": [
-        "Product Gallery",
-        "Product Categories",
-        "WhatsApp Ordering",
-        "Online Payments",
+        "WhatsApp Contact",
         "Customer Reviews"
       ],
       "enabled": true
     },
     {
-      "id": "educational",
-      "label": "Educational Website",
-      "desc": "Create a website for a school, institute, course or learning service.",
+      "id": "shop",
+      "label": "Shop / Local Store Website",
+      "desc": "Show your store's products and help customers enquire or order.",
       "examples": [
-        "School website",
-        "Coaching institute",
-        "Tuition center",
-        "Online courses",
-        "Training academy"
+        "Clothing Shop",
+        "Grocery Store",
+        "Mobile Shop",
+        "Furniture Store"
       ],
       "features": [
-        "Course / Class Information",
-        "About the School / Teacher",
-        "Enrolment / Enquiry Form",
-        "Photo Gallery",
-        "Student / Parent Notice Board",
-        "Contact & Location"
+        "Product Gallery",
+        "Product Categories",
+        "Product Enquiry",
+        "WhatsApp Ordering",
+        "Store Location",
+        "Offers",
+        "Online Payments",
+        "Stock Information"
       ],
       "enabled": true
     },
     {
       "id": "booking",
       "label": "Booking / Appointment Website",
-      "desc": "Let customers request or schedule appointments.",
+      "desc": "Let customers request or book appointments.",
       "examples": [
-        "Salon & spa",
-        "Medical / Dental clinic",
-        "Fitness studio",
-        "Consulting firm",
-        "Photography studio"
+        "Salon",
+        "Clinic",
+        "Gym",
+        "Consulting Service"
       ],
       "features": [
-        "Services List",
-        "Calendar / Appointment Booking",
-        "Working Hours & Availability",
-        "WhatsApp Enquiries",
-        "Customer Reviews",
-        "Directions & Map"
+        "Available Services",
+        "Appointment Calendar",
+        "Choose Time Slot",
+        "Booking Confirmation",
+        "Online Payment",
+        "WhatsApp Reminders"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "educational",
+      "label": "Educational Website",
+      "desc": "Share courses, information and learning resources.",
+      "examples": [
+        "School",
+        "Coaching Centre",
+        "Online Courses"
+      ],
+      "features": [
+        "Courses",
+        "Admissions / Enquiry Form",
+        "Faculty / Teachers",
+        "Timetable",
+        "Learning Materials",
+        "Student Login",
+        "Announcements"
       ],
       "enabled": true
     },
     {
       "id": "custom",
       "label": "Other / Custom Website",
-      "desc": "Build something based on the customer's unique idea.",
+      "desc": "For any website idea not listed above.",
       "examples": [
-        "Custom web app",
-        "Community portal",
-        "Directory",
-        "Interactive utility",
-        "Unique startup idea"
+        "Custom Web App",
+        "Community Portal",
+        "Interactive Tool"
       ],
       "features": [
-        "Custom Pages",
-        "Interactive Forms",
-        "Database Integration",
-        "Special Features",
-        "Responsive Design",
-        "WhatsApp Integration"
+        "Free-text requirements",
+        "Relevant suggested features",
+        "Not Sure option"
       ],
       "enabled": true
     },
     {
       "id": "not_sure",
-      "label": "Not Sure — Help Me Decide",
-      "desc": "We'll help you pick the best fit for your goals.",
+      "label": "Not Sure — Help Me Choose",
+      "desc": "For customers who need guidance selecting a website.",
       "examples": [
-        "First-time website owner",
-        "Exploring ideas",
-        "Flexible project scope"
+        "First-time Website",
+        "Flexible Scope",
+        "Free Consultation"
       ],
       "features": [
         "Clean Modern Design",
@@ -489,7 +489,7 @@
     "Not Sure Yet"
   ],
   "formConfig": {
-    "defaultCategory": "Business Website",
+    "defaultCategory": "",
     "defaultDesignStyle": "Clean & Simple",
     "requireDescription": false,
     "customQuestions": []
