@@ -1,9 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Copy,
   Check,
-  ChevronDown,
   ArrowRight,
   ArrowLeft,
   User,
@@ -11,24 +10,34 @@ import {
   Building2,
   Layers,
   ShoppingBag,
-  Sparkles,
   Utensils,
   Store,
   GraduationCap,
   Calendar,
   Code,
   HelpCircle,
+  MessageCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { useSite, Arrow } from "./App";
-import { InstagramIcon, FacebookIcon, MailIcon } from "./Decorations";
+import { MailIcon } from "./Decorations";
 import {
   DEFAULT_WEBSITE_CATEGORIES,
+  PRIMARY_PURPOSE_OPTIONS,
+  LOGIN_OPTIONS,
+  LOGIN_SECURITY_OPTIONS,
+  DASHBOARD_OPTIONS,
+  DATA_STORAGE_OPTIONS,
   DESIGN_STYLES,
+  ANIMATION_LEVELS,
+  PAGE_COUNT_OPTIONS,
+  DESIGN_MIND_OPTIONS,
   TIMELINE_CHOICES,
   BUDGET_CHOICES,
-  PRIMARY_OBJECTIVES,
-  CATEGORY_OBJECTIVES_MAP,
   getCategoryFeatureHeading,
+  getWhatsAppEnquiryUrl,
+  SANJU_BUSINESS_PHONE,
+  SANJU_WHATSAPP_NUMBER,
   type WebsiteCategory,
 } from "./content";
 
@@ -40,14 +49,13 @@ export function EnquiryBuilder({
   const s = useSite();
   const [params] = useSearchParams();
 
-  // 3-step builder: 0 = Category, 1 = Objectives & Features, 2 = Contact Details
+  // Exactly 4 steps: 0 = Choose Website, 1 = Features & Functionality, 2 = Design & Preferences, 3 = Contact & Submit
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [sent, setSent] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [copied, setCopied] = useState(false);
-  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
 
   // Available categories from site config or defaults
   const categories: WebsiteCategory[] = useMemo(() => {
@@ -77,7 +85,7 @@ export function EnquiryBuilder({
       : BUDGET_CHOICES;
   }, [s]);
 
-  // Initial category from URL param (if navigated via Spideyy suggestion)
+  // Initial category from URL param (e.g. from Spideyy AI suggestion chip)
   const initialCategory = useMemo(() => {
     const paramVal = params.get("category") || params.get("service");
     if (paramVal) {
@@ -88,43 +96,85 @@ export function EnquiryBuilder({
       );
       if (match) return match.label;
     }
-    return ""; // Requirement: No category selected by default
+    return ""; // Mandatory rule: No category selected by default
   }, [params, categories]);
 
-  // Form State
+  // Form State across all 4 steps
   const [form, setForm] = useState({
-    // Step 1: Category
+    // Step 1: Website & Purpose
     selectedCategory: initialCategory,
     customCategoryText: "",
+    selectedPurposes: [] as string[],
+    otherPurposeText: "",
 
-    // Step 2: Objectives & Features
-    selectedObjectives: [] as string[],
+    // Step 2: Features & Functionality
     selectedFeatures: [] as string[],
     otherFeatureText: "",
     includeOtherFeature: false,
     includeNotSureFeature: false,
-    designStyle: "Clean & Simple",
-    referenceUrl: "",
-    hasExistingWebsite: "No, I need a new website.",
-    existingWebsiteUrl: "",
-    hasDomain: "Not Sure",
-    timeline: "Flexible",
-    budget: "Not Sure Yet",
-    description: "",
+    loginOption: "", // "none", "email_password", "google", "mobile_otp", "email_otp", "multiple", "not_sure"
+    loginSecurity: [] as string[],
+    dashboardOption: "", // "none", "admin", "customer", "both", "multi_role", "not_sure"
+    dataStorage: "", // "no", "yes", "not_sure"
 
-    // Step 3: Contact Details
+    // Step 3: Design & Preferences
+    designStyle: "",
+    animationLevel: "",
+    pageCount: "",
+    designMind: "",
+    figmaUrl: "",
+    referenceUrl: "",
+    designNotes: "",
+    timeline: "Flexible",
+    budget: "Not Sure",
+
+    // Step 4: Contact & Submit
     name: "",
     email: "",
     countryCode: "+91",
     phone: "",
+    whatsappPhone: "",
+    sameAsPhone: true,
+    city: "",
     isBusiness: false,
     businessName: "",
-    city: "",
-    additionalMessage: "",
     preferredContact: "WhatsApp",
+    existingWebsiteUrl: "",
+    additionalMessage: "",
     consent: false,
     website: "", // Honeypot
   });
+
+  // Auto-Save Form Progress: Restore temporary draft from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("sxd_enquiry_draft_v4");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object") {
+          setForm((prev) => ({
+            ...prev,
+            ...parsed,
+            selectedCategory: initialCategory || parsed.selectedCategory || "",
+            website: "",
+          }));
+        }
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+  }, [initialCategory]);
+
+  // Auto-Save Form Progress: Persist changes to sessionStorage
+  useEffect(() => {
+    try {
+      const safeState: Record<string, unknown> = { ...form };
+      delete safeState.website;
+      sessionStorage.setItem("sxd_enquiry_draft_v4", JSON.stringify(safeState));
+    } catch {
+      /* ignore storage errors */
+    }
+  }, [form]);
 
   const update = (k: string, v: any) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -138,33 +188,25 @@ export function EnquiryBuilder({
     );
   }, [categories, form.selectedCategory]);
 
-  // Relevant primary objectives for the chosen category
-  const relevantObjectives = useMemo(() => {
-    const catId = activeCategory.id || "business";
-    const mapped = CATEGORY_OBJECTIVES_MAP[catId];
-    if (Array.isArray(mapped) && mapped.length > 0) return mapped;
-    return PRIMARY_OBJECTIVES;
-  }, [activeCategory]);
-
-  // Dynamic feature heading
+  // Dynamic feature heading for chosen category
   const dynamicFeatureHeading = useMemo(() => {
     return getCategoryFeatureHeading(activeCategory.label);
   }, [activeCategory.label]);
 
-  // Toggle objective selection
-  const toggleObjective = (obj: string) => {
+  // Toggle purpose
+  const togglePurpose = (purp: string) => {
     setForm((f) => {
-      const exists = f.selectedObjectives.includes(obj);
+      const exists = f.selectedPurposes.includes(purp);
       return {
         ...f,
-        selectedObjectives: exists
-          ? f.selectedObjectives.filter((item) => item !== obj)
-          : [...f.selectedObjectives, obj],
+        selectedPurposes: exists
+          ? f.selectedPurposes.filter((item) => item !== purp)
+          : [...f.selectedPurposes, purp],
       };
     });
   };
 
-  // Toggle feature selection
+  // Toggle feature
   const toggleFeature = (feat: string) => {
     setForm((f) => {
       const exists = f.selectedFeatures.includes(feat);
@@ -177,50 +219,120 @@ export function EnquiryBuilder({
     });
   };
 
-  const skipFeatures = () => {
-    setForm((f) => ({
-      ...f,
-      selectedFeatures: [],
-      includeOtherFeature: false,
-      includeNotSureFeature: true,
-    }));
+  // Toggle login security
+  const toggleLoginSecurity = (sec: string) => {
+    setForm((f) => {
+      const exists = f.loginSecurity.includes(sec);
+      return {
+        ...f,
+        loginSecurity: exists
+          ? f.loginSecurity.filter((item) => item !== sec)
+          : [...f.loginSecurity, sec],
+      };
+    });
+  };
+
+  const scrollToTop = () => {
+    const targetElement = document.getElementById(
+      isHomepageSection ? "choose-website" : "enquiry-top",
+    );
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   // Step 1 -> Step 2 validation
-  function handleGoToStep2(e: React.FormEvent) {
-    e.preventDefault();
+  function handleGoToStep2(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!form.selectedCategory) {
       setStatus("Please select a website type to continue.");
       return;
     }
+    if (form.selectedPurposes.length === 0) {
+      setStatus("Please choose at least one primary purpose (or select 'Not Sure') to continue.");
+      return;
+    }
     setStatus("");
     setStep(1);
-    const targetElement = document.getElementById(isHomepageSection ? "choose-website" : "enquiry-top");
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    scrollToTop();
   }
 
   // Step 2 -> Step 3 validation
-  function handleGoToStep3(e: React.FormEvent) {
-    e.preventDefault();
-    setStatus("");
-    setStep(2);
-    const targetElement = document.getElementById(isHomepageSection ? "choose-website" : "enquiry-top");
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
-
-  // Final Step 3 submission
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.name.trim() || !form.email.trim()) {
-      setStatus("Please enter your name and email address.");
+  function handleGoToStep3(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    const hasFeature =
+      form.selectedFeatures.length > 0 ||
+      form.includeNotSureFeature ||
+      form.includeOtherFeature;
+    if (!hasFeature) {
+      setStatus("Please choose at least one website feature or select 'Not Sure — Help Me Decide'.");
       return;
     }
-    if (!form.phone.trim()) {
-      setStatus("Please enter your mobile or WhatsApp number.");
+    if (!form.loginOption) {
+      setStatus("Please choose a login preference (or select 'No Login Needed' / 'Not Sure').");
+      return;
+    }
+    if (!form.dashboardOption) {
+      setStatus("Please choose a dashboard preference (or select 'No Dashboard' / 'Not Sure').");
+      return;
+    }
+    if (!form.dataStorage) {
+      setStatus("Please indicate if your website needs to save information (or select 'Not Sure').");
+      return;
+    }
+    setStatus("");
+    setStep(2);
+    scrollToTop();
+  }
+
+  // Step 3 -> Step 4 validation
+  function handleGoToStep4(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!form.designStyle) {
+      setStatus("Please select a design style (or choose 'Not Sure — Suggest One').");
+      return;
+    }
+    if (!form.animationLevel) {
+      setStatus("Please choose an animation preference (or select 'Not Sure').");
+      return;
+    }
+    if (!form.pageCount) {
+      setStatus("Please choose an estimated page count (or select 'Not Sure').");
+      return;
+    }
+    if (!form.designMind) {
+      setStatus("Please select whether you already have a design in mind (or select 'Not Sure').");
+      return;
+    }
+    setStatus("");
+    setStep(3);
+    scrollToTop();
+  }
+
+  // Final Step 4 Submission Handler (Handles both Submit & Finalize and Submit & Continue on WhatsApp)
+  async function handleSubmit(continueOnWhatsApp: boolean = false) {
+    if (busy) return; // Idempotency protection
+
+    // Validation
+    if (!form.name.trim() || form.name.trim().length < 2) {
+      setStatus("Please enter your full name.");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+      setStatus("Please enter a valid email address.");
+      return;
+    }
+    if (!form.phone.trim() || form.phone.trim().replace(/\D/g, "").length < 6) {
+      setStatus("Please enter a valid mobile number.");
+      return;
+    }
+    const waNumberToCheck = form.sameAsPhone ? form.phone : form.whatsappPhone;
+    if (!waNumberToCheck.trim() || waNumberToCheck.trim().replace(/\D/g, "").length < 6) {
+      setStatus("Please enter a valid WhatsApp number (or check 'Same as Mobile Number').");
+      return;
+    }
+    if (!form.city.trim()) {
+      setStatus("Please enter your city or location.");
       return;
     }
     if (form.isBusiness && !form.businessName.trim()) {
@@ -236,19 +348,44 @@ export function EnquiryBuilder({
     setStatus("");
 
     try {
-      const fullPhone = form.phone.trim()
-        ? `${form.countryCode} ${form.phone.trim()}`
-        : "";
+      const fullPhone = `${form.countryCode} ${form.phone.trim()}`;
+      const fullWhatsApp = form.sameAsPhone
+        ? fullPhone
+        : `${form.countryCode} ${form.whatsappPhone.trim()}`;
 
-      // Compile features and objectives list
+      // Compile features and requirements list
       const compiledFeatures = [...form.selectedFeatures];
-      if (form.selectedObjectives.length > 0) {
-        form.selectedObjectives.forEach((obj) => {
-          compiledFeatures.push(`Objective: ${obj}`);
-        });
+      if (form.selectedPurposes.length > 0) {
+        compiledFeatures.push(`Primary Purposes: ${form.selectedPurposes.join(", ")}`);
+      }
+      if (form.loginOption) {
+        const loginObj = LOGIN_OPTIONS.find((o) => o.id === form.loginOption);
+        compiledFeatures.push(`Login Requirement: ${loginObj?.label || form.loginOption}`);
+      }
+      if (form.loginSecurity.length > 0) {
+        compiledFeatures.push(`Login Security: ${form.loginSecurity.join(", ")}`);
+      }
+      if (form.dashboardOption) {
+        const dashObj = DASHBOARD_OPTIONS.find((o) => o.id === form.dashboardOption);
+        compiledFeatures.push(`Dashboard: ${dashObj?.label || form.dashboardOption}`);
+      }
+      if (form.dataStorage) {
+        compiledFeatures.push(`Data Storage: ${form.dataStorage.toUpperCase()}`);
+      }
+      if (form.animationLevel) {
+        compiledFeatures.push(`Animation Level: ${form.animationLevel}`);
+      }
+      if (form.pageCount) {
+        compiledFeatures.push(`Page Count: ${form.pageCount}`);
+      }
+      if (form.designMind) {
+        compiledFeatures.push(`Design Mind: ${form.designMind}`);
+      }
+      if (form.figmaUrl.trim()) {
+        compiledFeatures.push(`Figma URL: ${form.figmaUrl.trim()}`);
       }
       if (form.includeOtherFeature && form.otherFeatureText.trim()) {
-        compiledFeatures.push(`Other: ${form.otherFeatureText.trim()}`);
+        compiledFeatures.push(`Other Feature: ${form.otherFeatureText.trim()}`);
       } else if (form.includeOtherFeature) {
         compiledFeatures.push("Other Feature — Custom requirement");
       }
@@ -265,7 +402,7 @@ export function EnquiryBuilder({
         name: form.name.trim(),
         email: form.email.trim(),
         phone: fullPhone,
-        whatsapp: form.preferredContact === "WhatsApp" ? fullPhone : "",
+        whatsapp: fullWhatsApp,
         preferred_contact: form.preferredContact,
         company: form.isBusiness ? form.businessName.trim() : "",
         business_name: form.isBusiness ? form.businessName.trim() : "",
@@ -274,15 +411,23 @@ export function EnquiryBuilder({
         service: categoryDescription,
         categories: [categoryDescription],
         features: compiledFeatures,
+        primary_purpose: form.selectedPurposes.join(", "),
+        login_option: form.loginOption,
+        login_security: form.loginSecurity,
+        dashboard_option: form.dashboardOption,
+        data_storage: form.dataStorage,
+        animation_preference: form.animationLevel,
+        page_count: form.pageCount,
+        existing_design_option: form.designMind,
+        figma_url: form.figmaUrl.trim(),
         design_preference: form.designStyle,
         reference_url: form.referenceUrl.trim(),
-        has_existing_website: form.hasExistingWebsite,
+        has_existing_website: form.existingWebsiteUrl.trim() ? "Yes" : "No",
         existing_website_url: form.existingWebsiteUrl.trim(),
         website_url: form.existingWebsiteUrl.trim(),
-        has_domain: form.hasDomain,
         timeline: form.timeline,
         budget: form.budget,
-        description: form.description.trim() || `Enquiry for ${categoryDescription}`,
+        description: `Project enquiry for ${categoryDescription}. Purposes: ${form.selectedPurposes.join(", ") || "General"}. Style: ${form.designStyle || "Clean"}.`,
         city: form.city.trim(),
         additional_message: form.additionalMessage.trim(),
         consent: form.consent,
@@ -298,11 +443,18 @@ export function EnquiryBuilder({
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Unable to send your enquiry. Please try again.");
 
-      setTrackingCode(d.trackingCode || "SXD-001");
+      const generatedCode = d.trackingCode || "SXD-001";
+      setTrackingCode(generatedCode);
       setSent(true);
-      const targetElement = document.getElementById(isHomepageSection ? "choose-website" : "enquiry-top");
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      // Clear draft on successful submission
+      sessionStorage.removeItem("sxd_enquiry_draft_v4");
+      scrollToTop();
+
+      // OPTION B: WhatsApp Handoff (Only opens after successful database save)
+      if (continueOnWhatsApp) {
+        const waUrl = getWhatsAppEnquiryUrl(generatedCode, categoryDescription);
+        window.open(waUrl, "_blank", "noopener,noreferrer");
       }
     } catch (err) {
       setStatus((err as Error).message);
@@ -319,8 +471,8 @@ export function EnquiryBuilder({
     }
   }
 
-  function renderCategoryIcon(id: string) {
-    switch (id) {
+  const renderCategoryIcon = (catId?: string) => {
+    switch (catId) {
       case "portfolio":
         return <User size={20} />;
       case "blog":
@@ -335,68 +487,79 @@ export function EnquiryBuilder({
         return <Utensils size={20} />;
       case "shop":
         return <Store size={20} />;
-      case "educational":
-        return <GraduationCap size={20} />;
       case "booking":
         return <Calendar size={20} />;
+      case "educational":
+        return <GraduationCap size={20} />;
       case "custom":
         return <Code size={20} />;
       case "not_sure":
-        return <HelpCircle size={20} />;
       default:
-        return <Sparkles size={20} />;
+        return <HelpCircle size={20} />;
     }
-  }
+  };
 
   return (
-    <div className="enquiry-builder-root" id="enquiry-top">
-      {/* 3-Step Progress Indicator */}
+    <div
+      id={isHomepageSection ? "choose-website" : "enquiry-top"}
+      className="builder-container"
+    >
+      {/* 4-Step Progress Indicator Header (01 -> 02 -> 03 -> 04) */}
       {!sent && (
-        <div className="builder-steps" role="navigation" aria-label="Enquiry progress">
-          <div
-            className={`builder-step-pill ${step === 0 ? "active" : step > 0 ? "completed" : ""}`}
-            onClick={() => setStep(0)}
-            style={{ cursor: step > 0 ? "pointer" : "default" }}
+        <div className="builder-progress-stepper" aria-label="Enquiry progress">
+          <button
+            type="button"
+            className={`stepper-item ${step === 0 ? "active" : step > 0 ? "completed" : ""}`}
+            onClick={() => step > 0 && setStep(0)}
           >
-            <span className="builder-step-num">{step > 0 ? "✓" : "1"}</span>
-            <span className="builder-step-label">Website Type</span>
-          </div>
-          <div
-            className={`builder-step-pill ${step === 1 ? "active" : step > 1 ? "completed" : ""}`}
-            onClick={() => {
-              if (form.selectedCategory) setStep(1);
-            }}
-            style={{ cursor: step > 1 ? "pointer" : "default" }}
+            <span className="stepper-num">01</span>
+            <span className="stepper-label">Website Type</span>
+          </button>
+          <span className="stepper-arrow" aria-hidden="true">→</span>
+          <button
+            type="button"
+            className={`stepper-item ${step === 1 ? "active" : step > 1 ? "completed" : ""}`}
+            onClick={() => step > 1 && setStep(1)}
           >
-            <span className="builder-step-num">{step > 1 ? "✓" : "2"}</span>
-            <span className="builder-step-label">Objectives & Features</span>
-          </div>
-          <div
-            className={`builder-step-pill ${step === 2 ? "active" : ""}`}
+            <span className="stepper-num">02</span>
+            <span className="stepper-label">Features & Functionality</span>
+          </button>
+          <span className="stepper-arrow" aria-hidden="true">→</span>
+          <button
+            type="button"
+            className={`stepper-item ${step === 2 ? "active" : step > 2 ? "completed" : ""}`}
+            onClick={() => step > 2 && setStep(2)}
           >
-            <span className="builder-step-num">3</span>
-            <span className="builder-step-label">Contact Details</span>
-          </div>
+            <span className="stepper-num">03</span>
+            <span className="stepper-label">Design & Preferences</span>
+          </button>
+          <span className="stepper-arrow" aria-hidden="true">→</span>
+          <button
+            type="button"
+            className={`stepper-item ${step === 3 ? "active" : ""}`}
+            onClick={() => step > 3 && setStep(3)}
+          >
+            <span className="stepper-num">04</span>
+            <span className="stepper-label">Contact & Submit</span>
+          </button>
         </div>
       )}
 
-      {/* CONFIRMATION SCREEN */}
+      {/* Confirmation Screen */}
       {sent ? (
-        <div className="builder-confirmation-panel">
-          <span className="eyebrow confirmation-eyebrow">
-            Enquiry Received Successfully
-          </span>
-          <h2 className="confirmation-title">
-            Thank You! We&apos;ve Received Your Request.
-          </h2>
-          <p className="confirmation-desc">
-            Your project enquiry has been submitted. A confirmation with your tracking code has been dispatched to{" "}
-            <strong>{form.email}</strong>.
+        <div className="builder-confirmation-card">
+          <div className="washi-tape-strip top-center" aria-hidden="true" />
+          <div className="confirmation-badge">
+            <CheckCircle2 size={36} style={{ color: "#3b5f3d" }} />
+          </div>
+          <h3 className="confirmation-title">Your Enquiry Has Been Submitted!</h3>
+          <p className="confirmation-sub">
+            Thank you for choosing SANJU X DEV. We&apos;ll review your requirements and contact you.
           </p>
 
-          <div className="confirmation-badge-box">
-            <span className="confirmation-badge-label">Your Unique Tracking Code</span>
-            <div className="confirmation-code-display">{trackingCode}</div>
+          <div className="confirmation-code-box">
+            <span className="confirmation-code-label">Permanent Tracking ID</span>
+            <div className="confirmation-code">{trackingCode}</div>
             <p className="confirmation-code-note">
               Use this code anytime to monitor progress, milestones, and delivery status.
             </p>
@@ -424,6 +587,14 @@ export function EnquiryBuilder({
             <Link to={`/track?code=${trackingCode}`} className="button">
               Track My Project <Arrow />
             </Link>
+            <a
+              href={getWhatsAppEnquiryUrl(trackingCode, form.selectedCategory || "Website Project")}
+              target="_blank"
+              rel="noreferrer"
+              className="button button-whatsapp"
+            >
+              <MessageCircle size={16} /> Continue on WhatsApp
+            </a>
             <Link to="/" className="button secondary">
               Back to Home
             </Link>
@@ -432,21 +603,21 @@ export function EnquiryBuilder({
       ) : (
         <>
           {/* ================================================================
-              STEP 1 — SELECT WEBSITE TYPE
+              STEP 1 — CHOOSE YOUR WEBSITE & PRIMARY PURPOSE
               ================================================================ */}
           {step === 0 && (
-            <form onSubmit={handleGoToStep2} className="builder-step-form">
+            <div className="builder-step-form">
               <div className="builder-step-header">
-                <span className="eyebrow">Step 1 of 3</span>
+                <span className="eyebrow">Step 1 of 4</span>
                 <h3 className="builder-step-title">
                   What Kind of Website Do You Need?
                 </h3>
                 <p className="builder-step-sub">
-                  Choose what you&apos;re planning to create. We&apos;ll help with the rest.
+                  Choose the type of website you&apos;re planning. We&apos;ll help you with the rest.
                 </p>
               </div>
 
-              {/* 11 Selectable Category Cards Grid (2-Column Desktop, 1-Column Mobile) */}
+              {/* 11 Selectable Category Cards Grid */}
               <div className="builder-categories-grid" role="radiogroup" aria-label="Website Categories">
                 {categories.map((cat) => {
                   const isSelected = form.selectedCategory === cat.label;
@@ -469,7 +640,6 @@ export function EnquiryBuilder({
                         <div className="builder-cat-icon">
                           {renderCategoryIcon(cat.id)}
                         </div>
-                        {/* Radio selection indicator */}
                         <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
                           {isSelected && <span className="builder-radio-dot" />}
                         </div>
@@ -502,7 +672,7 @@ export function EnquiryBuilder({
                 <div className="builder-custom-category-box">
                   <label>
                     <span className="builder-custom-label">
-                      Describe your custom website or unique concept:
+                      Describe your custom website concept or unique requirement:
                     </span>
                     <input
                       type="text"
@@ -515,6 +685,59 @@ export function EnquiryBuilder({
                 </div>
               )}
 
+              {/* PRIMARY PURPOSE: "What should your website help you do?" */}
+              {form.selectedCategory && (
+                <div className="builder-substep-section">
+                  <div className="builder-substep-header">
+                    <h4 className="builder-substep-title">
+                      What should your website help you do?
+                    </h4>
+                    <p className="builder-substep-desc">
+                      Choose what you&apos;d like your website to help with. Select all that apply.
+                    </p>
+                  </div>
+
+                  <div className="builder-objectives-grid" role="group" aria-label="Primary Purposes">
+                    {PRIMARY_PURPOSE_OPTIONS.map((purp) => {
+                      const isChecked = form.selectedPurposes.includes(purp);
+                      return (
+                        <div
+                          key={purp}
+                          className={`builder-objective-card ${isChecked ? "selected" : ""}`}
+                          onClick={() => togglePurpose(purp)}
+                          role="checkbox"
+                          aria-checked={isChecked}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === " " || e.key === "Enter") {
+                              e.preventDefault();
+                              togglePurpose(purp);
+                            }
+                          }}
+                        >
+                          <span className="builder-objective-name">{purp}</span>
+                          <div className={`builder-checkbox-box ${isChecked ? "checked" : ""}`}>
+                            {isChecked && "✓"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {form.selectedPurposes.includes("Something Else") && (
+                    <div style={{ marginTop: 12 }}>
+                      <input
+                        type="text"
+                        className="builder-input"
+                        placeholder="Tell us what else your website should do..."
+                        value={form.otherPurposeText}
+                        onChange={(e) => update("otherPurposeText", e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {status && (
                 <p role="alert" className="builder-status-alert">
                   {status}
@@ -523,89 +746,46 @@ export function EnquiryBuilder({
 
               <div className="builder-step-actions">
                 <button
-                  type="submit"
-                  className="button builder-continue-btn"
-                  disabled={!form.selectedCategory}
+                  type="button"
+                  className="button"
+                  disabled={!form.selectedCategory || form.selectedPurposes.length === 0}
+                  onClick={() => handleGoToStep2()}
                 >
-                  {form.selectedCategory
-                    ? `Continue to Step 2: What Should Your Website Do?`
-                    : "Select a Website Type to Continue"}{" "}
-                  <ArrowRight size={18} />
+                  Continue to Features & Functionality <ArrowRight size={16} />
                 </button>
               </div>
-            </form>
+            </div>
           )}
 
           {/* ================================================================
-              STEP 2 — WHAT SHOULD YOUR WEBSITE DO? & FEATURES
+              STEP 2 — FEATURES & FUNCTIONALITY
               ================================================================ */}
           {step === 1 && (
-            <form onSubmit={handleGoToStep3} className="builder-step-form">
-              {/* PRIMARY OBJECTIVES (MATCHING CODEXA INTERACTION REFERENCE) */}
+            <div className="builder-step-form">
               <div className="builder-step-header">
-                <span className="eyebrow">
-                  Step 2 · For {form.selectedCategory}
-                </span>
+                <span className="eyebrow">Step 2 of 4</span>
                 <h3 className="builder-step-title">
-                  What Should Your Website Do?
+                  What Features Would You Like?
                 </h3>
                 <p className="builder-step-sub">
-                  Choose the things you&apos;d like your website to help with.
+                  Choose what you need. If you&apos;re not sure, we&apos;ll help you decide.
                 </p>
               </div>
 
-              {/* Primary Objectives Checkbox Grid */}
-              <div className="builder-objectives-grid" role="group" aria-label="Primary Objectives">
-                {relevantObjectives.map((obj) => {
-                  const isChecked = form.selectedObjectives.includes(obj);
-                  return (
-                    <div
-                      key={obj}
-                      className={`builder-objective-card ${isChecked ? "selected" : ""}`}
-                      onClick={() => toggleObjective(obj)}
-                      role="checkbox"
-                      aria-checked={isChecked}
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === " " || e.key === "Enter") {
-                          e.preventDefault();
-                          toggleObjective(obj);
-                        }
-                      }}
-                    >
-                      <span className="builder-objective-name">{obj}</span>
-                      <div className={`builder-checkbox-box ${isChecked ? "checked" : ""}`}>
-                        {isChecked && "✓"}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* CATEGORY-SPECIFIC FEATURE SELECTION */}
+              {/* A. Category-Specific Features */}
               <div className="builder-features-section">
                 <div className="builder-features-header">
                   <div>
-                    <h4 className="builder-features-title">
-                      {dynamicFeatureHeading}
-                    </h4>
+                    <h4 className="builder-features-title">{dynamicFeatureHeading}</h4>
                     <p className="builder-features-sub">
-                      Select specific features you want included.
+                      Select specific features you want included (choose at least one or &apos;Not Sure&apos;).
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={skipFeatures}
-                    className="builder-skip-link"
-                  >
-                    Skip this part
-                  </button>
                 </div>
 
-                <div className="builder-feature-grid" role="group" aria-label="Features">
+                <div className="builder-feature-grid" role="group" aria-label="Category Features">
                   {(activeCategory.features || []).map((feat: string) => {
                     const isSelected = form.selectedFeatures.includes(feat);
-                    const note = activeCategory.featureNotes?.[feat];
                     return (
                       <div
                         key={feat}
@@ -621,12 +801,7 @@ export function EnquiryBuilder({
                           }
                         }}
                       >
-                        <div className="builder-feature-info">
-                          <span className="builder-feature-label">{feat}</span>
-                          {note && (
-                            <span className="builder-feature-sub">{note}</span>
-                          )}
-                        </div>
+                        <span className="builder-feature-label">{feat}</span>
                         <div className={`builder-checkbox-box ${isSelected ? "checked" : ""}`}>
                           {isSelected && "✓"}
                         </div>
@@ -637,27 +812,12 @@ export function EnquiryBuilder({
                   {/* Other Feature Option */}
                   <div
                     className={`builder-feature-card ${form.includeOtherFeature ? "selected" : ""}`}
-                    onClick={() =>
-                      update("includeOtherFeature", !form.includeOtherFeature)
-                    }
+                    onClick={() => update("includeOtherFeature", !form.includeOtherFeature)}
                     role="checkbox"
                     aria-checked={form.includeOtherFeature}
                     tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === " " || e.key === "Enter") {
-                        e.preventDefault();
-                        update("includeOtherFeature", !form.includeOtherFeature);
-                      }
-                    }}
                   >
-                    <div className="builder-feature-info">
-                      <span className="builder-feature-label">
-                        Other Feature — Tell Us What You Need
-                      </span>
-                      <span className="builder-feature-sub">
-                        Add a custom feature or requirement
-                      </span>
-                    </div>
+                    <span className="builder-feature-label">Other Custom Feature</span>
                     <div className={`builder-checkbox-box ${form.includeOtherFeature ? "checked" : ""}`}>
                       {form.includeOtherFeature && "✓"}
                     </div>
@@ -666,27 +826,19 @@ export function EnquiryBuilder({
                   {/* Not Sure Help Me Decide Option */}
                   <div
                     className={`builder-feature-card ${form.includeNotSureFeature ? "selected" : ""}`}
-                    onClick={() =>
-                      update("includeNotSureFeature", !form.includeNotSureFeature)
-                    }
+                    onClick={() => {
+                      const nextVal = !form.includeNotSureFeature;
+                      setForm((f) => ({
+                        ...f,
+                        includeNotSureFeature: nextVal,
+                        selectedFeatures: nextVal ? [] : f.selectedFeatures,
+                      }));
+                    }}
                     role="checkbox"
                     aria-checked={form.includeNotSureFeature}
                     tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === " " || e.key === "Enter") {
-                        e.preventDefault();
-                        update("includeNotSureFeature", !form.includeNotSureFeature);
-                      }
-                    }}
                   >
-                    <div className="builder-feature-info">
-                      <span className="builder-feature-label">
-                        Not Sure — Help Me Decide
-                      </span>
-                      <span className="builder-feature-sub">
-                        We will suggest the best features for your goals
-                      </span>
-                    </div>
+                    <span className="builder-feature-label">Not Sure — Help Me Decide</span>
                     <div className={`builder-checkbox-box ${form.includeNotSureFeature ? "checked" : ""}`}>
                       {form.includeNotSureFeature && "✓"}
                     </div>
@@ -694,407 +846,743 @@ export function EnquiryBuilder({
                 </div>
 
                 {form.includeOtherFeature && (
-                  <div className="builder-other-feature-input-wrap">
-                    <label>
-                      <span className="builder-custom-label">
-                        Describe your custom feature or capability:
-                      </span>
-                      <input
-                        type="text"
-                        className="builder-input"
-                        value={form.otherFeatureText}
-                        onChange={(e) => update("otherFeatureText", e.target.value)}
-                        placeholder="e.g. Real-time calendar sync, custom pricing calculator, member portal..."
-                      />
-                    </label>
+                  <div style={{ marginTop: 12 }}>
+                    <input
+                      type="text"
+                      className="builder-input"
+                      placeholder="Specify your other requested feature..."
+                      value={form.otherFeatureText}
+                      onChange={(e) => update("otherFeatureText", e.target.value)}
+                    />
                   </div>
                 )}
               </div>
 
-              {/* DESIGN & PROJECT PREFERENCES */}
-              <div className="builder-preferences-section">
-                <h4 className="builder-preferences-title">
-                  Design & Project Preferences (Optional)
-                </h4>
+              {/* B. Customer Login Options */}
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">Do People Need to Log In?</h4>
+                  <p className="builder-substep-desc">
+                    Choose how customers or members should access your website.
+                  </p>
+                </div>
 
-                <div className="builder-pref-block">
-                  <span className="builder-pref-label">What design aesthetic do you prefer?</span>
-                  <div className="builder-radio-group">
-                    {designStyles.map((style: any) => {
-                      const isSelected = form.designStyle === style.label;
+                <div className="builder-radio-cards-grid" role="radiogroup" aria-label="Login Options">
+                  {LOGIN_OPTIONS.map((opt) => {
+                    const isSelected = form.loginOption === opt.id;
+                    return (
+                      <div
+                        key={opt.id}
+                        className={`builder-option-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => update("loginOption", opt.id)}
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                      >
+                        <div className="builder-option-content">
+                          <strong className="builder-option-title">{opt.label}</strong>
+                          <span className="builder-option-desc">{opt.desc}</span>
+                        </div>
+                        <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
+                          {isSelected && <span className="builder-radio-dot" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* C. Additional Login Security (Conditional when login is enabled) */}
+              {form.loginOption && form.loginOption !== "none" && (
+                <div className="builder-substep-section">
+                  <div className="builder-substep-header">
+                    <h4 className="builder-substep-title">Additional Login Security</h4>
+                    <p className="builder-substep-desc">
+                      Optional protections for user accounts. Select all that apply.
+                    </p>
+                  </div>
+
+                  <div className="builder-objectives-grid" role="group" aria-label="Login Security">
+                    {LOGIN_SECURITY_OPTIONS.map((sec) => {
+                      const isChecked = form.loginSecurity.includes(sec);
                       return (
                         <div
-                          key={style.id || style.label}
-                          className={`builder-radio-card ${isSelected ? "selected" : ""}`}
-                          onClick={() => update("designStyle", style.label)}
-                          role="radio"
-                          aria-checked={isSelected}
+                          key={sec}
+                          className={`builder-objective-card ${isChecked ? "selected" : ""}`}
+                          onClick={() => toggleLoginSecurity(sec)}
+                          role="checkbox"
+                          aria-checked={isChecked}
                           tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === " " || e.key === "Enter") {
-                              e.preventDefault();
-                              update("designStyle", style.label);
-                            }
-                          }}
                         >
-                          <span className="builder-radio-title">{style.label}</span>
-                          <span className="builder-radio-desc">{style.desc}</span>
+                          <span className="builder-objective-name">{sec}</span>
+                          <div className={`builder-checkbox-box ${isChecked ? "checked" : ""}`}>
+                            {isChecked && "✓"}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
+                </div>
+              )}
 
-                  {form.designStyle === "Inspired by a Website" && (
-                    <div style={{ marginTop: 10 }}>
-                      <label>
-                        <span className="builder-custom-label">Reference Website URL:</span>
-                        <input
-                          type="url"
-                          className="builder-input"
-                          value={form.referenceUrl}
-                          onChange={(e) => update("referenceUrl", e.target.value)}
-                          placeholder="https://example.com"
-                        />
-                      </label>
-                    </div>
-                  )}
+              {/* D. Website Management Dashboard */}
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">Do You Need a Dashboard?</h4>
+                  <p className="builder-substep-desc">
+                    A private area to manage your website, customers, products or content.
+                  </p>
                 </div>
 
-                <div className="form-grid" style={{ marginTop: 18 }}>
-                  <div>
-                    <span className="builder-pref-label">Do you already have a website?</span>
-                    <div className="pill-toggle-group">
-                      {[
-                        "No, I need a new website.",
-                        "Yes, I want to improve my existing website.",
-                      ].map((choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          className={`pill-toggle-btn ${form.hasExistingWebsite === choice ? "selected" : ""}`}
-                          onClick={() => update("hasExistingWebsite", choice)}
-                        >
-                          {choice}
-                        </button>
-                      ))}
-                    </div>
-                    {form.hasExistingWebsite.includes("Yes") && (
-                      <input
-                        type="url"
-                        className="builder-input"
-                        value={form.existingWebsiteUrl}
-                        onChange={(e) => update("existingWebsiteUrl", e.target.value)}
-                        placeholder="https://mycurrentsite.com"
-                        style={{ marginTop: 6 }}
-                      />
-                    )}
-                  </div>
-
-                  <div>
-                    <span className="builder-pref-label">Timeline preference:</span>
-                    <div className="pill-toggle-group">
-                      {timelineChoices.map((t: string) => (
-                        <button
-                          key={t}
-                          type="button"
-                          className={`pill-toggle-btn ${form.timeline === t ? "selected" : ""}`}
-                          onClick={() => update("timeline", t)}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 16 }}>
-                  <span className="builder-pref-label">Do you have a budget in mind?</span>
-                  <div className="pill-toggle-group">
-                    {budgetChoices.map((b: string) => (
-                      <button
-                        key={b}
-                        type="button"
-                        className={`pill-toggle-btn ${form.budget === b ? "selected" : ""}`}
-                        onClick={() => update("budget", b)}
+                <div className="builder-radio-cards-grid" role="radiogroup" aria-label="Dashboard Options">
+                  {DASHBOARD_OPTIONS.map((opt) => {
+                    const isSelected = form.dashboardOption === opt.id;
+                    return (
+                      <div
+                        key={opt.id}
+                        className={`builder-option-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => update("dashboardOption", opt.id)}
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={0}
                       >
-                        {b}
+                        <div className="builder-option-content">
+                          <strong className="builder-option-title">{opt.label}</strong>
+                          <span className="builder-option-desc">{opt.desc}</span>
+                        </div>
+                        <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
+                          {isSelected && <span className="builder-radio-dot" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* E. Data Storage */}
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">Does Your Website Need to Save Information?</h4>
+                  <p className="builder-substep-desc">
+                    Some websites need to save customer accounts, orders, bookings or enquiries.
+                  </p>
+                </div>
+
+                <div className="builder-radio-cards-grid three-col" role="radiogroup" aria-label="Data Storage">
+                  {DATA_STORAGE_OPTIONS.map((opt) => {
+                    const isSelected = form.dataStorage === opt.id;
+                    return (
+                      <div
+                        key={opt.id}
+                        className={`builder-option-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => update("dataStorage", opt.id)}
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                      >
+                        <div className="builder-option-content">
+                          <strong className="builder-option-title">{opt.label}</strong>
+                          <span className="builder-option-desc">{opt.desc}</span>
+                        </div>
+                        <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
+                          {isSelected && <span className="builder-radio-dot" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {status && (
+                <p role="alert" className="builder-status-alert">
+                  {status}
+                </p>
+              )}
+
+              <div className="builder-step-actions split">
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => {
+                    setStatus("");
+                    setStep(0);
+                    scrollToTop();
+                  }}
+                >
+                  <ArrowLeft size={16} /> Back to Website
+                </button>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => handleGoToStep3()}
+                >
+                  Continue to Design & Preferences <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================================================================
+              STEP 3 — DESIGN & PREFERENCES
+              ================================================================ */}
+          {step === 2 && (
+            <div className="builder-step-form">
+              <div className="builder-step-header">
+                <span className="eyebrow">Step 3 of 4</span>
+                <h3 className="builder-step-title">
+                  How Would You Like Your Website to Look?
+                </h3>
+                <p className="builder-step-sub">
+                  Tell us what style you prefer. You can change your mind later.
+                </p>
+              </div>
+
+              {/* A. Design Style */}
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">Design Style</h4>
+                  <p className="builder-substep-desc">
+                    Choose the visual identity that matches your brand personality.
+                  </p>
+                </div>
+
+                <div className="builder-radio-cards-grid" role="radiogroup" aria-label="Design Style">
+                  {designStyles.map((style: any) => {
+                    const isSelected = form.designStyle === style.label;
+                    return (
+                      <div
+                        key={style.id || style.label}
+                        className={`builder-option-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => update("designStyle", style.label)}
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                      >
+                        <div className="builder-option-content">
+                          <strong className="builder-option-title">{style.label}</strong>
+                          <span className="builder-option-desc">{style.desc}</span>
+                        </div>
+                        <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
+                          {isSelected && <span className="builder-radio-dot" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* B. Animation & Motion */}
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">How Much Animation Do You Want?</h4>
+                  <p className="builder-substep-desc">
+                    Choose the motion depth and interaction level for your website.
+                  </p>
+                </div>
+
+                <div className="builder-radio-cards-grid" role="radiogroup" aria-label="Animation Levels">
+                  {ANIMATION_LEVELS.map((anim) => {
+                    const isSelected = form.animationLevel === anim.label;
+                    return (
+                      <div
+                        key={anim.id}
+                        className={`builder-option-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => update("animationLevel", anim.label)}
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                      >
+                        <div className="builder-option-content">
+                          <strong className="builder-option-title">{anim.label}</strong>
+                          <span className="builder-option-desc">{anim.desc}</span>
+                        </div>
+                        <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
+                          {isSelected && <span className="builder-radio-dot" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* C. Number of Website Pages */}
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">How Many Pages Might You Need?</h4>
+                  <p className="builder-substep-desc">
+                    Estimate the size of your website. We can refine this together later.
+                  </p>
+                </div>
+
+                <div className="builder-radio-cards-grid" role="radiogroup" aria-label="Page Count">
+                  {PAGE_COUNT_OPTIONS.map((pg) => {
+                    const isSelected = form.pageCount === pg.label;
+                    return (
+                      <div
+                        key={pg.id}
+                        className={`builder-option-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => update("pageCount", pg.label)}
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                      >
+                        <div className="builder-option-content">
+                          <strong className="builder-option-title">{pg.label}</strong>
+                          <span className="builder-option-desc">{pg.desc}</span>
+                        </div>
+                        <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
+                          {isSelected && <span className="builder-radio-dot" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* D. Existing Design or Reference */}
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">Do You Already Have a Design in Mind?</h4>
+                  <p className="builder-substep-desc">
+                    Let us know if you have Figma files, reference websites, or if we should design from scratch.
+                  </p>
+                </div>
+
+                <div className="builder-radio-cards-grid" role="radiogroup" aria-label="Design In Mind">
+                  {DESIGN_MIND_OPTIONS.map((dm) => {
+                    const isSelected = form.designMind === dm.label;
+                    return (
+                      <div
+                        key={dm.id}
+                        className={`builder-option-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => update("designMind", dm.label)}
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                      >
+                        <div className="builder-option-content">
+                          <strong className="builder-option-title">{dm.label}</strong>
+                          <span className="builder-option-desc">{dm.desc}</span>
+                        </div>
+                        <div className={`builder-cat-radio ${isSelected ? "active" : ""}`}>
+                          {isSelected && <span className="builder-radio-dot" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {form.designMind === "Yes — I Have a Figma Design" && (
+                  <div style={{ marginTop: 12 }}>
+                    <input
+                      type="url"
+                      className="builder-input"
+                      placeholder="Paste your Figma file or prototype URL..."
+                      value={form.figmaUrl}
+                      onChange={(e) => update("figmaUrl", e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {form.designMind === "Yes — I Have Reference Websites" && (
+                  <div style={{ marginTop: 12 }}>
+                    <input
+                      type="text"
+                      className="builder-input"
+                      placeholder="e.g. https://example.com, https://awwwards.com/site..."
+                      value={form.referenceUrl}
+                      onChange={(e) => update("referenceUrl", e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {form.designMind === "Yes — I Have Screenshots or Sketches" && (
+                  <div style={{ marginTop: 12 }}>
+                    <textarea
+                      rows={2}
+                      className="builder-input"
+                      placeholder="Share notes or links to your sketches / screenshots (Google Drive, Dropbox, etc.)..."
+                      value={form.designNotes}
+                      onChange={(e) => update("designNotes", e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* E. Timeline & Budget Preferences */}
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">When Would You Like It Ready?</h4>
+                  <p className="builder-substep-desc">
+                    This is a planning preference, not a guaranteed delivery date.
+                  </p>
+                </div>
+
+                <div className="builder-pills-row" role="radiogroup" aria-label="Timeline">
+                  {timelineChoices.map((tl: string) => (
+                    <button
+                      key={tl}
+                      type="button"
+                      className={`builder-pill ${form.timeline === tl ? "active" : ""}`}
+                      onClick={() => update("timeline", tl)}
+                    >
+                      {tl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="builder-substep-section">
+                <div className="builder-substep-header">
+                  <h4 className="builder-substep-title">What Is Your Budget Preference?</h4>
+                  <p className="builder-substep-desc">
+                    This is an initial preference to guide scoping, not a confirmed price.
+                  </p>
+                </div>
+
+                <div className="builder-pills-row" role="radiogroup" aria-label="Budget">
+                  {budgetChoices.map((bg: string) => (
+                    <button
+                      key={bg}
+                      type="button"
+                      className={`builder-pill ${form.budget === bg ? "active" : ""}`}
+                      onClick={() => update("budget", bg)}
+                    >
+                      {bg}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {status && (
+                <p role="alert" className="builder-status-alert">
+                  {status}
+                </p>
+              )}
+
+              <div className="builder-step-actions split">
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => {
+                    setStatus("");
+                    setStep(1);
+                    scrollToTop();
+                  }}
+                >
+                  <ArrowLeft size={16} /> Back to Features
+                </button>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => handleGoToStep4()}
+                >
+                  Continue to Contact Details <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================================================================
+              STEP 4 — CONTACT & SUBMIT
+              ================================================================ */}
+          {step === 3 && (
+            <div className="builder-step-form">
+              <div className="builder-step-header">
+                <span className="eyebrow">Step 4 of 4</span>
+                <h3 className="builder-step-title">
+                  Almost Done! Let&apos;s Get in Touch.
+                </h3>
+                <p className="builder-step-sub">
+                  Enter your details so we can contact you about your project.
+                </p>
+              </div>
+
+              {/* Client Information Form Grid */}
+              <div className="builder-form-grid">
+                <div className="builder-form-group">
+                  <label htmlFor="client-name">
+                    Full Name <span className="req">*</span>
+                  </label>
+                  <input
+                    id="client-name"
+                    type="text"
+                    required
+                    placeholder="e.g. Alex Morgan"
+                    className="builder-input"
+                    value={form.name}
+                    onChange={(e) => update("name", e.target.value)}
+                  />
+                </div>
+
+                <div className="builder-form-group">
+                  <label htmlFor="client-email">
+                    Email Address <span className="req">*</span>
+                  </label>
+                  <input
+                    id="client-email"
+                    type="email"
+                    required
+                    placeholder="alex@example.com"
+                    className="builder-input"
+                    value={form.email}
+                    onChange={(e) => update("email", e.target.value)}
+                  />
+                </div>
+
+                <div className="builder-form-group">
+                  <label htmlFor="client-phone">
+                    Mobile Number <span className="req">*</span>
+                  </label>
+                  <div className="builder-phone-wrap">
+                    <select
+                      className="builder-country-select"
+                      value={form.countryCode}
+                      onChange={(e) => update("countryCode", e.target.value)}
+                    >
+                      <option value="+91">🇮🇳 +91 (IN)</option>
+                      <option value="+1">🇺🇸 +1 (US)</option>
+                      <option value="+44">🇬🇧 +44 (UK)</option>
+                      <option value="+971">🇦🇪 +971 (UAE)</option>
+                      <option value="+61">🇦🇺 +61 (AU)</option>
+                      <option value="+65">🇸🇬 +65 (SG)</option>
+                      <option value="+49">🇩🇪 +49 (DE)</option>
+                    </select>
+                    <input
+                      id="client-phone"
+                      type="tel"
+                      required
+                      placeholder="98765 43210"
+                      className="builder-input phone-field"
+                      value={form.phone}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        update("phone", val);
+                        if (form.sameAsPhone) {
+                          update("whatsappPhone", val);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="builder-form-group">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label htmlFor="client-whatsapp">
+                      WhatsApp Number <span className="req">*</span>
+                    </label>
+                    <label className="builder-checkbox-inline" style={{ fontSize: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={form.sameAsPhone}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          update("sameAsPhone", checked);
+                          if (checked) {
+                            update("whatsappPhone", form.phone);
+                          }
+                        }}
+                      />
+                      <span>Same as Mobile</span>
+                    </label>
+                  </div>
+                  <input
+                    id="client-whatsapp"
+                    type="tel"
+                    required
+                    placeholder="WhatsApp number"
+                    disabled={form.sameAsPhone}
+                    className="builder-input"
+                    value={form.sameAsPhone ? form.phone : form.whatsappPhone}
+                    onChange={(e) => update("whatsappPhone", e.target.value)}
+                  />
+                </div>
+
+                <div className="builder-form-group">
+                  <label htmlFor="client-city">
+                    City / Location <span className="req">*</span>
+                  </label>
+                  <input
+                    id="client-city"
+                    type="text"
+                    required
+                    placeholder="e.g. Hyderabad, Vijayawada, Bangalore"
+                    className="builder-input"
+                    value={form.city}
+                    onChange={(e) => update("city", e.target.value)}
+                  />
+                </div>
+
+                <div className="builder-form-group">
+                  <label>Are You Enquiring for Yourself or a Business?</label>
+                  <div className="builder-pills-row">
+                    <button
+                      type="button"
+                      className={`builder-pill ${!form.isBusiness ? "active" : ""}`}
+                      onClick={() => update("isBusiness", false)}
+                    >
+                      Personal / Individual Project
+                    </button>
+                    <button
+                      type="button"
+                      className={`builder-pill ${form.isBusiness ? "active" : ""}`}
+                      onClick={() => update("isBusiness", true)}
+                    >
+                      Business / Organization
+                    </button>
+                  </div>
+                </div>
+
+                {form.isBusiness && (
+                  <div className="builder-form-group full-width">
+                    <label htmlFor="client-business-name">
+                      Business or Brand Name <span className="req">*</span>
+                    </label>
+                    <input
+                      id="client-business-name"
+                      type="text"
+                      required
+                      placeholder="e.g. Acme Studio, Spice House, StarX Tech"
+                      className="builder-input"
+                      value={form.businessName}
+                      onChange={(e) => update("businessName", e.target.value)}
+                    />
+                  </div>
+                )}
+
+                <div className="builder-form-group full-width">
+                  <label>Preferred Contact Method</label>
+                  <div className="builder-pills-row">
+                    {["WhatsApp", "Phone Call", "Email"].map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        className={`builder-pill ${form.preferredContact === method ? "active" : ""}`}
+                        onClick={() => update("preferredContact", method)}
+                      >
+                        {method}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ marginTop: 16 }}>
-                  <label>
-                    <span className="builder-pref-label">Tell us a short sentence about your idea (Optional):</span>
-                    <textarea
-                      rows={2}
-                      maxLength={5000}
-                      className="builder-textarea"
-                      value={form.description}
-                      onChange={(e) => update("description", e.target.value)}
-                      placeholder="e.g. I run a boutique bakery in Bangalore and want a website to showcase our menu and let customers place weekend orders over WhatsApp."
-                    />
+                <div className="builder-form-group full-width">
+                  <label htmlFor="client-existing-site">
+                    Existing Website or Social Link (Optional)
                   </label>
-                </div>
-              </div>
-
-              {status && (
-                <p role="alert" className="builder-status-alert">
-                  {status}
-                </p>
-              )}
-
-              <div className="builder-step-actions split">
-                <button
-                  type="button"
-                  onClick={() => setStep(0)}
-                  className="button secondary"
-                >
-                  <ArrowLeft size={16} /> Back to Step 1
-                </button>
-
-                <button type="submit" className="button">
-                  Continue to Step 3: Contact Details <ArrowRight size={18} />
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* ================================================================
-              STEP 3 — CUSTOMER INFORMATION & SUBMISSION
-              ================================================================ */}
-          {step === 2 && (
-            <form onSubmit={handleSubmit} className="builder-step-form">
-              <div className="builder-step-header">
-                <span className="eyebrow">Step 3 of 3 · Final Step</span>
-                <h3 className="builder-step-title">
-                  Tell Us How to Reach You
-                </h3>
-                <p className="builder-step-sub">
-                  Where should we send your project proposal and tracking details?
-                </p>
-              </div>
-
-              {/* Required Contact Fields */}
-              <div className="form-grid">
-                <label>
-                  <span>Your Full Name *</span>
                   <input
-                    required
+                    id="client-existing-site"
                     type="text"
-                    autoComplete="name"
+                    placeholder="https://..."
                     className="builder-input"
-                    value={form.name}
-                    onChange={(e) => update("name", e.target.value)}
-                    placeholder="e.g. Sanjay Verma"
+                    value={form.existingWebsiteUrl}
+                    onChange={(e) => update("existingWebsiteUrl", e.target.value)}
                   />
-                </label>
-
-                <label>
-                  <span>Email Address *</span>
-                  <input
-                    required
-                    type="email"
-                    autoComplete="email"
-                    className="builder-input"
-                    value={form.email}
-                    onChange={(e) => update("email", e.target.value)}
-                    placeholder="e.g. sanjay@example.com"
-                  />
-                </label>
-              </div>
-
-              <div className="form-grid">
-                <label>
-                  <span>Mobile / WhatsApp Number *</span>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      type="text"
-                      className="builder-input"
-                      style={{ width: 85, textAlign: "center" }}
-                      value={form.countryCode}
-                      onChange={(e) => update("countryCode", e.target.value)}
-                      placeholder="+91"
-                    />
-                    <input
-                      required
-                      type="tel"
-                      autoComplete="tel"
-                      className="builder-input"
-                      style={{ flex: 1 }}
-                      value={form.phone}
-                      onChange={(e) => update("phone", e.target.value)}
-                      placeholder="e.g. 9876543210"
-                    />
-                  </div>
-                </label>
-
-                <label>
-                  <span>Preferred Contact Method</span>
-                  <select
-                    className="builder-select"
-                    value={form.preferredContact}
-                    onChange={(e) => update("preferredContact", e.target.value)}
-                  >
-                    <option value="WhatsApp">WhatsApp</option>
-                    <option value="Phone Call">Phone Call</option>
-                    <option value="Email">Email</option>
-                  </select>
-                </label>
-              </div>
-
-              {/* Individual vs Business */}
-              <div style={{ margin: "14px 0" }}>
-                <span className="builder-pref-label">Are you enquiring for yourself or a business?</span>
-                <div className="pill-toggle-group">
-                  <button
-                    type="button"
-                    className={`pill-toggle-btn ${!form.isBusiness ? "selected" : ""}`}
-                    onClick={() => update("isBusiness", false)}
-                  >
-                    For Myself / Individual
-                  </button>
-                  <button
-                    type="button"
-                    className={`pill-toggle-btn ${form.isBusiness ? "selected" : ""}`}
-                    onClick={() => update("isBusiness", true)}
-                  >
-                    For My Business / Brand
-                  </button>
                 </div>
 
-                {form.isBusiness && (
-                  <label style={{ display: "block", marginTop: 8 }}>
-                    <span>Business / Brand Name *</span>
-                    <input
-                      required
-                      type="text"
-                      className="builder-input"
-                      value={form.businessName}
-                      onChange={(e) => update("businessName", e.target.value)}
-                      placeholder="e.g. Studio Luxe, Apex Innovations..."
-                    />
+                <div className="builder-form-group full-width">
+                  <label htmlFor="client-message">
+                    Additional Message or Notes (Optional)
                   </label>
-                )}
-              </div>
-
-              {/* Collapsible Optional Details */}
-              <div style={{ margin: "14px 0" }}>
-                <button
-                  type="button"
-                  className="collapsible-trigger"
-                  onClick={() => setShowOptionalDetails(!showOptionalDetails)}
-                >
-                  <span>
-                    {showOptionalDetails
-                      ? "Hide optional details"
-                      : "+ Add location, existing website, or additional message (Optional)"}
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    style={{
-                      transform: showOptionalDetails ? "rotate(180deg)" : "none",
-                      transition: "transform 0.2s",
-                    }}
+                  <textarea
+                    id="client-message"
+                    rows={3}
+                    placeholder="Tell us any specific requirements, deadlines, or reference ideas..."
+                    className="builder-input"
+                    value={form.additionalMessage}
+                    onChange={(e) => update("additionalMessage", e.target.value)}
                   />
-                </button>
-
-                {showOptionalDetails && (
-                  <div className="builder-optional-panel">
-                    <div className="form-grid">
-                      <label>
-                        <span>City / Location</span>
-                        <input
-                          type="text"
-                          className="builder-input"
-                          value={form.city}
-                          onChange={(e) => update("city", e.target.value)}
-                          placeholder="e.g. Bangalore, India"
-                        />
-                      </label>
-
-                      <label>
-                        <span>Existing Website URL</span>
-                        <input
-                          type="url"
-                          className="builder-input"
-                          value={form.existingWebsiteUrl}
-                          onChange={(e) => update("existingWebsiteUrl", e.target.value)}
-                          placeholder="https://example.com"
-                        />
-                      </label>
-                    </div>
-
-                    <label style={{ display: "block", marginTop: 8 }}>
-                      <span>Additional Requirements or Notes</span>
-                      <textarea
-                        rows={2}
-                        maxLength={3000}
-                        className="builder-textarea"
-                        value={form.additionalMessage}
-                        onChange={(e) => update("additionalMessage", e.target.value)}
-                        placeholder="Any additional notes or specific questions for Sanjay..."
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {/* Review Summary Card */}
-              <div className="enquiry-summary-card">
-                <div className="enquiry-summary-title">Review Your Enquiry:</div>
-                <div className="enquiry-summary-grid">
-                  <div>
-                    <b>Website Type:</b> {form.selectedCategory}
-                    {form.customCategoryText ? ` (${form.customCategoryText})` : ""}
-                  </div>
-                  {form.selectedObjectives.length > 0 && (
-                    <div>
-                      <b>Primary Objectives:</b> {form.selectedObjectives.join(", ")}
-                    </div>
-                  )}
-                  <div>
-                    <b>Features:</b>{" "}
-                    {form.selectedFeatures.length > 0
-                      ? form.selectedFeatures.join(", ")
-                      : "General scoping / Not specified"}
-                    {form.includeOtherFeature ? " (+ Custom feature)" : ""}
-                  </div>
-                  <div>
-                    <b>Style & Timeline:</b> {form.designStyle} · {form.timeline} · {form.budget}
-                  </div>
-                  <div>
-                    <b>Contact:</b> {form.name} ({form.email}, {form.countryCode} {form.phone})
-                  </div>
                 </div>
-              </div>
 
-              {/* Consent Checkbox */}
-              <label className="check builder-consent-check">
+                {/* Honeypot field */}
                 <input
-                  type="checkbox"
-                  required
-                  checked={form.consent}
-                  onChange={(e) => update("consent", e.target.checked)}
-                />
-                <span className="builder-consent-text">
-                  I agree to receive a project proposal and tracking updates from SANJU X DEV. Your details are strictly confidential and will never be shared.{" "}
-                  <Link to="/privacy" style={{ textDecoration: "underline", color: "var(--accent)" }}>
-                    Privacy Policy
-                  </Link>
-                </span>
-              </label>
-
-              {/* Honeypot */}
-              <label className="honeypot" aria-hidden="true" style={{ display: "none" }}>
-                Website
-                <input
+                  type="text"
+                  name="website"
                   tabIndex={-1}
                   autoComplete="off"
+                  style={{ display: "none" }}
                   value={form.website}
                   onChange={(e) => update("website", e.target.value)}
                 />
-              </label>
+              </div>
+
+              {/* Review Before Submitting: Compact 4-Step Summary Card */}
+              <div className="builder-review-summary">
+                <div className="review-summary-header">
+                  <span className="review-summary-title">Enquiry Summary</span>
+                  <span className="review-summary-tag">Ready for Proposal</span>
+                </div>
+
+                <div className="review-summary-rows">
+                  <div className="review-row">
+                    <span className="review-lbl">Website Type:</span>
+                    <strong className="review-val">
+                      {form.selectedCategory || "Not selected"}
+                      {form.customCategoryText ? ` (${form.customCategoryText})` : ""}
+                    </strong>
+                    <button type="button" className="review-edit-btn" onClick={() => setStep(0)}>Edit</button>
+                  </div>
+
+                  <div className="review-row">
+                    <span className="review-lbl">Primary Purposes:</span>
+                    <span className="review-val">
+                      {form.selectedPurposes.length > 0 ? form.selectedPurposes.join(", ") : "Not specified"}
+                    </span>
+                    <button type="button" className="review-edit-btn" onClick={() => setStep(0)}>Edit</button>
+                  </div>
+
+                  <div className="review-row">
+                    <span className="review-lbl">Features Selected:</span>
+                    <span className="review-val">
+                      {form.includeNotSureFeature
+                        ? "Guidance requested (Not Sure)"
+                        : form.selectedFeatures.length > 0
+                        ? `${form.selectedFeatures.length} features selected (${form.selectedFeatures.slice(0, 3).join(", ")}${form.selectedFeatures.length > 3 ? "..." : ""})`
+                        : "Baseline features"}
+                    </span>
+                    <button type="button" className="review-edit-btn" onClick={() => setStep(1)}>Edit</button>
+                  </div>
+
+                  <div className="review-row">
+                    <span className="review-lbl">Login & Dashboard:</span>
+                    <span className="review-val">
+                      Login: {form.loginOption || "Not sure"} · Dashboard: {form.dashboardOption || "Not sure"}
+                    </span>
+                    <button type="button" className="review-edit-btn" onClick={() => setStep(1)}>Edit</button>
+                  </div>
+
+                  <div className="review-row">
+                    <span className="review-lbl">Design & Style:</span>
+                    <span className="review-val">
+                      {form.designStyle || "Clean & Simple"} · Animation: {form.animationLevel || "Smooth"} · Pages: {form.pageCount || "Small Website"}
+                    </span>
+                    <button type="button" className="review-edit-btn" onClick={() => setStep(2)}>Edit</button>
+                  </div>
+
+                  <div className="review-row">
+                    <span className="review-lbl">Timeline & Budget:</span>
+                    <span className="review-val">
+                      Timeline: {form.timeline} · Budget: {form.budget}
+                    </span>
+                    <button type="button" className="review-edit-btn" onClick={() => setStep(2)}>Edit</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mandatory Privacy Consent Checkbox */}
+              <div className="builder-consent-wrap">
+                <label className="builder-consent-label">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={form.consent}
+                    onChange={(e) => update("consent", e.target.checked)}
+                  />
+                  <span>
+                    I agree to let SANJU X DEV contact me regarding this enquiry and store my submitted project details.
+                  </span>
+                </label>
+              </div>
 
               {status && (
                 <p role="alert" className="builder-status-alert">
@@ -1102,21 +1590,44 @@ export function EnquiryBuilder({
                 </p>
               )}
 
+              {/* Two Submission Buttons */}
               <div className="builder-step-actions split">
                 <button
                   type="button"
-                  onClick={() => setStep(1)}
                   className="button secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setStatus("");
+                    setStep(2);
+                    scrollToTop();
+                  }}
                 >
-                  <ArrowLeft size={16} /> Back to Step 2
+                  <ArrowLeft size={16} /> Back to Preferences
                 </button>
 
-                <button type="submit" className="button" disabled={busy}>
-                  {busy ? "Sending Enquiry…" : "Send My Enquiry"}
-                  <Arrow />
-                </button>
+                <div className="builder-submit-dual-actions">
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={busy || !form.consent}
+                    onClick={() => void handleSubmit(false)}
+                  >
+                    {busy ? "Submitting..." : "Submit & Finalize"}
+                    <Arrow />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="button button-whatsapp"
+                    disabled={busy || !form.consent}
+                    onClick={() => void handleSubmit(true)}
+                  >
+                    <MessageCircle size={17} />
+                    {busy ? "Saving & Opening..." : "Submit & Continue on WhatsApp"}
+                  </button>
+                </div>
               </div>
-            </form>
+            </div>
           )}
         </>
       )}
@@ -1128,83 +1639,56 @@ export default function Contact() {
   const s = useSite();
 
   return (
-    <section className="page wrap enquiry-page-wrap">
-      <span className="eyebrow">Start a project</span>
-      <h1 className="enquiry-page-headline">Let&apos;s Build Your Website</h1>
-      <p className="enquiry-page-sub">
-        Choose what you&apos;re planning to create. We&apos;ll help with the rest.
-      </p>
+    <div className="page contact-page wrap">
+      <header className="page-header" style={{ marginBottom: 32 }}>
+        <span className="eyebrow">Project Enquiry & Consultation</span>
+        <h1 style={{ fontSize: "clamp(36px, 5vw, 56px)", margin: "8px 0" }}>
+          Choose Your Website
+        </h1>
+        <p style={{ maxWidth: 640, color: "var(--muted)", fontSize: 16 }}>
+          Select what you&apos;re planning to create, pick your features, and get an honest proposal with your unique tracking code.
+        </p>
+      </header>
 
-      <div className="contact-grid">
-        {/* Left Column: Context & Helpful Links */}
-        <aside className="contact-aside">
-          <div className="paper-tape-pin" aria-hidden="true" />
-          <h2>
-            Simple, honest<br />
-            consultation.
-          </h2>
-          <p>
-            You don&apos;t need to worry about servers, code frameworks, or
-            complex setups. We handle the full digital architecture so you
-            can focus on your business or brand.
-          </p>
+      {/* Render 4-step wizard */}
+      <EnquiryBuilder isHomepageSection={false} />
 
-          <div className="contact-social-links">
-            <a href={"mailto:" + s.email} className="contact-social-card" aria-label="Direct email">
-              <span className="contact-social-icon"><MailIcon size={18} /></span>
-              <div className="contact-social-info">
-                <span className="contact-social-label">Email</span>
-                <span className="contact-social-val">{s.email}</span>
-              </div>
-            </a>
-
-            <a
-              href={s.instagram || "https://www.instagram.com/sanju_x_dev/"}
-              target="_blank"
-              rel="noreferrer"
-              className="contact-social-card"
-              aria-label="Instagram profile"
-            >
-              <span className="contact-social-icon"><InstagramIcon size={18} /></span>
-              <div className="contact-social-info">
-                <span className="contact-social-label">Instagram</span>
-                <span className="contact-social-val">@sanju_x_dev</span>
-              </div>
-            </a>
-
-            <a
-              href={(s as any).facebook || "https://www.facebook.com/sanju.x.dev"}
-              target="_blank"
-              rel="noreferrer"
-              className="contact-social-card"
-              aria-label="Facebook page"
-            >
-              <span className="contact-social-icon"><FacebookIcon size={18} /></span>
-              <div className="contact-social-info">
-                <span className="contact-social-label">Facebook</span>
-                <span className="contact-social-val">sanju_x_dev</span>
-              </div>
-            </a>
-          </div>
-
-          <div style={{ marginTop: 24 }}>
-            <p style={{ margin: "6px 0 10px 0" }}>Already have an SXD enquiry?</p>
-            <Link className="text-link" to="/track">
-              Track project status <Arrow />
-            </Link>
-          </div>
-
-          <p style={{ marginTop: 18 }}>Prefer to explore our work first?</p>
-          <Link className="text-link" to="/work">
-            See our portfolio <Arrow />
-          </Link>
-        </aside>
-
-        {/* Right Column: Shared Enquiry Builder */}
-        <div className="form-panel">
-          <EnquiryBuilder />
+      {/* Direct Contact Alternatives */}
+      <aside className="contact-direct-options" style={{ marginTop: 60, borderTop: "1px solid var(--line)", paddingTop: 32 }}>
+        <h3 style={{ fontSize: 20, marginBottom: 12 }}>Prefer to Reach Out Directly?</h3>
+        <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>
+          If you already have a detailed brief or urgent question, feel free to contact Sanjay directly:
+        </p>
+        <div className="final-contact-grid">
+          <a href={"mailto:" + s.email} className="final-contact-item">
+            <div className="contact-item-icon"><MailIcon size={20} /></div>
+            <div className="contact-item-info">
+              <span className="contact-item-label">Email</span>
+              <span className="contact-item-value">{s.email}</span>
+            </div>
+          </a>
+          <a href={"tel:" + SANJU_BUSINESS_PHONE} className="final-contact-item">
+            <div className="contact-item-icon">📞</div>
+            <div className="contact-item-info">
+              <span className="contact-item-label">Direct Phone</span>
+              <span className="contact-item-value">{SANJU_BUSINESS_PHONE}</span>
+            </div>
+          </a>
+          <a
+            href={`https://wa.me/${SANJU_WHATSAPP_NUMBER}?text=${encodeURIComponent("Hello SANJU X DEV, I would like to enquire about a website.")}`}
+            target="_blank"
+            rel="noreferrer"
+            className="final-contact-item"
+            style={{ borderLeft: "3px solid #25d366" }}
+          >
+            <div className="contact-item-icon"><MessageCircle size={20} style={{ color: "#25d366" }} /></div>
+            <div className="contact-item-info">
+              <span className="contact-item-label">WhatsApp</span>
+              <span className="contact-item-value">{SANJU_BUSINESS_PHONE}</span>
+            </div>
+          </a>
         </div>
-      </div>
-    </section>
+      </aside>
+    </div>
   );
 }

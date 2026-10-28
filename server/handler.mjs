@@ -544,20 +544,37 @@ export default async function handler(req, res) {
         const daysRemaining = calculateDaysRemainingIST(project?.target_date);
 
         const statusLabels = {
-          under_review: "Under Initial Review",
-          new: "Under Initial Review",
-          scope_confirmed: "Scope & Timeline Confirmed",
-          "in-progress": "In Active Development",
-          in_progress: "In Active Development",
-          testing: "Quality & Responsive Testing",
-          completed: "Completed & Delivered",
-          closed: "Delivered",
+          enquiry_received: "Enquiry Received",
+          under_review: "Under Review",
+          more_details_needed: "More Details Needed",
+          accepted: "Accepted",
+          planning: "Planning",
+          designing: "Designing",
+          development_in_progress: "Development in Progress",
+          in_progress: "Development in Progress",
+          "in-progress": "Development in Progress",
+          testing: "Testing",
+          waiting_for_customer: "Waiting for Customer",
           on_hold: "On Hold",
+          ready_for_review: "Ready for Review",
+          completed: "Completed",
+          delivered: "Delivered",
+          closed: "Delivered",
           declined: "Declined",
+          new: "Enquiry Received",
         };
 
         const currentStatusKey = project?.status || enquiryRow?.status || "under_review";
         const statusLabel = statusLabels[currentStatusKey] || "Under Review";
+
+        let formattedTimeline = "Expected completion date not confirmed yet.";
+        if (currentStatusKey === "on_hold") {
+          formattedTimeline = "Project is on hold";
+        } else if (currentStatusKey === "completed" || currentStatusKey === "delivered" || currentStatusKey === "closed") {
+          formattedTimeline = "Completed";
+        } else if (daysRemaining) {
+          formattedTimeline = daysRemaining;
+        }
 
         const sanitized = {
           trackingCode: rawCode,
@@ -570,7 +587,7 @@ export default async function handler(req, res) {
           startDate: project?.start_date || null,
           targetDate: project?.target_date || null,
           completedDate: project?.completed_date || null,
-          daysRemaining: currentStatusKey === "completed" ? "Completed" : daysRemaining,
+          daysRemaining: formattedTimeline,
           publicUpdate: project?.public_update || (enquiryRow?.status === "new" ? "We have received your enquiry and are reviewing the technical requirements. We will be in touch shortly." : "Project is moving forward according to schedule."),
           publicUpdateTime: project?.public_update_time || enquiryRow?.created_at,
           liveUrl: project?.live_url || null,

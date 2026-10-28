@@ -150,17 +150,36 @@ export function enquiry(x) {
     has_existing_website: 150,
     has_domain: 100,
     additional_message: 3000,
+    primary_purpose: 500,
+    login_option: 150,
+    dashboard_option: 150,
+    data_storage: 100,
+    animation_preference: 150,
+    page_count: 150,
+    existing_design_option: 150,
+    figma_url: 300,
   };
 
   for (const [k, maxLen] of Object.entries(limits)) {
     if (x[k] !== undefined && x[k] !== null) {
-      if (typeof x[k] !== "string" || x[k].length > maxLen) {
+      if (Array.isArray(x[k])) {
+        out[k] = x[k].map((item) => String(item).trim()).filter(Boolean).join(", ");
+      } else if (typeof x[k] !== "string" || x[k].length > maxLen) {
         throw Error("Please check your " + k + ".");
+      } else {
+        out[k] = x[k].trim();
       }
-      out[k] = x[k].trim();
     } else {
       out[k] = "";
     }
+  }
+
+  if (Array.isArray(x.login_security)) {
+    out.login_security = x.login_security.map((s) => String(s).trim()).filter(Boolean);
+  } else if (typeof x.login_security === "string") {
+    out.login_security = x.login_security.trim() ? [x.login_security.trim()] : [];
+  } else {
+    out.login_security = [];
   }
 
   if (Array.isArray(x.features)) {

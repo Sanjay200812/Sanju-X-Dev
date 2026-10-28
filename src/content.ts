@@ -579,19 +579,94 @@ export const DEFAULT_WEBSITE_CATEGORIES: WebsiteCategory[] = [
   }
 ];
 
+export const PRIMARY_PURPOSE_OPTIONS = [
+  "Show My Work",
+  "Introduce My Business",
+  "Display Products",
+  "Sell Products Online",
+  "Receive Enquiries",
+  "Accept Bookings",
+  "Share Information",
+  "Show My Services",
+  "Something Else",
+  "Not Sure",
+];
+
+export const LOGIN_OPTIONS = [
+  { id: "none", label: "No Login Needed", desc: "Open access for all visitors." },
+  { id: "email_password", label: "Email & Password", desc: "Traditional secure account login." },
+  { id: "google", label: "Google Sign-In", desc: "Fast 1-click login with Google." },
+  { id: "mobile_otp", label: "Mobile Number & OTP", desc: "Instant SMS / WhatsApp OTP login." },
+  { id: "email_otp", label: "Email OTP", desc: "Passwordless one-time verification code." },
+  { id: "multiple", label: "Multiple Sign-In Options", desc: "Google, email and mobile combined." },
+  { id: "not_sure", label: "Not Sure", desc: "Recommend the best login method." },
+];
+
+export const LOGIN_SECURITY_OPTIONS = [
+  "Forgot Password / Reset Password",
+  "Email Verification",
+  "Two-Step Verification",
+  "Different Access Roles",
+  "Login Activity / Active Sessions",
+  "Not Sure",
+];
+
+export const DASHBOARD_OPTIONS = [
+  { id: "none", label: "No Dashboard", desc: "Static website with no backend area needed." },
+  { id: "admin", label: "Admin Dashboard", desc: "Manage website content, customer enquiries and business information." },
+  { id: "customer", label: "Customer Dashboard", desc: "Let customers see their orders, bookings or personal information." },
+  { id: "both", label: "Customer + Admin Dashboard", desc: "Both client management and administrative controls." },
+  { id: "multi_role", label: "Different Dashboards for Different Roles", desc: "Custom permissions for managers, staff and customers." },
+  { id: "not_sure", label: "Not Sure", desc: "Help me decide if I need a dashboard." },
+];
+
+export const DATA_STORAGE_OPTIONS = [
+  { id: "no", label: "No", desc: "Does not need to store user records or dynamic data." },
+  { id: "yes", label: "Yes", desc: "Save customer accounts, orders, bookings or enquiries." },
+  { id: "not_sure", label: "Not Sure", desc: "Help me decide based on my website scope." },
+];
+
 export const DESIGN_STYLES = [
-  { id: "clean_simple", label: "Clean & Simple", desc: "Easy to read and professional." },
-  { id: "modern_professional", label: "Modern & Professional", desc: "Stylish but suitable for business." },
-  { id: "dark_premium", label: "Dark & Premium", desc: "Elegant darker colors and refined details." },
-  { id: "colorful_creative", label: "Colorful & Creative", desc: "More personality and visual energy." },
-  { id: "inspired", label: "Inspired by a Website", desc: "Share a reference link." },
-  { id: "not_sure", label: "Not Sure", desc: "Suggest a design for me." },
+  { id: "clean_simple", label: "Clean & Simple", desc: "Minimalist, uncluttered and easy to read." },
+  { id: "modern_professional", label: "Modern & Professional", desc: "Contemporary layout with sharp typography." },
+  { id: "dark_premium", label: "Dark & Premium", desc: "High-contrast sleek aesthetic with refined tones." },
+  { id: "creative_colorful", label: "Creative & Colorful", desc: "Vibrant, expressive visuals and dynamic energy." },
+  { id: "luxury_elegant", label: "Luxury & Elegant", desc: "Sophisticated serif typography and timeless spacing." },
+  { id: "custom", label: "Custom Design", desc: "A distinctive bespoke look crafted from scratch." },
+  { id: "not_sure", label: "Not Sure — Suggest One", desc: "Recommend what suits my website best." },
+];
+
+export const ANIMATION_LEVELS = [
+  { id: "minimal", label: "Minimal", desc: "Simple, subtle movements." },
+  { id: "smooth", label: "Smooth", desc: "Elegant scrolling and hover effects." },
+  { id: "advanced", label: "Advanced", desc: "Interactive elements, layered motion and polished transitions." },
+  { id: "cinematic", label: "Cinematic", desc: "Immersive animation and advanced interactive experiences." },
+  { id: "not_sure", label: "Not Sure", desc: "Recommend what suits my website." },
+];
+
+export const PAGE_COUNT_OPTIONS = [
+  { id: "1_page", label: "1 Page — Everything in One Place", desc: "Single-page landing or portfolio." },
+  { id: "2_5_pages", label: "2–5 Pages — Small Website", desc: "Home, About, Services, Contact, etc." },
+  { id: "6_10_pages", label: "6–10 Pages — Growing Website", desc: "Multiple services, blog, portfolio items." },
+  { id: "11_20_pages", label: "11–20 Pages — Larger Website", desc: "Comprehensive brand or content portal." },
+  { id: "20_plus", label: "More Than 20 Pages", desc: "Extensive catalogue or multi-section portal." },
+  { id: "custom_app", label: "Custom Web Application", desc: "Application interface with dynamic views." },
+  { id: "not_sure", label: "Not Sure", desc: "Estimate based on my required content." },
+];
+
+export const DESIGN_MIND_OPTIONS = [
+  { id: "design_for_me", label: "No — Please Design It for Me", desc: "Create complete UI/UX from scratch." },
+  { id: "figma", label: "Yes — I Have a Figma Design", desc: "I have design mockups ready in Figma." },
+  { id: "references", label: "Yes — I Have Reference Websites", desc: "Websites with styles or features I admire." },
+  { id: "sketches", label: "Yes — I Have Screenshots or Sketches", desc: "Visual ideas, sketches, or wireframes." },
+  { id: "not_sure", label: "Not Sure", desc: "Discuss ideas during initial project review." },
 ];
 
 export const TIMELINE_CHOICES = [
   "As Soon As Possible",
   "Within 2 Weeks",
-  "Within 1 Month",
+  "Within a Month",
+  "1–3 Months",
   "Flexible",
   "Not Sure",
 ];
@@ -600,10 +675,47 @@ export const BUDGET_CHOICES = [
   "Below ₹5,000",
   "₹5,000–₹10,000",
   "₹10,000–₹25,000",
-  "₹25,000+",
-  "I'd Like a Quote",
-  "Not Sure Yet",
+  "Above ₹25,000",
+  "Need a Quote",
+  "Not Sure",
 ];
+
+export const PROJECT_STATUS_LIST = [
+  { key: "enquiry_received", label: "Enquiry Received" },
+  { key: "under_review", label: "Under Review" },
+  { key: "more_details_needed", label: "More Details Needed" },
+  { key: "accepted", label: "Accepted" },
+  { key: "planning", label: "Planning" },
+  { key: "designing", label: "Designing" },
+  { key: "development_in_progress", label: "Development in Progress" },
+  { key: "testing", label: "Testing" },
+  { key: "waiting_for_customer", label: "Waiting for Customer" },
+  { key: "on_hold", label: "On Hold" },
+  { key: "ready_for_review", label: "Ready for Review" },
+  { key: "completed", label: "Completed" },
+  { key: "delivered", label: "Delivered" },
+  { key: "declined", label: "Declined" },
+];
+
+export const SANJU_BUSINESS_PHONE = "+91 7075452718";
+export const SANJU_WHATSAPP_NUMBER = "917075452718";
+
+export function getWhatsAppEnquiryUrl(trackingCode: string, websiteType: string): string {
+  const message = [
+    "Hello SANJU X DEV,",
+    "I have submitted a project enquiry.",
+    `Tracking ID: ${trackingCode}`,
+    `Website Type: ${websiteType}`,
+    "I would like to discuss my project requirements and next steps.",
+    "Thank you.",
+  ].join("\n");
+  return `https://wa.me/${SANJU_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+export function getGeneralWhatsAppUrl(customText?: string): string {
+  const msg = customText || "Hello SANJU X DEV, I would like to discuss a website / digital project.";
+  return `https://wa.me/${SANJU_WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+}
 
 export const defaults = {
   headline: "Thoughtful Design.\nPowerful Digital Experiences.",
@@ -611,6 +723,8 @@ export const defaults = {
   about:
     "SANJU X DEV is a web development and digital solutions business. We bring design and engineering together to create clear, engaging experiences for businesses and their customers.",
   email: "sanjuxdev27@gmail.com",
+  phone: SANJU_BUSINESS_PHONE,
+  whatsapp: `https://wa.me/${SANJU_WHATSAPP_NUMBER}`,
   instagram: "https://www.instagram.com/sanju_x_dev/",
   facebook: "https://www.facebook.com/sanju.x.dev",
   defaultTheme: "silver",

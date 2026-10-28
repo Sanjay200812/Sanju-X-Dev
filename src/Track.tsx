@@ -10,8 +10,10 @@ import {
   Check,
   Lock,
   MessageCircle,
+  AlertCircle,
 } from "lucide-react";
 import { useSite, Arrow } from "./App";
+import { SANJU_WHATSAPP_NUMBER } from "./content";
 
 interface Milestone {
   name: string;
@@ -294,6 +296,31 @@ export default function Track() {
                 </div>
               </div>
 
+              {/* On Hold Alert Banner */}
+              {project.status === "on_hold" && (
+                <div
+                  style={{
+                    background: "#fff8e6",
+                    border: "1px solid #e6b800",
+                    borderLeft: "5px solid #d99b00",
+                    padding: "14px 18px",
+                    borderRadius: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    marginBottom: 20,
+                  }}
+                >
+                  <AlertCircle size={20} style={{ color: "#b38000", flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ display: "block", fontSize: 13, color: "#805b00" }}>Project is Currently On Hold</strong>
+                    <span style={{ fontSize: 12.5, color: "#996d00" }}>
+                      Active work is temporarily paused while awaiting client decisions or assets. Reach out anytime on WhatsApp to resume.
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Status and Progress Overview */}
               <div
                 style={{
@@ -312,7 +339,12 @@ export default function Track() {
                         width: 10,
                         height: 10,
                         borderRadius: "50%",
-                        backgroundColor: project.status === "completed" ? "#25d366" : "var(--accent)",
+                        backgroundColor:
+                          project.status === "completed" || project.status === "delivered"
+                            ? "#25d366"
+                            : project.status === "on_hold"
+                            ? "#d99b00"
+                            : "var(--accent)",
                       }}
                     />
                     <strong style={{ fontSize: 16 }}>{project.statusLabel}</strong>
@@ -348,15 +380,19 @@ export default function Track() {
                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                     <Calendar size={16} style={{ color: "var(--muted)" }} />
                     <div>
-                      <span style={{ color: "var(--muted)", display: "block", fontSize: 11 }}>Target Completion</span>
-                      <strong>{formatISTDate(project.targetDate)}</strong>
+                      <span style={{ color: "var(--muted)", display: "block", fontSize: 11 }}>Expected Completion</span>
+                      <strong>
+                        {project.targetDate
+                          ? formatISTDate(project.targetDate)
+                          : "Expected completion date not confirmed yet."}
+                      </strong>
                     </div>
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                     <Clock size={16} style={{ color: "var(--muted)" }} />
                     <div>
-                      <span style={{ color: "var(--muted)", display: "block", fontSize: 11 }}>Timeline</span>
+                      <span style={{ color: "var(--muted)", display: "block", fontSize: 11 }}>Timeline Status</span>
                       <strong style={{ color: "var(--accent)" }}>{project.daysRemaining || "In Review"}</strong>
                     </div>
                   </div>
@@ -392,8 +428,13 @@ export default function Track() {
 
               {/* Milestones Checklist */}
               <div style={{ marginBottom: 28 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 12 }}>
-                  Milestone Progress
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)" }}>
+                    Milestone Progress
+                  </div>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                    {project.milestones.filter((m) => m.completed).length} of {project.milestones.length} Completed
+                  </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {project.milestones.map((m, idx) => (
@@ -465,7 +506,7 @@ export default function Track() {
               {/* Action Buttons */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 24, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
                 <a
-                  href={`https://wa.me/919392257217?text=${encodeURIComponent(`Hi Sanjay, I am checking the status for project ${project.trackingCode} (${project.title}).`)}`}
+                  href={`https://wa.me/${SANJU_WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hello SANJU X DEV, I have a question regarding my project ${project.trackingCode} (${project.title}).`)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="button"
