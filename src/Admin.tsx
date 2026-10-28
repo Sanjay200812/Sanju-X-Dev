@@ -9,7 +9,6 @@ import {
   Check,
   Download,
   Trash2,
-  ChevronDown,
   Plus,
   ExternalLink,
   Send,
@@ -27,12 +26,8 @@ const auth =
 
 export default function Admin() {
   const [stage, setStage] = useState<"code" | "login" | "setup" | "workspace">("code");
-  const [showSecondaryLogin, setShowSecondaryLogin] = useState(false);
   const [secretCode, setSecretCode] = useState("");
   const [showSecret, setShowSecret] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [newCode, setNewCode] = useState("");
   const [confirmCode, setConfirmCode] = useState("");
   const [status, setStatus] = useState("");
@@ -44,7 +39,6 @@ export default function Admin() {
 
   // Lockout states (in seconds)
   const [codeLockout, setCodeLockout] = useState(0);
-  const [passwordLockout, setPasswordLockout] = useState(0);
 
   // Enquiry filters & management
   const [search, setSearch] = useState("");
@@ -75,7 +69,6 @@ export default function Admin() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCodeLockout((sec) => (sec > 0 ? sec - 1 : 0));
-      setPasswordLockout((sec) => (sec > 0 ? sec - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -92,7 +85,6 @@ export default function Admin() {
         if (r.ok) {
           const d = await r.json();
           if (d.codeLockout?.locked) setCodeLockout(d.codeLockout.remainingSeconds);
-          if (d.passwordLockout?.locked) setPasswordLockout(d.passwordLockout.remainingSeconds);
         }
       } catch {
         /* offline or non-blocking */
@@ -161,7 +153,6 @@ export default function Admin() {
     if (!r.ok) {
       if (d.remainingSeconds) {
         if (body?.action === "login-code") setCodeLockout(d.remainingSeconds);
-        if (body?.action === "login-password") setPasswordLockout(d.remainingSeconds);
       }
       throw Error(d.error || "Request failed");
     }
@@ -203,7 +194,6 @@ export default function Admin() {
       await auth?.auth.signOut({ scope: "global" });
       setStage("code");
       setData(null);
-      setPassword("");
       setSecretCode("");
     });
   }
@@ -306,13 +296,13 @@ export default function Admin() {
           <div style={{ marginBottom: 20 }}>
             <h3 style={{ margin: "0 0 6px 0" }}>
               {stage === "setup"
-                ? "Create your private secret code"
-                : "Secure owner workspace"}
+                ? "Configure Owner Password"
+                : "Spideyy — Owner Access"}
             </h3>
             <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
               {stage === "setup"
-                ? "Choose a strong high-entropy code or passphrase (minimum 8 characters) for direct owner access."
-                : "Owner authentication and protected dashboard."}
+                ? "Choose a strong password (minimum 8 characters) for direct owner access."
+                : "Enter your owner password to unlock the workspace."}
             </p>
           </div>
 
@@ -323,16 +313,16 @@ export default function Admin() {
           )}
 
           {stage === "setup" ? (
-            /* SETUP PRIVATE SECRET CODE */
+            /* SETUP PRIVATE OWNER PASSWORD */
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 void run(async () => {
                   if (newCode.length < 8) {
-                    throw Error("Secret code must be at least 8 characters long.");
+                    throw Error("Password must be at least 8 characters long.");
                   }
                   if (newCode !== confirmCode) {
-                    throw Error("Secret codes do not match.");
+                    throw Error("Passwords do not match.");
                   }
                   await api({ action: "setup-code", code: newCode, confirmCode });
                   setNewCode("");
@@ -342,7 +332,7 @@ export default function Admin() {
               }}
             >
               <label>
-                New secret code / passphrase (min 8 characters)
+                New Owner Password (min 8 characters)
                 <input
                   type="password"
                   required
@@ -351,11 +341,11 @@ export default function Admin() {
                   autoComplete="new-password"
                   value={newCode}
                   onChange={(e) => setNewCode(e.target.value)}
-                  placeholder="e.g. MySecurePassphrase2026!"
+                  placeholder="Enter new owner password"
                 />
               </label>
               <label>
-                Confirm secret code
+                Confirm Password
                 <input
                   type="password"
                   required
@@ -364,198 +354,79 @@ export default function Admin() {
                   autoComplete="new-password"
                   value={confirmCode}
                   onChange={(e) => setConfirmCode(e.target.value)}
+                  placeholder="Confirm new owner password"
                 />
               </label>
               <button className="button" disabled={busy || !auth}>
-                {busy ? "Saving…" : "Save secret code & unlock"}
+                {busy ? "Saving…" : "Save Password & Unlock"}
               </button>
             </form>
           ) : (
-            /* PRIMARY & SECONDARY LOGIN */
-            <div>
-              {/* PRIMARY LOGIN — SECRET CODE */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void run(async () => {
-                    const res = await api({ action: "login-code", code: secretCode });
-                    setSecretCode("");
-                    if (res.sessionToken && auth) {
-                      try {
-                        await auth.auth.setSession({
-                          access_token: res.sessionToken,
-                          refresh_token: "",
-                        });
-                      } catch {
-                        /* ignore */
-                      }
-                    }
-                    await load();
-                  });
-                }}
-              >
-                <label>
-                  Private secret code
-                  <div style={{ position: "relative" }}>
-                    <input
-                      type={showSecret ? "text" : "password"}
-                      required
-                      autoComplete="current-password"
-                      disabled={codeLockout > 0 || busy}
-                      value={secretCode}
-                      onChange={(e) => setSecretCode(e.target.value)}
-                      placeholder="Enter owner secret code"
-                      style={{ paddingRight: 40 }}
-                    />
-                    <button
-                      type="button"
-                      aria-label={showSecret ? "Hide code" : "Show code"}
-                      onClick={() => setShowSecret(!showSecret)}
-                      style={{
-                        position: "absolute",
-                        right: 10,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        opacity: 0.7,
-                      }}
-                    >
-                      {showSecret ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </label>
-
-                {codeLockout > 0 && (
-                  <p className="status" style={{ color: "var(--accent)", marginTop: 8 }}>
-                    Secret code locked. Retry in {codeLockout}s
-                  </p>
-                )}
-
-                <button
-                  className="button"
-                  style={{ width: "100%", marginTop: 12 }}
-                  disabled={busy || !auth || codeLockout > 0}
-                >
-                  {busy ? "Verifying…" : "Unlock Dashboard"}
-                </button>
-              </form>
-
-              {/* SECONDARY LOGIN DISCLOSURE */}
-              <div className="credentials-disclosure-section">
-                <button
-                  type="button"
-                  id="credentials-toggle"
-                  className="credentials-disclosure-btn"
-                  aria-expanded={showSecondaryLogin}
-                  aria-controls="credentials-form-panel"
-                  onClick={() => setShowSecondaryLogin(!showSecondaryLogin)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setShowSecondaryLogin(!showSecondaryLogin);
-                    }
-                  }}
-                >
-                  <span className="credentials-disclosure-label">Login with Credentials</span>
-                  <ChevronDown
-                    size={20}
-                    className={"credentials-chevron " + (showSecondaryLogin ? "rotated" : "")}
-                    aria-hidden="true"
-                  />
-                </button>
-
-                <div
-                  id="credentials-form-panel"
-                  className={"credentials-collapse " + (showSecondaryLogin ? "expanded" : "")}
-                  role="region"
-                  aria-labelledby="credentials-toggle"
-                >
-                  <form
-                    className="credentials-form"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (!email.trim() || !password.trim()) return;
-                      void run(async () => {
-                        const res = await api({
-                          action: "login-password",
-                          email: email.trim(),
-                          password,
-                        });
-                        setPassword("");
-                        if (res.session && auth) {
-                          try {
-                            await auth.auth.setSession(res.session);
-                          } catch {
-                            /* ignore */
-                          }
-                        }
-                        if (!res.pinConfigured) {
-                          setStage("setup");
-                        } else {
-                          await load();
-                        }
+            /* PRIMARY OWNER LOGIN */
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void run(async () => {
+                  const res = await api({ action: "login-code", code: secretCode });
+                  setSecretCode("");
+                  if (res.sessionToken && auth) {
+                    try {
+                      await auth.auth.setSession({
+                        access_token: res.sessionToken,
+                        refresh_token: "",
                       });
+                    } catch {
+                      /* ignore */
+                    }
+                  }
+                  await load();
+                });
+              }}
+            >
+              <label>
+                Owner Password
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showSecret ? "text" : "password"}
+                    required
+                    autoComplete="current-password"
+                    disabled={codeLockout > 0 || busy}
+                    value={secretCode}
+                    onChange={(e) => setSecretCode(e.target.value)}
+                    placeholder="Enter owner password"
+                    style={{ paddingRight: 40 }}
+                  />
+                  <button
+                    type="button"
+                    aria-label={showSecret ? "Hide password" : "Show password"}
+                    onClick={() => setShowSecret(!showSecret)}
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      opacity: 0.7,
                     }}
                   >
-                    <label>
-                      Owner email
-                      <input
-                        type="email"
-                        required
-                        disabled={passwordLockout > 0 || busy}
-                        autoComplete="username"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="owner@domain.com"
-                      />
-                    </label>
-                    <label>
-                      Password
-                      <div style={{ position: "relative" }}>
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          required
-                          disabled={passwordLockout > 0 || busy}
-                          autoComplete="current-password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          style={{ paddingRight: 40 }}
-                          placeholder="••••••••"
-                        />
-                        <button
-                          type="button"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
-                          onClick={() => setShowPassword(!showPassword)}
-                          style={{
-                            position: "absolute",
-                            right: 10,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            opacity: 0.7,
-                          }}
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                    </label>
-
-                    {passwordLockout > 0 && (
-                      <p className="status" style={{ color: "var(--accent)", marginTop: 8 }}>
-                        Credential access locked. Retry in {passwordLockout}s
-                      </p>
-                    )}
-
-                    <button
-                      type="submit"
-                      className="button secondary"
-                      style={{ width: "100%", marginTop: 14 }}
-                      disabled={busy || !auth || passwordLockout > 0 || !email.trim() || !password.trim()}
-                    >
-                      {busy ? "Signing in…" : "Login"}
-                    </button>
-                  </form>
+                    {showSecret ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-              </div>
-            </div>
+              </label>
+
+              {codeLockout > 0 && (
+                <p className="status" style={{ color: "var(--accent)", marginTop: 8 }}>
+                  Password locked. Retry in {codeLockout}s
+                </p>
+              )}
+
+              <button
+                className="button"
+                style={{ width: "100%", marginTop: 12 }}
+                disabled={busy || !auth || codeLockout > 0}
+              >
+                {busy ? "Verifying…" : "Unlock Dashboard"}
+              </button>
+            </form>
           )}
         </div>
       ) : (

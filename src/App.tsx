@@ -20,7 +20,6 @@ import {
   ArrowUpRight,
   ArrowRight,
   ArrowUp,
-  ArrowDown,
   Menu,
   X,
   Monitor,
@@ -32,7 +31,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { defaults, projects as seed, SANJU_BUSINESS_PHONE, SANJU_WHATSAPP_NUMBER } from "./content";
-import Contact, { EnquiryBuilder } from "./Contact";
+import Contact, { EnquiryPreview } from "./Contact";
 import Assistant from "./Assistant";
 import { ChatProvider, useChat } from "./chat-context";
 import {
@@ -52,7 +51,7 @@ export const Arrow = () => <ArrowUpRight size={18} aria-hidden="true" />;
 
 export function CTA({
   text = "Start a conversation",
-  to = "/contact",
+  to = "/project",
   light = false,
 }: {
   text?: string;
@@ -222,7 +221,7 @@ function Footer() {
         <div className="compact-footer-nav">
           <Link to="/">Home</Link>
           <Link to="/work">Projects</Link>
-          <Link to="/contact">Start a Project</Link>
+          <Link to="/project">Start a Project</Link>
           <Link to="/track">Track Project</Link>
           <Link to="/privacy">Privacy</Link>
         </div>
@@ -502,9 +501,9 @@ function Home() {
 
           {/* Clear Start Your Project Button */}
           <div className="hero-start-project-wrap">
-            <a href="#choose-website" className="button hero-start-project-btn">
-              Start Your Project <ArrowDown size={18} />
-            </a>
+            <Link to="/project" className="button hero-start-project-btn">
+              Start Your Project <ArrowRight size={18} />
+            </Link>
           </div>
         </div>
       </section>
@@ -600,7 +599,7 @@ function Home() {
         </div>
 
         <div className="homepage-enquiry-card-wrapper">
-          <EnquiryBuilder isHomepageSection={true} />
+          <EnquiryPreview />
         </div>
       </section>
 
@@ -779,7 +778,7 @@ function CaseStudy() {
       </section>
       <CTA
         text="Discuss a similar project"
-        to={"/contact?service=" + encodeURIComponent(p.category)}
+        to={"/project?category=" + encodeURIComponent(p.category)}
       />
     </article>
   );
@@ -808,7 +807,7 @@ function ServiceList() {
             <div className="service-detail">
               <p>{x.description}</p>
               <span>{x.items}</span>
-              <Link to={"/contact?service=" + encodeURIComponent(x.name)}>
+              <Link to={"/project?category=" + encodeURIComponent(x.name)}>
                 Enquire about this service <Arrow />
               </Link>
             </div>
@@ -1039,22 +1038,15 @@ export default function App() {
                 ) : (
                   <NavLink to="/work">Projects</NavLink>
                 )}
-                {loc.pathname === "/" ? (
-                  <a href="#choose-website">Start a Project</a>
-                ) : (
-                  <NavLink to="/contact">Start a Project</NavLink>
-                )}
+                <NavLink to="/project">Start a Project</NavLink>
                 {loc.pathname === "/" ? (
                   <a href="#contact">Contact</a>
                 ) : (
                   <a href="/#contact">Contact</a>
                 )}
-                <a
-                  href={loc.pathname === "/" ? "#choose-website" : "/contact"}
-                  className="nav-cta-btn"
-                >
+                <Link to="/project" className="nav-cta-btn">
                   Start Your Project <ArrowRight size={15} />
-                </a>
+                </Link>
               </nav>
             </div>
           </header>
@@ -1065,7 +1057,8 @@ export default function App() {
               <Route path="/work/:slug" element={<CaseStudy />} />
               <Route path="/services" element={<Services />} />
               <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
+              <Route path="/project" element={<Contact />} />
+              <Route path="/contact" element={<Navigate to="/project" replace />} />
               <Route
                 path="/track"
                 element={

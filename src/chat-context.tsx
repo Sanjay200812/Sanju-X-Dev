@@ -35,7 +35,7 @@ const initialMessage: ChatMessage = {
   text: "Hi, I'm Spideyy! I can help you understand our services, recommend the right website type, explain features, or answer any questions about your project.",
   links: [
     { label: "What website is right for me?", url: "ask:What website is right for me?" },
-    { label: "Start Your Project", url: "/contact" },
+    { label: "Start Your Project", url: "/project" },
     { label: "Track a Project", url: "/track" },
   ],
   mode: "Spideyy",
@@ -105,7 +105,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         text: "I couldn't reach the live AI assistant right now. You can explore our five case studies in Our Work or share your requirements directly through our Contact form.",
         links: [
           { label: "Explore Our Work", url: "/work" },
-          { label: "Start a Project", url: "/contact" },
+          { label: "Start a Project", url: "/project" },
           { label: "Track Status", url: "/track" },
         ],
         mode: "FAQ guide",

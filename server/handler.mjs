@@ -108,15 +108,15 @@ function extractChatLinks(question, answer) {
 
   // 2. The 5 Official Website Categories recommendation links
   if (/e-commerce|ecommerce|online store|shopping cart|clothing shop|sell online|order online/i.test(textCombined)) {
-    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("E-Commerce Website"));
+    addLink("Start Your Project", "/project?category=" + encodeURIComponent("E-Commerce Website"));
   } else if (/business website|corporate|company website|local business|lead gen/i.test(textCombined)) {
-    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("Business Website"));
+    addLink("Start Your Project", "/project?category=" + encodeURIComponent("Business Website"));
   } else if (/portfolio|personal website|resume website|personal brand/i.test(textCombined)) {
-    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("Personal Portfolio"));
+    addLink("Start Your Project", "/project?category=" + encodeURIComponent("Personal Portfolio"));
   } else if (/blog|content website|news|publishing|articles/i.test(textCombined)) {
-    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("Blog / Content Website"));
+    addLink("Start Your Project", "/project?category=" + encodeURIComponent("Blog / Content Website"));
   } else if (/agency website|creative studio|creative agency/i.test(textCombined)) {
-    addLink("Start Your Project", "/contact?category=" + encodeURIComponent("Agency Website"));
+    addLink("Start Your Project", "/project?category=" + encodeURIComponent("Agency Website"));
   }
 
   // 3. Project tracking queries
@@ -131,7 +131,7 @@ function extractChatLinks(question, answer) {
 
   // 5. General project enquiry queries
   if (/contact|brief|enquiry|quote|hire|start a project|how do i start/i.test(textCombined)) {
-    addLink("Start an Enquiry", "/contact");
+    addLink("Start an Enquiry", "/project");
   }
 
   return links.slice(0, 3);
@@ -328,20 +328,57 @@ export default async function handler(req, res) {
       await rate(client, req, "enquiry", 5);
       await rate(client, req, "enquiry-global", 100);
 
+      // Request-level idempotency to prevent duplicate submissions on repeated clicks
+      if (data.idempotency_key) {
+        try {
+          const { data: existing } = await client
+            .from("studio_enquiries")
+            .select("id, tracking_code, data")
+            .filter("data->>idempotency_key", "eq", data.idempotency_key)
+            .limit(1)
+            .maybeSingle();
+          if (existing && existing.tracking_code) {
+            return send(200, {
+              ok: true,
+              trackingCode: existing.tracking_code,
+              idempotent: true,
+            });
+          }
+        } catch {
+          /* ignore idempotency lookup failure and proceed */
+        }
+      }
+
       // Generate sequential tracking code SXD-001, SXD-002, etc.
-      let trackingCode = "SXD-001";
+      let trackingCode = null;
       try {
         const { data: codeData, error: codeErr } = await client.rpc("studio_generate_tracking_code");
         if (!codeErr && codeData) {
           trackingCode = codeData;
-        } else {
+        }
+      } catch {
+        /* fallback to database count */
+      }
+      if (!trackingCode) {
+        try {
           const { count } = await client.from("studio_enquiries").select("id", { count: "exact", head: true });
           const nextNum = (count || 0) + 1;
           trackingCode = nextNum < 1000 ? `SXD-${String(nextNum).padStart(3, "0")}` : `SXD-${nextNum}`;
+        } catch {
+          try {
+            const { data: latest } = await client
+              .from("studio_enquiries")
+              .select("tracking_code")
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const match = latest?.tracking_code?.match(/SXD-(\d+)/);
+            const nextNum = match ? parseInt(match[1], 10) + 1 : 1;
+            trackingCode = nextNum < 1000 ? `SXD-${String(nextNum).padStart(3, "0")}` : `SXD-${nextNum}`;
+          } catch {
+            trackingCode = "SXD-001";
+          }
         }
-      } catch {
-        const nextNum = 1;
-        trackingCode = `SXD-${String(nextNum).padStart(3, "0")}`;
       }
 
       const insertRecord = {
@@ -666,18 +703,18 @@ export default async function handler(req, res) {
               "\n- Multi-turn memory: You have memory of earlier messages in the current chat. Understand follow-up questions (e.g. 'Can customers pay online?', 'What did I just ask you?', 'How much?')." +
               "\n- Ask useful clarification questions when a project idea is broad." +
               "\n\nRECOMMEND FROM THE 5 OFFICIAL WEBSITE CATEGORIES:" +
-              "\n1. Personal Portfolio: For developers, designers, creators, artists, students, or personal brands (/contact?category=Personal%20Portfolio)." +
-              "\n2. Blog / Content Website: For articles, stories, news, knowledge base, tutorials, or regular updates (/contact?category=Blog%20%2F%20Content%20Website)." +
-              "\n3. Business Website: For companies, local businesses, services, and corporate websites focused on customer trust and enquiry generation (/contact?category=Business%20Website)." +
-              "\n4. Agency Website: For creative agencies, studios, and multidisciplinary teams showcasing multi-service capabilities and client work (/contact?category=Agency%20Website)." +
-              "\n5. E-Commerce Website: For clothing shops, retail stores, product sellers, or online shopping with product catalogues, shopping carts, WhatsApp ordering, and secure payments (UPI, cards, net banking) (/contact?category=E-Commerce%20Website)." +
+              "\n1. Personal Portfolio: For developers, designers, creators, artists, students, or personal brands (/project?category=Personal%20Portfolio)." +
+              "\n2. Blog / Content Website: For articles, stories, news, knowledge base, tutorials, or regular updates (/project?category=Blog%20%2F%20Content%20Website)." +
+              "\n3. Business Website: For companies, local businesses, services, and corporate websites focused on customer trust and enquiry generation (/project?category=Business%20Website)." +
+              "\n4. Agency Website: For creative agencies, studios, and multidisciplinary teams showcasing multi-service capabilities and client work (/project?category=Agency%20Website)." +
+              "\n5. E-Commerce Website: For clothing shops, retail stores, product sellers, or online shopping with product catalogues, shopping carts, WhatsApp ordering, and secure payments (UPI, cards, net banking) (/project?category=E-Commerce%20Website)." +
               "\nRecommend website categories based on customer's actual business needs rather than keyword matching alone." +
               "\n\nPROJECT ENQUIRY INTEGRATION:" +
               "\nWhen a visitor describes their website idea, explain why the recommended category suits them, and invite them to 'Start Your Project' with the relevant category preselected. Never create an enquiry without explicit customer consent and submission." +
               "\n\nSTRICT TRACKING & PRIVACY RULES:" +
               "\nClients receive an SXD Tracking ID (e.g. SXD-001) upon submitting an enquiry. To track status, progress milestones, or countdown days, clients must visit /track and enter their Tracking ID and registered email. NEVER disclose private client names, emails, phone numbers, or unverified project details in chat. Direct all tracking questions to /track." +
               "\n\nSTRICT PRICING & TIMELINES RULES:" +
-              "\nNever invent fixed price packages, delivery guarantees, or false quotes. Every project is scoped individually without arbitrary assumptions. Guide clients to /contact to share a brief for a tailored estimate." +
+              "\nNever invent fixed price packages, delivery guarantees, or false quotes. Every project is scoped individually without arbitrary assumptions. Guide clients to /project to share a brief for a tailored estimate." +
               "\n\nVERIFIED 5 PORTFOLIO PROJECTS (NO FALSE CLAIMS):" +
               "\n1. StarX Live (entertainment streaming), 2. TicketX (event/cinema booking application), 3. StarX Connect (digital NFC & virtual card), 4. AudioX (audio utility app), 5. Yuva Shakti (youth community portal). Direct visitors to /work for full case studies." +
               (content.knowledge ? "\n\nAPPROVED BUSINESS KNOWLEDGE:\n" + content.knowledge : "");
@@ -751,8 +788,8 @@ export default async function handler(req, res) {
       );
 
       if (isTeluguMixed) {
-        answer = "Namaste! SANJU X DEV can definitely build this for you. Whether you need a business website, online store, or custom application, we build it modern, mobile-friendly, and fast. You can share your project idea directly on our simple 2-step Contact page or email Sanjay at sanjuxdev27@gmail.com.";
-        links.push({ label: "Start Your Project", url: "/contact" });
+        answer = "Namaste! SANJU X DEV can definitely build this for you. Whether you need a business website, online store, or custom application, we build it modern, mobile-friendly, and fast. You can share your project idea directly on our dedicated Project page or email Sanjay at sanjuxdev27@gmail.com.";
+        links.push({ label: "Start Your Project", url: "/project" });
         links.push({ label: "Explore Our Work", url: "/work" });
       } else if (project) {
         answer = `${project.name}: ${project.summary} ${project.headline} Key features include: ${project.features.join(", ")}.`;
@@ -760,53 +797,53 @@ export default async function handler(req, res) {
         links.push({ label: "Visit Live Site ↗", url: project.url });
       } else if (/(website for my shop|for my shop|for my store)/i.test(q) && !/clothing/i.test(q)) {
         answer = "A Business Website could work if you want to show your products and receive enquiries. If you want customers to pay and place orders online, an E-Commerce Website may be better.";
-        links.push({ label: "Start With This Website Type", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
-        links.push({ label: "Start With Business Website", url: "/contact?category=" + encodeURIComponent("Business Website") });
+        links.push({ label: "Start With This Website Type", url: "/project?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "Start With Business Website", url: "/project?category=" + encodeURIComponent("Business Website") });
       } else if (/(clothing|online shop|clothing shop|retail)/i.test(q)) {
         answer = "For a clothing shop or retail business where you want customers to browse items and place orders, an E-Commerce Website is the ideal choice. We build them with product catalogues, shopping carts, WhatsApp ordering, and secure payments (UPI, cards).";
-        links.push({ label: "Start Your Project", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
-        links.push({ label: "Start With This Website Type", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "Start Your Project", url: "/project?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "Start With This Website Type", url: "/project?category=" + encodeURIComponent("E-Commerce Website") });
         links.push({ label: "View TicketX Platform", url: "/work/ticketx" });
       } else if (/online payments?|pay online|upi|payment gateway|accept payments/i.test(q)) {
         answer = "Yes! We integrate secure online payment gateways supporting UPI (Google Pay, PhonePe, Paytm), credit/debit cards, and net banking with instant checkout notifications and receipt generation.";
-        links.push({ label: "Start Your Project", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "Start Your Project", url: "/project?category=" + encodeURIComponent("E-Commerce Website") });
       } else if (/right for me|what website is right|what kind of website|which website|kind of website|what type of website|recommend|need a website|help me decide/.test(q)) {
         answer = "We specialize in five core website categories:\n• Personal Portfolio — Showcase work, skills, and resume.\n• Blog / Content Website — Share articles, stories, and updates.\n• Business Website — Help customers discover and contact your company.\n• Agency Website — Present your agency, team, and client case studies.\n• E-Commerce Website / Online Store — Showcase products, accept online payments, and sell.\nTell us about your project and we'll guide you to the perfect fit!";
-        links.push({ label: "Start Your Project", url: "/contact" });
+        links.push({ label: "Start Your Project", url: "/project" });
         links.push({ label: "Explore Our Work", url: "/work" });
       } else if (/how do i start|how to start|start a project|how do i get started|begin/.test(q)) {
-        answer = "Starting is simple and takes just 3 short steps! On our Contact page, select your website category, choose the features you'd like, and tell us how to reach you. You'll immediately receive your sequential SXD Tracking ID and no payment is required to enquire.";
-        links.push({ label: "Start Your Project", url: "/contact" });
+        answer = "Starting is simple and takes just 4 easy steps! On our Project page (/project), select your website category, choose the features you'd like, set your preferences, and connect with us on WhatsApp. You'll immediately receive your sequential SXD Tracking ID.";
+        links.push({ label: "Start Your Project", url: "/project" });
         links.push({ label: "Explore Our Work", url: "/work" });
       } else if (/online store|ecommerce|e-commerce|sell products|shopping/.test(q)) {
         answer = "Yes! We design and build modern online stores and e-commerce websites with clear product catalogues, mobile shopping, WhatsApp ordering, and secure payment checkout (UPI, cards, net banking). You can easily manage products and see incoming orders.";
-        links.push({ label: "Start Your Project", url: "/contact?category=" + encodeURIComponent("E-Commerce Website") });
+        links.push({ label: "Start Your Project", url: "/project?category=" + encodeURIComponent("E-Commerce Website") });
         links.push({ label: "View TicketX Platform", url: "/work/ticketx" });
       } else if (/track|tracking|status|check my project|project status|sxd-/.test(q)) {
         answer = "You can track your project anytime on our Track Project page (/track). For security, enter your unique Tracking ID (such as SXD-001) and your registered email address to view real-time milestone progress, status updates, and countdown days remaining.";
         links.push({ label: "Track My Project", url: "/track" });
-        links.push({ label: "Start an Enquiry", url: "/contact" });
+        links.push({ label: "Start an Enquiry", url: "/project" });
       } else if (/price|cost|budget|pricing|rate|how much|what does a website cost/.test(q)) {
-        answer = "Every website project is tailored to its specific scope, design requirements, and integrations. We don't use fixed packages or assumptions. Share a brief on our Contact page for an honest, tailored estimate based on your scope.";
-        links.push({ label: "Start a Project Brief", url: "/contact" });
+        answer = "Every website project is tailored to its specific scope, design requirements, and integrations. We don't use fixed packages or assumptions. Share your requirements on our Project page (/project) for an honest, tailored estimate based on your scope.";
+        links.push({ label: "Start a Project Brief", url: "/project" });
       } else if (/time|timeline|how long|launch|deadline/.test(q)) {
         answer = "Project timelines depend on requirements and complexity—typically ranging from 2–4 weeks for focused business websites to 6–10 weeks for bespoke web applications. We confirm exact milestones after understanding your scope.";
-        links.push({ label: "Share Your Timeline", url: "/contact" });
+        links.push({ label: "Share Your Timeline", url: "/project" });
       } else if (/codexa|agency|affiliation|founder/.test(q)) {
         answer = "Sanjay is a Co-Founder at CodeXa Agency. It is a distinct, separate professional affiliation alongside SANJU X DEV.";
         links.push({ label: "About SANJU X DEV", url: "/about" });
       } else if (/feature|features|whatsapp button|login|admin dashboard|chatbot/.test(q)) {
         answer = "We support all essential modern website features without confusing jargon: WhatsApp direct chat buttons, online payments (UPI, cards), product listings, appointment booking, user login, admin dashboards, and custom AI assistants like Spideyy.";
-        links.push({ label: "Start a Project Brief", url: "/contact" });
+        links.push({ label: "Start a Project Brief", url: "/project" });
       } else if (serviceMatch) {
         answer = `${serviceMatch.name}: ${serviceMatch.description} Scope includes: ${serviceMatch.items}.`;
-        links.push({ label: "Discuss " + serviceMatch.name, url: "/contact?service=" + encodeURIComponent(serviceMatch.name) });
+        links.push({ label: "Discuss " + serviceMatch.name, url: "/project?service=" + encodeURIComponent(serviceMatch.name) });
       } else if (/work|portfolio|projects|case stud|past/.test(q)) {
         answer = "We have five verified portfolio case studies: StarX Live, TicketX, StarX Connect, AudioX, and Yuva Shakti. Each includes real desktop/mobile screenshots, architectural summaries, and live links.";
         links.push({ label: "Explore Our Work", url: "/work" });
       } else if (/contact|email|phone|hire|message|touch|reach/.test(q)) {
-        answer = `You can start a project conversation through our simple 2-step contact form or email Sanjay directly at ${s.email}.`;
-        links.push({ label: "Start a Conversation", url: "/contact" });
+        answer = `You can start a project conversation on our dedicated /project page or email Sanjay directly at ${s.email}.`;
+        links.push({ label: "Start Your Project", url: "/project" });
       } else {
         const faqMatch = (s.faqs || []).find((f) =>
           f.q
@@ -1611,9 +1648,9 @@ export default async function handler(req, res) {
     throw fail(404, "Not found.");
   } catch (e) {
     send(e.status || 400, {
-      error: e.status
-        ? e.message
-        : "Invalid request. Please check the supplied information.",
+      error:
+        e.message ||
+        "Invalid request. Please check the supplied information.",
     });
   }
 }

@@ -179,7 +179,7 @@ test("spideyy AI answers 'How much will it cost?' by explaining custom scoping w
   );
 
   assert.equal(body.mode, "AI assistant");
-  assert.ok(body.links.some((l) => l.url.includes("/contact")));
+  assert.ok(body.links.some((l) => l.url.includes("/project") || l.url.includes("/contact")));
 });
 
 test("spideyy AI understands Telugu-English mixed enquiry 'Naku business website kavali.'", async () => {

@@ -37,6 +37,7 @@ const pages = [
   ["work", "Our Work — Five Selected Case Studies", "Explore live websites and web applications built by SANJU X DEV including StarX Live, TicketX, StarX Connect, AudioX and Yuva Shakti."],
   ["about", "About the Business — SANJU X DEV", seed.about],
   ["services", "Services — Design & Digital Development", "Web development, UI/UX design, custom web applications, e-commerce storefronts, and interactive digital experiences."],
+  ["project", "Start a Project — SANJU X DEV", "Choose your website type, select your features, and start your tailored web project with SANJU X DEV."],
   ["contact", "Start a Project — SANJU X DEV", "Submit a project brief to start a conversation about tailored web development and design for your business."],
   ["track", "Track Project — SANJU X DEV", "Check live project status, milestones, and development updates for your SANJU X DEV project."],
   ["privacy", "Privacy, Clearly — SANJU X DEV", "Learn how customer enquiries and visitor privacy are respected and stored securely at SANJU X DEV."],
