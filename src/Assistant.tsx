@@ -1,52 +1,36 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { X, ArrowUp } from "lucide-react";
-import { useSite } from "./App";
-import { useChat } from "./chat-context";
-
-const STARTER_QUESTIONS = [
-  "What website is right for me?",
-  "Can you build an online store?",
-  "How do I start my project?",
-];
+import { X, ArrowUp, RotateCcw, ArrowRight, ExternalLink } from "lucide-react";
+import { useChat, STARTER_QUESTIONS } from "./chat-context";
 
 export default function Assistant() {
-  const s = useSite();
-  const { messages, busy, mode, floatingOpen, setFloatingOpen, ask } = useChat();
+  const { messages, busy, status, floatingOpen, setFloatingOpen, ask, clearMessages } = useChat();
   const [input, setInput] = useState("");
-  const panel = useRef<HTMLDivElement>(null),
-    launcher = useRef<HTMLButtonElement>(null),
-    field = useRef<HTMLInputElement>(null),
-    messagesEndRef = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const launcher = useRef<HTMLButtonElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Determine if this is a fresh conversation (only the initial greeting)
+  const isFreshConversation = useMemo(() => {
+    return messages.length <= 1;
+  }, [messages.length]);
+
+  // Focus input when chat opens & handle Escape key
   useEffect(() => {
     if (!floatingOpen) return;
     field.current?.focus();
-    const handle = (e: KeyboardEvent) => {
+    const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setFloatingOpen(false);
         launcher.current?.focus();
       }
-      if (e.key === "Tab") {
-        const els =
-          panel.current?.querySelectorAll<HTMLElement>("button,a,input");
-        if (!els?.length) return;
-        const first = els[0],
-          last = els[els.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
     };
-    document.addEventListener("keydown", handle);
-    return () => document.removeEventListener("keydown", handle);
+    document.addEventListener("keydown", handleKeydown);
+    return () => document.removeEventListener("keydown", handleKeydown);
   }, [floatingOpen, setFloatingOpen]);
 
-  // Auto-scroll when messages update or busy state changes
+  // Auto-scroll to latest message smoothly
   useEffect(() => {
     if (floatingOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,142 +45,179 @@ export default function Assistant() {
     void ask(trimmed);
   };
 
+  const getStatusBadge = () => {
+    switch (status) {
+      case "Available":
+        return { label: "Available", className: "status-available" };
+      case "Connecting":
+        return { label: "Connecting", className: "status-connecting" };
+      case "Limited Assistance":
+        return { label: "Limited Assistance", className: "status-limited" };
+      default:
+        return { label: "Limited Assistance", className: "status-limited" };
+    }
+  };
+
+  const badge = getStatusBadge();
+
   return (
     <>
+      {/* FLOATING LAUNCHER */}
       <button
         ref={launcher}
         type="button"
         className="chat-launch"
         aria-expanded={floatingOpen}
-        aria-label="Open Spideyy project assistant"
+        aria-label="Open Spideyy website consultant"
         onClick={() => setFloatingOpen(!floatingOpen)}
       >
         <img className="spider-official" src="/assets/spideyy.jpg" alt="Spideyy" />
-        <span>Ask Spideyy</span>
+        <span className="chat-launch-text">Ask Spideyy</span>
       </button>
 
+      {/* CHAT WINDOW */}
       {floatingOpen && (
         <div
           ref={panel}
           className="chat"
           role="dialog"
           aria-modal="true"
-          aria-label="Spideyy project assistant"
+          aria-label="Spideyy website consultant"
         >
+          {/* 1. HEADER */}
           <div className="chat-head">
-            <img className="spider-official" src="/assets/spideyy.jpg" alt="Spideyy" />
-            <div>
-              <b className="chat-head-title">Spideyy</b>
-              <small className="chat-head-subtitle">
-                {mode === "AI Online" ? "AI Online" : "Project Assistant"} · SANJU X DEV
-              </small>
+            <div className="chat-head-identity">
+              <img className="spider-official" src="/assets/spideyy.jpg" alt="Spideyy" />
+              <div className="chat-head-titles">
+                <span className="chat-head-title">Spideyy</span>
+                <span className={`chat-head-status ${badge.className}`}>
+                  <span className="live-dot" /> {badge.label}
+                </span>
+              </div>
             </div>
-            <button
-              type="button"
-              aria-label="Close assistant"
-              onClick={() => {
-                setFloatingOpen(false);
-                launcher.current?.focus();
-              }}
-            >
-              <X size={18} />
-            </button>
+
+            <div className="chat-head-actions">
+              <button
+                type="button"
+                className="chat-head-action-btn"
+                title="Start a new conversation"
+                aria-label="Start a new conversation"
+                onClick={clearMessages}
+                disabled={busy}
+              >
+                <RotateCcw size={14} />
+                <span className="chat-action-label">New Chat</span>
+              </button>
+              <button
+                type="button"
+                className="chat-head-action-btn close"
+                aria-label="Close Spideyy"
+                onClick={() => {
+                  setFloatingOpen(false);
+                  launcher.current?.focus();
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
-          <div className="chat-body">
-            <div aria-live="polite" className="chat-messages-scroll">
-              {messages.map((m: any, i: number) => (
+          {/* 2. CONVERSATION AREA */}
+          <div className="chat-body" aria-live="polite">
+            <div className="chat-messages-scroll">
+              {messages.map((m, idx) => (
                 <div
-                  key={i}
-                  className={"chat-msg-row " + (m.role === "user" ? "user-row" : "assistant-row")}
+                  key={idx}
+                  className={`chat-msg-row ${m.role === "user" ? "user-row" : "assistant-row"}`}
                 >
-                  <p className={m.role === "user" ? "user" : "assistant-bubble"}>{m.text}</p>
-                  {m.links && m.links.length > 0 && (
-                    <div className="chat-suggestions" style={{ marginBottom: 12 }}>
-                      {m.links.map((lnk: any, li: number) =>
-                        lnk.url.startsWith("ask:") ? (
-                          <button
-                            key={li}
-                            type="button"
-                            disabled={busy}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleAsk(lnk.url.slice(4));
-                            }}
-                          >
-                            {lnk.label}
-                          </button>
-                        ) : lnk.url.startsWith("http") ? (
-                          <a
-                            key={li}
-                            href={lnk.url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {lnk.label}
-                          </a>
-                        ) : (
-                          <Link
-                            key={li}
-                            to={lnk.url}
-                            className={lnk.label.includes("Start") ? "action-primary" : ""}
-                            onClick={() => setFloatingOpen(false)}
-                          >
-                            {lnk.label}
-                          </Link>
-                        ),
-                      )}
-                    </div>
+                  {m.role === "assistant" && (
+                    <img className="spider-official chat-msg-avatar" src="/assets/spideyy.jpg" alt="Spideyy" />
                   )}
+                  <div className="chat-bubble-wrap">
+                    <div className={m.role === "user" ? "user-bubble" : "assistant-bubble"}>
+                      {m.text.split("\n").map((line, lineIdx) => (
+                        <p key={lineIdx} className="chat-bubble-p">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+
+                    {/* Contextual Action Buttons (At most 1-2, cleanly spaced) */}
+                    {m.links && m.links.length > 0 && (
+                      <div className="chat-contextual-actions">
+                        {m.links.slice(0, 2).map((lnk, linkIdx) => {
+                          const isPrimary = lnk.label.includes("Start");
+                          const isExternal = lnk.url.startsWith("http");
+
+                          if (isExternal) {
+                            return (
+                              <a
+                                key={linkIdx}
+                                href={lnk.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="chat-action-pill secondary"
+                              >
+                                {lnk.label} <ExternalLink size={13} />
+                              </a>
+                            );
+                          }
+
+                          return (
+                            <Link
+                              key={linkIdx}
+                              to={lnk.url}
+                              className={`chat-action-pill ${isPrimary ? "primary" : "secondary"}`}
+                            >
+                              {lnk.label} <ArrowRight size={14} />
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
+
+              {/* Thinking Indicator */}
               {busy && (
                 <div className="chat-msg-row assistant-row">
-                  <p className="assistant-bubble thinking">
-                    <span className="live-dot" /> Spideyy is thinking…
-                  </p>
+                  <img className="spider-official chat-msg-avatar" src="/assets/spideyy.jpg" alt="Spideyy" />
+                  <div className="assistant-bubble thinking">
+                    <span className="typing-dots">
+                      <span className="dot" />
+                      <span className="dot" />
+                      <span className="dot" />
+                    </span>
+                    <span className="thinking-text">Spideyy is thinking…</span>
+                  </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Starter Questions: Exactly 3 Requested */}
-            <div className="chat-quick-section">
-              <span className="chat-quick-label">Suggested Questions:</span>
-              <div className="chat-suggestions">
-                {STARTER_QUESTIONS.map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    disabled={busy}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleAsk(q);
-                    }}
-                  >
-                    {q}
-                  </button>
-                ))}
+            {/* 3. STARTER QUESTIONS (MAXIMUM THREE, COLLAPSED ONCE CONVERSATION BEGINS) */}
+            {isFreshConversation && (
+              <div className="chat-starter-section">
+                <span className="chat-starter-heading">Suggested questions:</span>
+                <div className="chat-starter-grid">
+                  {STARTER_QUESTIONS.map((sq, sqIdx) => (
+                    <button
+                      key={sqIdx}
+                      type="button"
+                      className="chat-starter-btn"
+                      disabled={busy}
+                      onClick={() => handleAsk(sq)}
+                    >
+                      {sq}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* Quick Navigation Links */}
-            <div className="chat-nav-footer">
-              <Link to="/work" onClick={() => setFloatingOpen(false)}>
-                Explore Our Work
-              </Link>
-              <Link to="/contact" onClick={() => setFloatingOpen(false)}>
-                Start a Project
-              </Link>
-              <Link to="/track" onClick={() => setFloatingOpen(false)}>
-                Track Status
-              </Link>
-              <a href={"mailto:" + s.email}>Email Sanju</a>
-            </div>
+            )}
           </div>
 
+          {/* 4. INPUT AREA */}
           <form
             className="chat-input-form"
             onSubmit={(e) => {
@@ -206,18 +227,22 @@ export default function Assistant() {
           >
             <input
               ref={field}
-              aria-label="Message Spideyy"
+              type="text"
+              className="chat-input-field"
+              aria-label="Ask Spideyy anything"
               maxLength={1000}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Spideyy anything about your website..."
+              placeholder="Ask Spideyy anything..."
+              disabled={busy}
             />
             <button
               type="submit"
+              className="chat-input-send-btn"
               aria-label="Send message to Spideyy"
               disabled={busy || !input.trim()}
             >
-              <ArrowUp size={20} />
+              <ArrowUp size={18} />
             </button>
           </form>
         </div>

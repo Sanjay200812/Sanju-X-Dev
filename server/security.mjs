@@ -152,12 +152,14 @@ export function enquiry(x) {
     additional_message: 3000,
     primary_purpose: 500,
     login_option: 150,
+    login_method: 150,
     dashboard_option: 150,
     data_storage: 100,
     animation_preference: 150,
     page_count: 150,
     existing_design_option: 150,
     figma_url: 300,
+    idempotency_key: 100,
   };
 
   for (const [k, maxLen] of Object.entries(limits)) {

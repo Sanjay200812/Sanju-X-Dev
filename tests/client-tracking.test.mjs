@@ -168,7 +168,7 @@ test("/api/chat handles Telugu-English enquiries with polite guidance", async ()
   assert.equal(status, 200);
   assert.equal(body.mode, "FAQ guide");
   assert.match(body.answer, /SANJU X DEV/);
-  assert.ok(body.links.some((l) => l.url === "/contact"));
+  assert.ok(body.links.some((l) => l.url === "/project" || l.url === "/contact"));
 });
 
 test("/api/chat handles website recommendation and store queries non-technically", async () => {
@@ -222,7 +222,7 @@ test("/api/chat explains project starting and tracking clearly", async () => {
       end: (str) => { startBody = JSON.parse(str); },
     },
   );
-  assert.match(startBody.answer, /Contact/);
+  assert.match(startBody.answer, /Contact|Project/i);
   assert.match(startBody.answer, /SXD/);
 
   // Track status

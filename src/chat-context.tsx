@@ -4,8 +4,11 @@ import {
   useState,
   useCallback,
   useRef,
+  useEffect,
   ReactNode,
 } from "react";
+
+export type AiStatus = "Available" | "Connecting" | "Limited Assistance" | "Unavailable";
 
 export interface ChatLink {
   label: string;
@@ -20,10 +23,16 @@ export interface ChatMessage {
   timestamp?: string;
 }
 
+export const STARTER_QUESTIONS = [
+  "What website is right for me?",
+  "Can you build an online store?",
+  "How do I start a project?",
+];
+
 interface ChatContextType {
   messages: ChatMessage[];
   busy: boolean;
-  mode: string;
+  status: AiStatus;
   floatingOpen: boolean;
   setFloatingOpen: (open: boolean) => void;
   ask: (question: string) => Promise<void>;
@@ -32,12 +41,8 @@ interface ChatContextType {
 
 const initialMessage: ChatMessage = {
   role: "assistant",
-  text: "Hi, I'm Spideyy! I can help you understand our services, recommend the right website type, explain features, or answer any questions about your project.",
-  links: [
-    { label: "What website is right for me?", url: "ask:What website is right for me?" },
-    { label: "Start Your Project", url: "/contact" },
-    { label: "Track a Project", url: "/track" },
-  ],
+  text: "Hi, I'm Spideyy! I can help you understand our services, recommend the right website type, explain features, or plan your project.",
+  links: [],
   mode: "Spideyy",
 };
 
@@ -47,11 +52,33 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const messagesRef = useRef<ChatMessage[]>([initialMessage]);
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState("Spideyy");
+  const [status, setStatus] = useState<AiStatus>("Connecting");
   const [floatingOpen, setFloatingOpen] = useState(false);
 
   // Sync ref whenever state changes
   messagesRef.current = messages;
+
+  // Initial health check to determine true provider status
+  useEffect(() => {
+    let active = true;
+    async function checkHealth() {
+      try {
+        const res = await fetch("/api/chat", { method: "GET" });
+        if (res.ok && active) {
+          const data = await res.json();
+          setStatus(data.status === "Available" ? "Available" : "Limited Assistance");
+        } else if (active) {
+          setStatus("Limited Assistance");
+        }
+      } catch {
+        if (active) setStatus("Limited Assistance");
+      }
+    }
+    void checkHealth();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const ask = useCallback(async (q: string) => {
     const trimmed = q.trim();
@@ -63,35 +90,40 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       timestamp: new Date().toISOString(),
     };
 
-    // Keep conversation history up to date immediately without stale closures
-    const previousHistory = messagesRef.current.slice(-10).map((m) => ({
-      role: m.role,
-      text: m.text,
-    }));
+    // Filter out initial greeting to send clean conversation turns to backend
+    const conversationHistory = messagesRef.current
+      .filter((m) => m !== initialMessage)
+      .slice(-10)
+      .map((m) => ({
+        role: m.role,
+        text: m.text,
+      }));
 
     const nextMessages = [...messagesRef.current, userMessage];
     messagesRef.current = nextMessages;
     setMessages(nextMessages);
     setBusy(true);
+    setStatus("Connecting");
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: trimmed, history: previousHistory }),
+        body: JSON.stringify({ question: trimmed, history: conversationHistory }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to get an answer.");
 
-      const newMode = data.mode === "AI assistant" ? "AI Online" : "Spideyy";
-      setMode(newMode);
+      const isLiveAi = data.mode === "AI assistant";
+      const resolvedStatus: AiStatus = isLiveAi ? "Available" : "Limited Assistance";
+      setStatus(resolvedStatus);
 
       const assistantMessage: ChatMessage = {
         role: "assistant",
         text: data.answer,
         links: data.links || [],
-        mode: newMode,
+        mode: isLiveAi ? "Spideyy AI" : "Spideyy",
         timestamp: new Date().toISOString(),
       };
 
@@ -99,16 +131,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       messagesRef.current = finalMessages;
       setMessages(finalMessages);
     } catch {
-      setMode("FAQ guide");
+      setStatus("Limited Assistance");
       const fallbackMessage: ChatMessage = {
         role: "assistant",
-        text: "I couldn't reach the live AI assistant right now. You can explore our five case studies in Our Work or share your requirements directly through our Contact form.",
+        text: "I couldn't reach the live AI assistant right now. You can explore our verified projects in Our Work or share your project requirements directly through our Project page.",
         links: [
-          { label: "Explore Our Work", url: "/work" },
-          { label: "Start a Project", url: "/contact" },
-          { label: "Track Status", url: "/track" },
+          { label: "Start Your Project", url: "/project" },
+          { label: "View Projects", url: "/work" },
         ],
-        mode: "FAQ guide",
+        mode: "Limited Assistance",
         timestamp: new Date().toISOString(),
       };
       const finalMessages = [...messagesRef.current, fallbackMessage];
@@ -129,7 +160,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       value={{
         messages,
         busy,
-        mode,
+        status,
         floatingOpen,
         setFloatingOpen,
         ask,

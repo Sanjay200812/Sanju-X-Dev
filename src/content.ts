@@ -580,93 +580,82 @@ export const DEFAULT_WEBSITE_CATEGORIES: WebsiteCategory[] = [
 ];
 
 export const PRIMARY_PURPOSE_OPTIONS = [
-  "Show My Work",
-  "Introduce My Business",
-  "Display Products",
+  "Showcase Myself / My Work",
+  "Showcase My Business",
   "Sell Products Online",
-  "Receive Enquiries",
-  "Accept Bookings",
-  "Share Information",
-  "Show My Services",
-  "Something Else",
-  "Not Sure",
+  "Sell Services",
+  "Receive Customer Enquiries",
+  "Accept Bookings & Appointments",
+  "Manage Customers",
+  "Manage Employees / Team",
+  "Provide AI Features",
+  "Not Sure — Help Me Decide",
 ];
 
 export const LOGIN_OPTIONS = [
-  { id: "none", label: "No Login Needed", desc: "Open access for all visitors." },
-  { id: "email_password", label: "Email & Password", desc: "Traditional secure account login." },
-  { id: "google", label: "Google Sign-In", desc: "Fast 1-click login with Google." },
-  { id: "mobile_otp", label: "Mobile Number & OTP", desc: "Instant SMS / WhatsApp OTP login." },
-  { id: "email_otp", label: "Email OTP", desc: "Passwordless one-time verification code." },
-  { id: "multiple", label: "Multiple Sign-In Options", desc: "Google, email and mobile combined." },
-  { id: "not_sure", label: "Not Sure", desc: "Recommend the best login method." },
+  { id: "no", label: "No", desc: "Open access for all visitors without accounts." },
+  { id: "yes", label: "Yes", desc: "Customers need an account to sign in." },
+  { id: "not_sure", label: "Not Sure", desc: "Recommend the best login approach." },
 ];
 
-export const LOGIN_SECURITY_OPTIONS = [
-  "Forgot Password / Reset Password",
-  "Email Verification",
-  "Two-Step Verification",
-  "Different Access Roles",
-  "Login Activity / Active Sessions",
-  "Not Sure",
+export const LOGIN_METHODS = [
+  { id: "email_password", label: "Email and Password", desc: "Standard secure account login." },
+  { id: "google", label: "Google Account", desc: "Fast 1-click login with Google." },
+  { id: "mobile_otp", label: "Mobile OTP", desc: "Instant SMS or WhatsApp OTP verification." },
+  { id: "not_sure", label: "Not Sure", desc: "Help me decide which is best." },
 ];
 
 export const DASHBOARD_OPTIONS = [
-  { id: "none", label: "No Dashboard", desc: "Static website with no backend area needed." },
-  { id: "admin", label: "Admin Dashboard", desc: "Manage website content, customer enquiries and business information." },
-  { id: "customer", label: "Customer Dashboard", desc: "Let customers see their orders, bookings or personal information." },
-  { id: "both", label: "Customer + Admin Dashboard", desc: "Both client management and administrative controls." },
-  { id: "multi_role", label: "Different Dashboards for Different Roles", desc: "Custom permissions for managers, staff and customers." },
-  { id: "not_sure", label: "Not Sure", desc: "Help me decide if I need a dashboard." },
+  { id: "no", label: "No", desc: "Standard website with no admin dashboard needed." },
+  { id: "yes", label: "Yes — Give Me an Admin Dashboard", desc: "Manage content, orders, or enquiries myself." },
+  { id: "not_sure", label: "Not Sure", desc: "Help me decide if a dashboard is beneficial." },
 ];
 
 export const DATA_STORAGE_OPTIONS = [
-  { id: "no", label: "No", desc: "Does not need to store user records or dynamic data." },
-  { id: "yes", label: "Yes", desc: "Save customer accounts, orders, bookings or enquiries." },
-  { id: "not_sure", label: "Not Sure", desc: "Help me decide based on my website scope." },
+  { id: "yes", label: "Yes", desc: "Save customer accounts, orders, messages or bookings." },
+  { id: "no", label: "No", desc: "Simple website without saving customer records." },
+  { id: "not_sure", label: "Not Sure", desc: "Decide based on my website features." },
 ];
 
 export const DESIGN_STYLES = [
   { id: "clean_simple", label: "Clean & Simple", desc: "Minimalist, uncluttered and easy to read." },
   { id: "modern_professional", label: "Modern & Professional", desc: "Contemporary layout with sharp typography." },
-  { id: "dark_premium", label: "Dark & Premium", desc: "High-contrast sleek aesthetic with refined tones." },
-  { id: "creative_colorful", label: "Creative & Colorful", desc: "Vibrant, expressive visuals and dynamic energy." },
-  { id: "luxury_elegant", label: "Luxury & Elegant", desc: "Sophisticated serif typography and timeless spacing." },
-  { id: "custom", label: "Custom Design", desc: "A distinctive bespoke look crafted from scratch." },
-  { id: "not_sure", label: "Not Sure — Suggest One", desc: "Recommend what suits my website best." },
+  { id: "dark_premium", label: "Dark & Premium", desc: "High-contrast sleek aesthetic with refined dark tones." },
+  { id: "creative_colorful", label: "Creative & Colorful", desc: "Vibrant, expressive visuals and dynamic personality." },
+  { id: "not_sure", label: "Not Sure", desc: "Recommend what suits my project best." },
 ];
 
 export const ANIMATION_LEVELS = [
-  { id: "minimal", label: "Minimal", desc: "Simple, subtle movements." },
-  { id: "smooth", label: "Smooth", desc: "Elegant scrolling and hover effects." },
-  { id: "advanced", label: "Advanced", desc: "Interactive elements, layered motion and polished transitions." },
-  { id: "cinematic", label: "Cinematic", desc: "Immersive animation and advanced interactive experiences." },
-  { id: "not_sure", label: "Not Sure", desc: "Recommend what suits my website." },
+  { id: "simple", label: "Simple", desc: "Small, smooth effects and micro-interactions." },
+  { id: "professional", label: "Professional", desc: "Elegant transitions and smooth scrolling." },
+  { id: "advanced", label: "Advanced", desc: "More interactive animations and dynamic motion." },
+  { id: "not_sure", label: "Not Sure", desc: "Help me decide the best motion balance." },
 ];
 
 export const PAGE_COUNT_OPTIONS = [
-  { id: "1_page", label: "1 Page — Everything in One Place", desc: "Single-page landing or portfolio." },
+  { id: "1_page", label: "One Page — Everything on One Page", desc: "Single-page landing or portfolio." },
   { id: "2_5_pages", label: "2–5 Pages — Small Website", desc: "Home, About, Services, Contact, etc." },
-  { id: "6_10_pages", label: "6–10 Pages — Growing Website", desc: "Multiple services, blog, portfolio items." },
-  { id: "11_20_pages", label: "11–20 Pages — Larger Website", desc: "Comprehensive brand or content portal." },
-  { id: "20_plus", label: "More Than 20 Pages", desc: "Extensive catalogue or multi-section portal." },
-  { id: "custom_app", label: "Custom Web Application", desc: "Application interface with dynamic views." },
-  { id: "not_sure", label: "Not Sure", desc: "Estimate based on my required content." },
+  { id: "6_10_pages", label: "6–10 Pages — Larger Website", desc: "Multiple services, portfolio items or sections." },
+  { id: "not_sure", label: "Not Sure — Help Me Decide", desc: "Estimate based on my required content." },
 ];
 
 export const DESIGN_MIND_OPTIONS = [
-  { id: "design_for_me", label: "No — Please Design It for Me", desc: "Create complete UI/UX from scratch." },
-  { id: "figma", label: "Yes — I Have a Figma Design", desc: "I have design mockups ready in Figma." },
-  { id: "references", label: "Yes — I Have Reference Websites", desc: "Websites with styles or features I admire." },
-  { id: "sketches", label: "Yes — I Have Screenshots or Sketches", desc: "Visual ideas, sketches, or wireframes." },
-  { id: "not_sure", label: "Not Sure", desc: "Discuss ideas during initial project review." },
+  { id: "create_everything", label: "No — Create Everything for Me", desc: "Craft complete design and layout from scratch." },
+  { id: "existing_site", label: "Yes — I Have an Existing Website", desc: "Modernize or upgrade my current website." },
+  { id: "reference_site", label: "Yes — I Have a Reference Website or Design", desc: "I have links or examples that I admire." },
+  { id: "not_sure", label: "Not Sure", desc: "Discuss visual ideas together." },
+];
+
+export const DOMAIN_OPTIONS = [
+  { id: "yes", label: "Yes", desc: "I already own my website address (domain)." },
+  { id: "no", label: "No", desc: "I need help choosing and purchasing a domain." },
+  { id: "not_sure", label: "Not Sure", desc: "Guide me on domain setup." },
 ];
 
 export const TIMELINE_CHOICES = [
   "As Soon As Possible",
   "Within 2 Weeks",
-  "Within a Month",
-  "1–3 Months",
+  "Within 1 Month",
   "Flexible",
   "Not Sure",
 ];
@@ -675,9 +664,9 @@ export const BUDGET_CHOICES = [
   "Below ₹5,000",
   "₹5,000–₹10,000",
   "₹10,000–₹25,000",
-  "Above ₹25,000",
-  "Need a Quote",
-  "Not Sure",
+  "₹25,000+",
+  "I'd Like a Quote",
+  "Not Sure Yet",
 ];
 
 export const PROJECT_STATUS_LIST = [
@@ -700,16 +689,104 @@ export const PROJECT_STATUS_LIST = [
 export const SANJU_BUSINESS_PHONE = "+91 7075452718";
 export const SANJU_WHATSAPP_NUMBER = "917075452718";
 
-export function getWhatsAppEnquiryUrl(trackingCode: string, websiteType: string): string {
-  const message = [
-    "Hello SANJU X DEV,",
-    "I have submitted a project enquiry.",
-    `Tracking ID: ${trackingCode}`,
-    `Website Type: ${websiteType}`,
-    "I would like to discuss my project requirements and next steps.",
-    "Thank you.",
-  ].join("\n");
-  return `https://wa.me/${SANJU_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+export interface DetailedEnquiryData {
+  trackingCode: string;
+  name: string;
+  businessName?: string;
+  email: string;
+  phone: string;
+  whatsapp?: string;
+  city?: string;
+  websiteType: string;
+  primaryPurpose?: string | string[];
+  features?: string | string[];
+  loginOption?: string;
+  loginMethod?: string;
+  dashboardOption?: string;
+  dataStorage?: string;
+  designStyle?: string;
+  animationLevel?: string;
+  pageCount?: string;
+  existingDesign?: string;
+  referenceUrl?: string;
+  hasDomain?: string;
+  timeline?: string;
+  budget?: string;
+  additionalMessage?: string;
+}
+
+export function buildDetailedWhatsAppMessage(d: DetailedEnquiryData): string {
+  const lines: string[] = [
+    "SANJU X DEV — NEW PROJECT ENQUIRY",
+    "",
+    `• Tracking ID: ${d.trackingCode}`,
+    `• Customer Name: ${d.name}`,
+  ];
+
+  if (d.businessName) lines.push(`• Business Name: ${d.businessName}`);
+  if (d.email) lines.push(`• Email: ${d.email}`);
+  if (d.phone) lines.push(`• Phone / WhatsApp: ${d.phone}`);
+  if (d.city) lines.push(`• City: ${d.city}`);
+
+  lines.push("");
+  lines.push(`• Website Type: ${d.websiteType}`);
+
+  const purposes = Array.isArray(d.primaryPurpose)
+    ? d.primaryPurpose.join(", ")
+    : d.primaryPurpose;
+  if (purposes) lines.push(`• Main Purpose: ${purposes}`);
+
+  const feats = Array.isArray(d.features) ? d.features.join(", ") : d.features;
+  if (feats) lines.push(`• Selected Features: ${feats}`);
+
+  if (d.loginOption) {
+    const loginText = d.loginMethod && d.loginOption.toLowerCase().includes("yes")
+      ? `${d.loginOption} (${d.loginMethod})`
+      : d.loginOption;
+    lines.push(`• Customer Login: ${loginText}`);
+  }
+
+  if (d.dashboardOption) lines.push(`• Admin Dashboard: ${d.dashboardOption}`);
+  if (d.dataStorage) lines.push(`• Save Customer Data: ${d.dataStorage}`);
+
+  lines.push("");
+  if (d.designStyle) lines.push(`• Design Style: ${d.designStyle}`);
+  if (d.animationLevel) lines.push(`• Animation Preference: ${d.animationLevel}`);
+  if (d.pageCount) lines.push(`• Number of Pages: ${d.pageCount}`);
+
+  if (d.existingDesign) {
+    const designText = d.referenceUrl
+      ? `${d.existingDesign} (${d.referenceUrl})`
+      : d.existingDesign;
+    lines.push(`• Existing Design / Site: ${designText}`);
+  }
+
+  if (d.hasDomain) lines.push(`• Owns Website Address: ${d.hasDomain}`);
+  if (d.timeline) lines.push(`• Timeline: ${d.timeline}`);
+  if (d.budget) lines.push(`• Budget: ${d.budget}`);
+
+  if (d.additionalMessage) {
+    lines.push("");
+    lines.push(`• Additional Notes: ${d.additionalMessage}`);
+  }
+
+  return lines.join("\n");
+}
+
+export function getWhatsAppEnquiryUrl(trackingCode: string, websiteType: string, details?: DetailedEnquiryData): string {
+  const text = details
+    ? buildDetailedWhatsAppMessage(details)
+    : [
+        "SANJU X DEV — NEW PROJECT ENQUIRY",
+        "",
+        `• Tracking ID: ${trackingCode}`,
+        `• Website Type: ${websiteType}`,
+        "",
+        "I would like to discuss my project requirements and next steps.",
+        "Thank you.",
+      ].join("\n");
+
+  return `https://wa.me/${SANJU_WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 }
 
 export function getGeneralWhatsAppUrl(customText?: string): string {
