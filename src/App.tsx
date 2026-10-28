@@ -33,7 +33,7 @@ import {
 import { defaults, projects as seed, SANJU_BUSINESS_PHONE, SANJU_WHATSAPP_NUMBER } from "./content";
 import Contact, { EnquiryPreview } from "./Contact";
 import Assistant from "./Assistant";
-import { ChatProvider, useChat } from "./chat-context";
+import { ChatProvider, useChat, STARTER_QUESTIONS } from "./chat-context";
 import {
   InstagramIcon,
   FacebookIcon,
@@ -320,16 +320,11 @@ export function Device({
 }
 
 function HomepageAiConsole() {
-  const { messages, busy, mode, ask, setFloatingOpen } = useChat();
+  const { messages, busy, status, ask, setFloatingOpen } = useChat();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Exactly 3 clean suggestions
-  const defaultQuestions = [
-    "What website is right for me?",
-    "Can you build an online store?",
-    "How do I start my project?",
-  ];
+  const defaultQuestions = STARTER_QUESTIONS;
 
   const handleSubmit = (q: string) => {
     const target = q.trim();
@@ -354,9 +349,8 @@ function HomepageAiConsole() {
             <span>Instant website guidance & project estimates</span>
           </div>
         </div>
-        <span className="home-ai-status-pill">
-          <span className="live-dot" />{" "}
-          {mode === "AI Online" ? "AI Online" : "Spideyy Active"}
+        <span className={`home-ai-status-pill ${status === "Available" ? "status-available" : "status-limited"}`}>
+          <span className="live-dot" /> {status}
         </span>
       </div>
 

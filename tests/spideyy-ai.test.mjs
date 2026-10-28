@@ -348,3 +348,264 @@ test("spideyy falls back gracefully to 'FAQ guide' when OpenAI fails or is uncon
   assert.equal(body.mode, "FAQ guide");
   assert.ok(body.answer.includes("Business Website"));
 });
+
+
+// ============================================================================
+// PHASE 10: 10 REQUIRED CONVERSATIONAL INTELLIGENCE TESTS
+// ============================================================================
+
+test("Phase 10 - Test 1: User 'I own a clothing shop.' recognizes business appropriately", async () => {
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: { question: "I own a clothing shop." },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  assert.match(body.answer, /clothing shop|E-Commerce|product catalogue/i);
+  assert.ok(body.links.some((l) => l.url.includes("E-Commerce")));
+});
+
+test("Phase 10 - Test 2: User 'I don't want online payments. Only WhatsApp ordering.' respects negative requirement", async () => {
+  const history = [
+    { role: "user", text: "I own a clothing shop." },
+    { role: "assistant", text: "For a clothing shop, an E-Commerce Website or product catalogue is the ideal choice." },
+  ];
+
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: {
+        question: "I don't want online payments. Only WhatsApp ordering.",
+        history,
+      },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  // Must recommend WhatsApp catalogue/ordering
+  assert.match(body.answer, /WhatsApp/i);
+  // Must NOT recommend online payments as a requested feature
+  assert.doesNotMatch(body.answer, /We integrate secure online payment gateways supporting UPI/i);
+  assert.match(body.answer, /without requiring an online payment gateway/i);
+});
+
+test("Phase 10 - Test 3: User 'What business did I mention earlier?' remembers the clothing shop", async () => {
+  const history = [
+    { role: "user", text: "I own a clothing shop." },
+    { role: "assistant", text: "For a clothing shop, a product catalogue is great." },
+    { role: "user", text: "I don't want online payments. Only WhatsApp ordering." },
+    { role: "assistant", text: "Understood! A product catalogue with WhatsApp ordering is ideal." },
+  ];
+
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: {
+        question: "What business did I mention earlier?",
+        history,
+      },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  assert.match(body.answer, /clothing shop/i);
+});
+
+test("Phase 10 - Test 4: Telugu-English 'Naku clothing shop undhi, budget ₹5000. Em features best untayi?' handles budget & business", async () => {
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: {
+        question: "Naku clothing shop undhi, budget ₹5000. Em features best untayi?",
+      },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  assert.match(body.answer, /clothing shop/i);
+  assert.match(body.answer, /5000/);
+  assert.match(body.answer, /WhatsApp/i);
+  // Must NOT give false fixed price promise
+  assert.doesNotMatch(body.answer, /guaranteed fixed price/i);
+});
+
+test("Phase 10 - Test 5: User 'What if I want online payments later?' explains phased scalability", async () => {
+  const history = [
+    { role: "user", text: "I own a clothing shop." },
+    { role: "user", text: "Only WhatsApp ordering." },
+  ];
+
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: {
+        question: "What if I want online payments later?",
+        history,
+      },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  assert.match(body.answer, /later|phase|scalable|add/i);
+  assert.match(body.answer, /payment gateway|UPI/i);
+});
+
+test("Phase 10 - Test 6: User 'I want to submit my project.' provides working action linking to /project", async () => {
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: { question: "I want to submit my project." },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  assert.ok(body.links.some((l) => l.label === "Start Your Project" && l.url === "/project"));
+});
+
+test("Phase 10 - Test 7: User 'Track SXD-001.' directs to secure /track without exposing private data", async () => {
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: { question: "Track SXD-001." },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  assert.match(body.answer, /\/track/i);
+  assert.ok(body.links.some((l) => l.url === "/track"));
+  // Never expose private customer data
+  assert.doesNotMatch(body.answer, /@/);
+});
+
+test("Phase 10 - Test 8: User 'What did I ask you earlier?' accurately references earlier conversation", async () => {
+  const history = [
+    { role: "user", text: "Can you build a photography portfolio?" },
+    { role: "assistant", text: "Yes, a Personal Portfolio is perfect for photography." },
+  ];
+
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: {
+        question: "What did I ask you earlier?",
+        history,
+      },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  assert.match(body.answer, /photography portfolio/i);
+});
+
+test("Phase 10 - Test 9: User 'Hello.' responds naturally without unnecessary advertisements or action buttons", async () => {
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: { question: "Hello." },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  assert.match(body.answer, /Welcome to SANJU X DEV/i);
+  // Pure greeting should have zero or at most no pushy marketing buttons
+  assert.equal(body.links.length, 0);
+});
+
+test("Phase 10 - Test 10: Provider unavailability simulation returns clearly identified fallback mode", async () => {
+  configureEnvironment({
+    SITE_URL: "http://127.0.0.1:3100",
+    OPENAI_API_KEY: "sk-failing-key",
+    OPENAI_MODEL: "gpt-4o-mini",
+    OPENAI_FETCH: async () => ({
+      ok: false,
+      status: 429,
+      json: async () => ({
+        error: { message: "quota exceeded", code: "credit_balance_exhausted" }
+      }),
+    }),
+  });
+
+  let body = {};
+  await handler(
+    {
+      method: "POST",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3100" },
+      body: { question: "Tell me about business websites." },
+    },
+    {
+      setHeader() {},
+      set statusCode(_) {},
+      end(str) { body = JSON.parse(str); },
+    }
+  );
+
+  // Must NOT claim to be live "AI assistant"
+  assert.notEqual(body.mode, "AI assistant");
+  assert.equal(body.mode, "FAQ guide");
+});
